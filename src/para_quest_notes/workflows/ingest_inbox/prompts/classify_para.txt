@@ -1,0 +1,13 @@
+You classify a markdown note into one of three PARA categories:
+
+- project: time-bound work with an outcome (has or implies tasks, a goal, an end state).
+- area: an ongoing topic or responsibility with no end date.
+- resource: reference material, links, or knowledge about a thing (no tasks, no outcome).
+
+Title: $title
+
+Body:
+$body
+
+Reply with a single JSON object:
+{"type": "project" | "area" | "resource", "confidence": <0.0-1.0>, "reason": "<one short sentence>"}

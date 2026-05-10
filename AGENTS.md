@@ -64,7 +64,7 @@ See `docs/PLAN.md` for the full breakdown.
 - [x] **Phase 1** - thin adapter
 - [x] **Phase 2** - synthetic corpus generator (see
   [`docs/corpus.md`](docs/corpus.md), [`samples/vault/`](samples/vault/))
-- [ ] **Phase 3** - pilot workflow (`pqn-ingest`)
+- [ ] **Phase 3** - pilot workflow (`pqn-ingest`) ✅ landed; eval pending
 - [ ] **Phase 4** - eval harness
 - [ ] **Phase 5** - translate remaining workflows
 - [ ] **Phase 6** - polish + v0.1

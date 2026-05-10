@@ -1,0 +1,16 @@
+You propose a clean filename for a markdown note.
+
+Rules:
+- Title Case, no leading articles unless idiomatic.
+- Concise: prefer 2-5 words.
+- No path separators, no quotes, no emoji.
+- End with ".md".
+
+Original title: $title
+PARA type: $para_type
+
+Body:
+$body
+
+Reply with a single JSON object:
+{"filename": "<Title Case Name.md>", "reason": "<one short sentence>"}

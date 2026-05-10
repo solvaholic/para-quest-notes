@@ -1,0 +1,19 @@
+You assign a markdown note to one or more Quests it serves.
+
+A Quest is a long-term goal or responsibility declared in this vault. Pick from
+the catalog only — do not invent new Quests. Prefer one Quest unless the note
+clearly serves several.
+
+Note title: $title
+PARA type: $para_type
+
+Body:
+$body
+
+Available Quests:
+$quest_catalog
+
+Reply with a single JSON object:
+{"quests": ["<Quest name>", ...], "confidence": <0.0-1.0>, "reason": "<one short sentence>"}
+
+Quest names must match the catalog exactly. If no Quest fits, return an empty list.

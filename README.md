@@ -41,7 +41,8 @@ The workflows preserve that reasoning, locally.
 - [x] Phase 2: synthetic corpus generator (also serves as demo vault —
       see [`docs/corpus.md`](docs/corpus.md) and
       [`samples/vault/`](samples/vault/))
-- [ ] Phase 3: pilot workflow - `pqn-ingest` (inbox → PARA + Quest)
+- [x] Phase 3: pilot workflow - `pqn-ingest` (inbox → PARA + Quest)
+      — see [`docs/workflows/ingest.md`](docs/workflows/ingest.md)
 - [ ] Phase 4: per-step eval harness (matrix over models / prompts)
 - [ ] Phase 5: translate remaining workflows (`validate`, `create`,
       `archive`, `daily`)
