@@ -101,7 +101,7 @@ para-quest-notes/
 │   │       ├── cli.py              # entry-point: pqn-ingest
 │   │       ├── pipeline.py
 │   │       ├── steps/
-│   │       │   ├── detect_shape.py        # gen1/gen2/gen3, pure code
+│   │       │   ├── classify_location.py    # location_kind detection, pure code
 │   │       │   ├── classify_para.py       # LLM step
 │   │       │   ├── pick_quest.py          # LLM step
 │   │       │   ├── propose_filename.py    # LLM step
@@ -162,14 +162,25 @@ Phases are dependency-ordered. No time estimates.
   `~/.local/state/para-quest-notes/runs/`.
 - Fake LLM for unit tests (records calls, returns canned responses).
 
-### Phase 2 - Synthetic corpus / sample vault
-- `corpus/seeds.yaml` with **generic** Quests/Areas (e.g. Health,
-  Family, Craft) - no personal data, suitable for a public repo.
-- `generate.py`: produces N notes across PARA types, gen1/2/3 shapes,
-  daily notes, messy inbox cases (missing frontmatter, ambiguous
-  Quests, attachments). Reproducible (seed-controlled).
-- Output doubles as: (a) test corpus for eval, (b) demo vault for
-  README quickstart, (c) docs material.
+### Phase 2 - Synthetic corpus / sample vault ✅
+- `corpus/seeds.yaml` with **generic** Quests/Areas (Health, Connect,
+  Create + Side Quests Maintain Home, Stay Sharp). No personal data.
+- `generate.py`: produces N notes across PARA types, location kinds
+  (`para` / `topic` / `quest` / `inbox` / `daily`), frontmatter kinds
+  (`none` / `obsidian_only` / `partial_para` / `full`), and orthogonal
+  quirks (ambiguous quest, broken wikilinks, missing supports, etc.).
+  Reproducible (seed-controlled).
+- `samples/vault/` committed as a ~30-note sandbox. A reproducibility
+  test (`tests/corpus/test_sample_vault.py`) regenerates it and
+  asserts byte-equivalence so it can never silently drift.
+- `python -m para_quest_notes.corpus` only — no `pqn-corpus` console
+  script in v1 (the audience is maintainers + README quickstart, not
+  end users with their own vaults).
+- **Note for Phase 3:** the pilot's location-detection step should be
+  named after what it does (e.g., `classify_location.py`). The
+  architecture sketch above used to call it `detect_shape.py` with a
+  `gen1/gen2/gen3` reference — that's solvaholic-specific heritage
+  and is intentionally absent from the public product.
 
 ### Phase 3 - Pilot workflow: `ingest_inbox`
 - Translate the existing `ingest-inbox-notes` SKILL.md into discrete

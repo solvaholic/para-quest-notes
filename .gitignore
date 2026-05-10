@@ -30,3 +30,4 @@ eval/runs/
 
 # Local state
 *.log
+/demo-vault/

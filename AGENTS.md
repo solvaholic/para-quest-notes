@@ -61,8 +61,9 @@ para-quest-notes/
 See `docs/PLAN.md` for the full breakdown.
 
 - [x] **Phase 0** - bootstrap (this commit/repo)
-- [x] **Phase 1** - thin adapter (next)
-- [ ] **Phase 2** - synthetic corpus generator
+- [x] **Phase 1** - thin adapter
+- [x] **Phase 2** - synthetic corpus generator (see
+  [`docs/corpus.md`](docs/corpus.md), [`samples/vault/`](samples/vault/))
 - [ ] **Phase 3** - pilot workflow (`pqn-ingest`)
 - [ ] **Phase 4** - eval harness
 - [ ] **Phase 5** - translate remaining workflows

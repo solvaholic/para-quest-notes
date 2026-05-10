@@ -1,0 +1,376 @@
+{
+  "generator_version": 1,
+  "options": {
+    "seed": 2026,
+    "projects": 6,
+    "areas": 0,
+    "resources": 0,
+    "inbox": 5,
+    "daily": 7,
+    "quirk_rate": 0.3,
+    "write_manifest": true
+  },
+  "files": [
+    {
+      "path": "Connect/Plan Family Reunion.md",
+      "title": "Plan Family Reunion",
+      "type": "project",
+      "location_kind": "quest",
+      "frontmatter_kind": "full",
+      "quirks": [
+        "duplicate_title",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "Create/Publish First Zine.md",
+      "title": "Publish First Zine",
+      "type": "project",
+      "location_kind": "quest",
+      "frontmatter_kind": "full",
+      "quirks": [
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "Health/Cooking.md",
+      "title": "Cooking",
+      "type": "area",
+      "location_kind": "quest",
+      "frontmatter_kind": "partial_para",
+      "quirks": [
+        "ambiguous_quest",
+        "has_attachments"
+      ]
+    },
+    {
+      "path": "Hobby/Refactor Bookshelf.md",
+      "title": "Refactor Bookshelf",
+      "type": "project",
+      "location_kind": "topic",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "ambiguous_quest",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "Home/Build Raised Beds.md",
+      "title": "Build Raised Beds",
+      "type": "project",
+      "location_kind": "topic",
+      "frontmatter_kind": "full",
+      "quirks": [
+        "duplicate_title",
+        "has_attachments",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "Maintain Home/Replace Water Heater.md",
+      "title": "Replace Water Heater",
+      "type": "project",
+      "location_kind": "quest",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "Work/Lawn Mower Manual.md",
+      "title": "Lawn Mower Manual",
+      "type": "resource",
+      "location_kind": "topic",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "Work/Run a 5K.md",
+      "title": "Run a 5K",
+      "type": "project",
+      "location_kind": "topic",
+      "frontmatter_kind": "full",
+      "quirks": [
+        "has_attachments",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "areas/Connect.md",
+      "title": "Connect",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "full",
+      "quirks": []
+    },
+    {
+      "path": "areas/Create.md",
+      "title": "Create",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "full",
+      "quirks": []
+    },
+    {
+      "path": "areas/Garden.md",
+      "title": "Garden",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "partial_para",
+      "quirks": [
+        "closed_tasks_only",
+        "has_attachments",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "areas/Health.md",
+      "title": "Health",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "full",
+      "quirks": []
+    },
+    {
+      "path": "areas/Letters.md",
+      "title": "Letters",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "partial_para",
+      "quirks": [
+        "duplicate_title"
+      ]
+    },
+    {
+      "path": "areas/Maintain Home.md",
+      "title": "Maintain Home",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "full",
+      "quirks": []
+    },
+    {
+      "path": "areas/Reading.md",
+      "title": "Reading",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "full",
+      "quirks": [
+        "closed_tasks_only",
+        "has_attachments",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "areas/Stay Sharp.md",
+      "title": "Stay Sharp",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "full",
+      "quirks": []
+    },
+    {
+      "path": "areas/Walking.md",
+      "title": "Walking",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "none",
+      "quirks": []
+    },
+    {
+      "path": "areas/Workshop.md",
+      "title": "Workshop",
+      "type": "area",
+      "location_kind": "para",
+      "frontmatter_kind": "full",
+      "quirks": [
+        "broken_wikilink",
+        "has_attachments"
+      ]
+    },
+    {
+      "path": "inbox/Begin movement effort will.md",
+      "title": "Begin movement effort will",
+      "type": "resource",
+      "location_kind": "inbox",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "closed_tasks_only",
+        "duplicate_title",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "inbox/Business happy describe away color.md",
+      "title": "Business happy describe away color",
+      "type": "resource",
+      "location_kind": "inbox",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "ambiguous_quest",
+        "broken_wikilink",
+        "has_attachments"
+      ]
+    },
+    {
+      "path": "inbox/Draw star must direction hotel.md",
+      "title": "Draw star must direction hotel",
+      "type": "resource",
+      "location_kind": "inbox",
+      "frontmatter_kind": "obsidian_only",
+      "quirks": [
+        "has_tasks",
+        "missing_supports"
+      ]
+    },
+    {
+      "path": "inbox/Nearly catch sport become.md",
+      "title": "Nearly catch sport become",
+      "type": "resource",
+      "location_kind": "inbox",
+      "frontmatter_kind": "obsidian_only",
+      "quirks": [
+        "ambiguous_quest",
+        "broken_wikilink",
+        "has_attachments",
+        "missing_supports"
+      ]
+    },
+    {
+      "path": "inbox/Possible trial smile.md",
+      "title": "Possible trial smile",
+      "type": "resource",
+      "location_kind": "inbox",
+      "frontmatter_kind": "obsidian_only",
+      "quirks": [
+        "closed_tasks_only",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "resources/Sourdough Notes.md",
+      "title": "Sourdough Notes",
+      "type": "resource",
+      "location_kind": "para",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "ambiguous_quest",
+        "broken_wikilink",
+        "closed_tasks_only",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "resources/Trail Map.md",
+      "title": "Trail Map",
+      "type": "resource",
+      "location_kind": "para",
+      "frontmatter_kind": "partial_para",
+      "quirks": [
+        "missing_supports"
+      ]
+    },
+    {
+      "path": "resources/Water Heater Models.md",
+      "title": "Water Heater Models",
+      "type": "resource",
+      "location_kind": "para",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "duplicate_title"
+      ]
+    },
+    {
+      "path": "resources/Zine Layout Cheatsheet.md",
+      "title": "Zine Layout Cheatsheet",
+      "type": "resource",
+      "location_kind": "para",
+      "frontmatter_kind": "full",
+      "quirks": [
+        "ambiguous_quest",
+        "closed_tasks_only",
+        "has_attachments",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "resources/daily_notes/2026/02/2026-02-04.md",
+      "title": "2026-02-04",
+      "type": "resource",
+      "location_kind": "daily",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "ambiguous_quest",
+        "has_attachments"
+      ]
+    },
+    {
+      "path": "resources/daily_notes/2026/02/2026-02-05.md",
+      "title": "2026-02-05",
+      "type": "resource",
+      "location_kind": "daily",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "has_attachments"
+      ]
+    },
+    {
+      "path": "resources/daily_notes/2026/02/2026-02-06.md",
+      "title": "2026-02-06",
+      "type": "resource",
+      "location_kind": "daily",
+      "frontmatter_kind": "obsidian_only",
+      "quirks": [
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "resources/daily_notes/2026/02/2026-02-07.md",
+      "title": "2026-02-07",
+      "type": "resource",
+      "location_kind": "daily",
+      "frontmatter_kind": "obsidian_only",
+      "quirks": [
+        "has_attachments"
+      ]
+    },
+    {
+      "path": "resources/daily_notes/2026/02/2026-02-08.md",
+      "title": "2026-02-08",
+      "type": "resource",
+      "location_kind": "daily",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "broken_wikilink",
+        "duplicate_title",
+        "has_attachments"
+      ]
+    },
+    {
+      "path": "resources/daily_notes/2026/02/2026-02-09.md",
+      "title": "2026-02-09",
+      "type": "resource",
+      "location_kind": "daily",
+      "frontmatter_kind": "none",
+      "quirks": [
+        "ambiguous_quest",
+        "has_attachments",
+        "has_tasks"
+      ]
+    },
+    {
+      "path": "resources/daily_notes/2026/02/2026-02-10.md",
+      "title": "2026-02-10",
+      "type": "resource",
+      "location_kind": "daily",
+      "frontmatter_kind": "obsidian_only",
+      "quirks": [
+        "ambiguous_quest",
+        "broken_wikilink",
+        "has_attachments"
+      ]
+    }
+  ]
+}

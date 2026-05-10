@@ -1,0 +1,101 @@
+# Generic seeds for the synthetic corpus generator.
+#
+# All names are intentionally generic. None of this reflects a real
+# user's note vault. The ingest workflow keys off structure and
+# backmatter, not these specific words; pick whatever makes the demo
+# vault read naturally.
+
+main_quests:
+  - name: Health
+    purpose: Physical and mental well-being.
+  - name: Connect
+    purpose: Family, community, relationships.
+  - name: Create
+    purpose: Things you make, ship, or grow.
+
+side_quests:
+  - name: Maintain Home
+    supports: [Health, Create]
+  - name: Stay Sharp
+    supports: [Create]
+
+# Areas have quest: none. Each `supports` entry must be a Main Quest
+# or Side Quest declared above.
+areas:
+  - name: Garden
+    supports: [Maintain Home]
+  - name: Workshop
+    supports: [Maintain Home]
+  - name: Reading
+    supports: [Stay Sharp]
+  - name: Cooking
+    supports: [Health]
+  - name: Walking
+    supports: [Health]
+  - name: Letters
+    supports: [Connect]
+
+# Project titles are reused as note titles. Each Project supports one
+# or more Quests.
+projects:
+  - title: Build Raised Beds
+    supports: [Maintain Home]
+  - title: Replace Water Heater
+    supports: [Maintain Home]
+  - title: Publish First Zine
+    supports: [Create]
+  - title: Plan Family Reunion
+    supports: [Connect]
+  - title: Run a 5K
+    supports: [Health]
+  - title: Refactor Bookshelf
+    supports: [Stay Sharp, Maintain Home]
+
+# Resources are referenced from Areas/Projects via wikilinks. `parents`
+# lists Areas the resource is conceptually under (used to seed an
+# incoming wikilink so the Resource isn't an orphan).
+resources:
+  - title: Lawn Mower Manual
+    parents: [Garden]
+  - title: Sourdough Notes
+    parents: [Cooking]
+  - title: Trail Map
+    parents: [Walking]
+  - title: Zine Layout Cheatsheet
+    parents: [Reading]
+  - title: Water Heater Models
+    parents: [Workshop]
+
+# Vocabulary used by the body renderer.
+task_verbs:
+  - Buy
+  - Call
+  - Email
+  - Schedule
+  - Read
+  - Draft
+  - Review
+  - Test
+  - Replace
+  - Service
+  - Plan
+  - Measure
+  - Sketch
+  - Confirm
+
+# Topic-organized vault directories (used by location_kind: topic).
+# These are intentionally not PARA top-levels.
+topic_dirs:
+  - Home
+  - Work
+  - Family
+  - Hobby
+  - Misc
+
+# Common Obsidian-style tags for frontmatter_kind: obsidian_only.
+obsidian_tags:
+  - inbox
+  - todo
+  - idea
+  - reference
+  - draft

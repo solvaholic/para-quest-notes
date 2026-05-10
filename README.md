@@ -35,16 +35,37 @@ The workflows preserve that reasoning, locally.
 
 ## Status / roadmap
 
-- [x] Phase 0: repo bootstrap (you are here)
-- [ ] Phase 1: thin runtime adapter (Ollama client, Step/Workflow,
+- [x] Phase 0: repo bootstrap
+- [x] Phase 1: thin runtime adapter (Ollama client, Step/Workflow,
       escalation, config + vault discovery)
-- [ ] Phase 2: synthetic corpus generator (also serves as demo vault)
+- [x] Phase 2: synthetic corpus generator (also serves as demo vault —
+      see [`docs/corpus.md`](docs/corpus.md) and
+      [`samples/vault/`](samples/vault/))
 - [ ] Phase 3: pilot workflow - `pqn-ingest` (inbox → PARA + Quest)
 - [ ] Phase 4: per-step eval harness (matrix over models / prompts)
 - [ ] Phase 5: translate remaining workflows (`validate`, `create`,
       `archive`, `daily`)
 - [ ] Phase 6: polish + v0.1 release
 - [ ] Phase 7 (deferred): agent SKILL.md wrappers
+
+## Try the sample vault
+
+A small (~30-note) sample vault lives at
+[`samples/vault/`](samples/vault/) for poking at the workflows
+without involving any real notes:
+
+```bash
+uv sync --dev
+
+# Inspect the committed sample vault
+ls samples/vault/
+
+# Or generate a fresh one with different seed/options
+uv run python -m para_quest_notes.corpus \
+    --out ./demo-vault --seed 42 --projects 8 --inbox 6 --daily 14
+```
+
+See [`docs/corpus.md`](docs/corpus.md) for the full shape taxonomy.
 
 ## Install (eventually)
 
