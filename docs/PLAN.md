@@ -237,6 +237,12 @@ documented JSON contract.
   choice with real data.
 - **Ollama model availability churn.** Pin exact tags in a
   `models.yaml`; eval reports name the exact tag used.
+- **Models silently return empty strings under `format="json"`.**
+  Observed in Phase 1 smoke testing: a trivial `'Reply with {"ok": true}'`
+  prompt produced valid JSON from some models and an empty response from
+  others. Eval harness (Phase 4) should include a cheap "did the model
+  return *any* parseable JSON?" judge as the first gate, before scoring
+  semantic correctness. Worth a per-model "responds at all" baseline.
 
 ## Out of scope (for v1)
 
