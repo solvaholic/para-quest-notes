@@ -1,0 +1,65 @@
+[project]
+name = "para-quest-notes"
+version = "0.0.1"
+description = "Local, scripted workflows for managing PARA + Quest markdown notes with small LLMs via Ollama."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [{ name = "solvaholic" }]
+keywords = ["notes", "markdown", "para", "quest", "ollama", "obsidian", "llm"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Topic :: Office/Business",
+]
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+# CLI entry points are added per-workflow as they land.
+# Phase 1 will add `pqn-ingest` once the ingest workflow ships.
+[project.scripts]
+
+[project.urls]
+Homepage = "https://github.com/solvaholic/para-quest-notes"
+Repository = "https://github.com/solvaholic/para-quest-notes"
+Issues = "https://github.com/solvaholic/para-quest-notes/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/para_quest_notes"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_unused_ignores = true
+warn_return_any = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
