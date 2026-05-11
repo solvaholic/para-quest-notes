@@ -1,0 +1,25 @@
+# Clean project: time-bound, has tasks, clearly serves Health.
+id: clean-project-5k
+title: "Train for 5K"
+body: |
+  Goal: run a 5K in 12 weeks. Couch-to-5K plan, three runs a week,
+  one long run on Saturdays. Need to buy proper shoes by week two.
+
+  ## Tasks
+  - [ ] Pick a race date
+  - [ ] Buy running shoes
+  - [ ] Print the 12-week plan
+quest_catalog:
+  - { name: Health,  kind: main }
+  - { name: Connect, kind: main }
+  - { name: Create,  kind: main }
+expected:
+  classify_para:
+    type: project
+  pick_quest:
+    acceptable:
+      - [Health]
+  propose_filename:
+    canonical: "train for 5k"
+  plan_destination:
+    destination: "projects/Train For 5k.md"

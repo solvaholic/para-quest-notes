@@ -1,0 +1,21 @@
+# Clean resource: reference info, no Quest required (skipped).
+id: clean-resource-sourdough
+title: "Sourdough Hydration Notes"
+body: |
+  Hydration percentages and how they change crumb structure.
+
+  - 65%: tight crumb, easier to handle
+  - 75%: open crumb, sticky dough
+  - 85%: very open, needs experience
+
+  Reference for picking a target before mixing.
+quest_catalog: []
+expected:
+  classify_para:
+    type: resource
+  pick_quest:
+    skipped: true
+  propose_filename:
+    canonical: "sourdough hydration notes"
+  plan_destination:
+    destination: "resources/Sourdough Hydration Notes.md"

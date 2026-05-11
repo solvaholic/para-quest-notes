@@ -64,8 +64,10 @@ See `docs/PLAN.md` for the full breakdown.
 - [x] **Phase 1** - thin adapter
 - [x] **Phase 2** - synthetic corpus generator (see
   [`docs/corpus.md`](docs/corpus.md), [`samples/vault/`](samples/vault/))
-- [ ] **Phase 3** - pilot workflow (`pqn-ingest`) ✅ landed; eval pending
-- [ ] **Phase 4** - eval harness
+- [x] **Phase 3** - pilot workflow (`pqn-ingest`)
+- [ ] **Phase 4** - eval harness ✅ landed (see
+  [`docs/eval.md`](docs/eval.md), [`eval/fixtures/`](eval/fixtures/));
+  fixture set still small (~7), grow toward ~30 before declaring done
 - [ ] **Phase 5** - translate remaining workflows
 - [ ] **Phase 6** - polish + v0.1
 - [ ] **Phase 7** (deferred) - agent SKILL.md wrappers

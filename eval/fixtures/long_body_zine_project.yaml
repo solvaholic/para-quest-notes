@@ -1,0 +1,34 @@
+# LLM-friendly long body: enough context that any reasonable model
+# should classify and route it correctly. Good "easy" baseline.
+id: long-body-zine-project
+title: "Publish First Zine"
+body: |
+  I want to publish a 24-page zine by the end of the quarter. Theme
+  is "small repairs" — short essays plus photos of fixes I've done
+  around the house this year. Print run of 50 copies on the local
+  riso printer.
+
+  ## Plan
+  - Outline 8 pieces by week 2
+  - First drafts by week 6
+  - Layout in Affinity Publisher week 8
+  - Print and trim week 10
+
+  ## Open questions
+  - Cover stock? Need to ask the print shop.
+  - Distribution: just give to friends, or list on the local zine
+    library shelf?
+quest_catalog:
+  - { name: Create,        kind: main }
+  - { name: Connect,       kind: main }
+  - { name: Maintain Home, kind: side }
+expected:
+  classify_para:
+    type: project
+  pick_quest:
+    acceptable:
+      - [Create]
+  propose_filename:
+    canonical: "publish first zine"
+  plan_destination:
+    destination: "projects/Publish First Zine.md"

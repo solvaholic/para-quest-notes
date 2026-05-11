@@ -1,0 +1,23 @@
+# Filename collision-prone: a generic title that an LLM might keep
+# verbatim. We just want it Title-Cased; nothing else in the test
+# vault collides because we don't have a real vault here.
+id: filename-generic-notes
+title: "notes"
+body: |
+  Random thoughts to organize later. Probably about the workshop
+  reorg — bins for fasteners, pegboard for hand tools, label maker
+  for everything.
+quest_catalog:
+  - { name: Maintain Home, kind: side }
+  - { name: Create,        kind: main }
+expected:
+  classify_para:
+    type: resource
+  pick_quest:
+    skipped: true
+  propose_filename:
+    # Models tend to keep the title; canonical match means casing
+    # doesn't matter, but the word should be there.
+    canonical: "notes"
+  plan_destination:
+    destination: "resources/Notes.md"

@@ -106,3 +106,34 @@ class OllamaClient:
         raise LLMError(
             f"ollama generate failed after {self.retries} attempts: {last_exc!r}"
         ) from last_exc
+
+    def unload(self, model: str | None = None) -> bool:
+        """Tell Ollama to unload ``model`` immediately.
+
+        Posts an empty generate with ``keep_alive: 0`` — the documented
+        way to drop a model from memory without restarting the server.
+        See https://github.com/ollama/ollama/blob/main/docs/api.md.
+
+        Returns True on success, False on failure (best-effort: callers
+        should not abort an eval run if unload fails). Local Ollama is
+        memory-bound, so the eval runner uses this to free a model
+        before loading the next one.
+        """
+        chosen_model = model or self.default_model
+        body = {
+            "model": chosen_model,
+            "prompt": "",
+            "stream": False,
+            "keep_alive": 0,
+        }
+        url = f"{self.base_url}/api/generate"
+        data = json.dumps(body).encode("utf-8")
+        try:
+            req = urllib.request.Request(
+                url, data=data, headers={"Content-Type": "application/json"}
+            )
+            with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
+                resp.read()  # drain
+            return True
+        except (urllib.error.URLError, TimeoutError):
+            return False

@@ -1,0 +1,18 @@
+# Minimal body: a one-line note. Models often over-classify these.
+# We expect 'resource' (no outcome implied, no tasks).
+id: minimal-body-link-dump
+title: "Lawn Mower Manual Link"
+body: |
+  https://example.com/manuals/lawnmower-x200.pdf
+quest_catalog:
+  - { name: Maintain Home, kind: side }
+  - { name: Health,        kind: main }
+expected:
+  classify_para:
+    type: resource
+  pick_quest:
+    skipped: true
+  propose_filename:
+    canonical: "lawn mower manual link"
+  plan_destination:
+    destination: "resources/Lawn Mower Manual Link.md"

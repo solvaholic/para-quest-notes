@@ -201,15 +201,20 @@ Phases are dependency-ordered. No time estimates.
   [`docs/workflows/ingest.md`](workflows/ingest.md). That's the
   future agent interface too.
 
-### Phase 4 - Eval harness
+### Phase 4 - Eval harness ✅ landed (fixture set growing)
 - `eval/fixtures/` - hand-labeled subset of generated corpus with
   per-step expected outputs (PARA class, Quest pick, filename, dest).
 - `runner.py` matrix: `(model, temperature, prompt_version) x fixture`.
+  Models run **sequentially** with explicit Ollama unload between
+  them (local memory constraint; hosted inference is the future
+  parallelization escape hatch).
 - `judges.py`: exact-match for class/dest, normalized-match for
   filename, soft-match (Jaccard or LLM-judge as fallback) for Quest
   pick when multiple are defensible.
 - `report.py`: markdown summary + per-fixture trace links.
 - Eval runs live under `eval/runs/<timestamp>/`.
+- See [`docs/eval.md`](eval.md). Landed with ~7 starter fixtures;
+  grow toward ~30 before declaring Phase 4 done.
 
 ### Phase 5 - Translate remaining skills
 Once pilot + eval are green, translate in this order (cheapest first):

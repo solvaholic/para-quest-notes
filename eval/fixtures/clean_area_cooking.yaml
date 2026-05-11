@@ -1,0 +1,19 @@
+# Clean area: ongoing responsibility, no end state, no tasks.
+id: clean-area-cooking
+title: "Home Cooking"
+body: |
+  Things I want to keep getting better at in the kitchen. Weeknight
+  meals, rotating a few staples, trying one new recipe a week.
+quest_catalog:
+  - { name: Health,  kind: main }
+  - { name: Connect, kind: main }
+expected:
+  classify_para:
+    type: area
+  pick_quest:
+    acceptable:
+      - [Health]
+  propose_filename:
+    canonical: "home cooking"
+  plan_destination:
+    destination: "areas/Home Cooking.md"

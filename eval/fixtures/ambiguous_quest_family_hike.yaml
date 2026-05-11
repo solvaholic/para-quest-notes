@@ -1,0 +1,30 @@
+# Ambiguous Quest: a project that defensibly serves multiple Quests.
+# Either Health alone or {Health, Connect} should be acceptable —
+# it's a family hike that's both fitness and family time.
+id: ambiguous-quest-family-hike
+title: "Plan Family Hike Day"
+body: |
+  Saturday hike with the kids. Pick a trail with a payoff (waterfall,
+  view) and pack lunch. Goal: get everyone outside for a few hours
+  and burn off some energy.
+
+  ## Tasks
+  - [ ] Pick a trail
+  - [ ] Check weather Friday
+  - [ ] Pack lunches Friday night
+quest_catalog:
+  - { name: Health,  kind: main }
+  - { name: Connect, kind: main }
+  - { name: Create,  kind: main }
+expected:
+  classify_para:
+    type: project
+  pick_quest:
+    acceptable:
+      - [Health]
+      - [Connect]
+      - [Health, Connect]
+  propose_filename:
+    canonical: "plan family hike day"
+  plan_destination:
+    destination: "projects/Plan Family Hike Day.md"
