@@ -12,13 +12,13 @@ from __future__ import annotations
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.prompts import Prompt
 from para_quest_notes.adapter.step import StepContext, StepResult
+from para_quest_notes.vault.quests import Quest
 from para_quest_notes.workflows.ingest_inbox.steps._llm import (
     call_llm_json,
     confidence_ok,
     require,
 )
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
-from para_quest_notes.workflows.ingest_inbox.vault_quests import Quest
 
 BODY_PREVIEW_CHARS = 2000
 

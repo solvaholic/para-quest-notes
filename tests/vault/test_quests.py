@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from para_quest_notes.workflows.ingest_inbox.vault_quests import discover_quests
+from para_quest_notes.vault.quests import discover_quests
 
 
 def _write(p: Path, text: str) -> None:

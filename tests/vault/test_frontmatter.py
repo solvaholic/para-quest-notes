@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from para_quest_notes.workflows.ingest_inbox.frontmatter import merge, parse
+from para_quest_notes.vault.frontmatter import merge, parse
 
 
 def test_parse_no_frontmatter():

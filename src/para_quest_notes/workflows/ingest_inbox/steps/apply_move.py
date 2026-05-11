@@ -25,8 +25,8 @@ from typing import Any
 
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.step import StepContext, StepResult
+from para_quest_notes.vault.frontmatter import ParsedNote, merge
 from para_quest_notes.workflows.ingest_inbox.contract import AppliedChange
-from para_quest_notes.workflows.ingest_inbox.frontmatter import ParsedNote, merge
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
 
 
@@ -50,6 +50,11 @@ class ApplyMove:
         dest = vault / destination_rel
         para_type = ctx.scratchpad.get("para_type") or ""
         quests: list[str] = ctx.scratchpad.get("quests", [])
+
+        # Pre-flight collision detection happens in `propose_filename`
+        # (which delegates to `validate.api.check_basename_available`),
+        # so by the time we get here the destination basename is known
+        # to be unique vault-wide.
 
         new_fm = _build_frontmatter(scan.parsed.frontmatter, para_type, quests)
         old_stem = scan.source.stem

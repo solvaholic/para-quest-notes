@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from para_quest_notes.adapter.step import StepContext, StepResult
-from para_quest_notes.workflows.ingest_inbox.frontmatter import ParsedNote, parse
+from para_quest_notes.vault.frontmatter import ParsedNote, parse
 
 
 @dataclass

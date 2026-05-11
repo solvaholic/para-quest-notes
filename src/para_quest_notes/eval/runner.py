@@ -27,14 +27,14 @@ from para_quest_notes.adapter.step import StepContext
 from para_quest_notes.adapter.trace import TraceWriter
 from para_quest_notes.eval.fixtures import Fixture
 from para_quest_notes.eval.judges import Verdict, judge_responds, judge_step
-from para_quest_notes.workflows.ingest_inbox.frontmatter import ParsedNote
+from para_quest_notes.vault.frontmatter import ParsedNote
+from para_quest_notes.vault.quests import Quest
 from para_quest_notes.workflows.ingest_inbox.pipeline import PROMPTS_DIR
 from para_quest_notes.workflows.ingest_inbox.steps.classify_para import ClassifyPara
 from para_quest_notes.workflows.ingest_inbox.steps.pick_quest import PickQuest
 from para_quest_notes.workflows.ingest_inbox.steps.plan_destination import PlanDestination
 from para_quest_notes.workflows.ingest_inbox.steps.propose_filename import ProposeFilename
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
-from para_quest_notes.workflows.ingest_inbox.vault_quests import Quest
 
 # Steps we evaluate. ``scan_note`` and ``apply_move`` are pure and not
 # part of the LLM eval matrix (scan is fixture-driven; apply touches
