@@ -217,15 +217,41 @@ Phases are dependency-ordered. No time estimates.
   grow toward ~30 before declaring Phase 4 done.
 
 ### Phase 5 - Translate remaining skills
-Once pilot + eval are green, translate in this order (cheapest first):
-1. `validate-note-integrity` (no LLM, pure port) → `pqn-validate`.
-2. `create-note` (light LLM use) → `pqn-create`.
-3. `archive-note` (LLM for Outcome summarization) → `pqn-archive`.
-4. `daily-note-ingest` (mostly script, narrow LLM tiebreak) →
+
+**First slice landed** (shared-infra lift + `pqn-validate`):
+
+- Lifted `frontmatter.py` and `vault_quests.py` (now `vault/quests.py`)
+  out of `workflows/ingest_inbox/` into a shared
+  `src/para_quest_notes/vault/` package. Other workflows can import
+  these without reaching into a sibling workflow.
+- Added `adapter/cli.py` with a shared `build_base_parser()` so
+  `--vault`, `--config`, `--format` semantics stay consistent across
+  every `pqn-*` CLI. LLM workflows opt into `--model` via
+  `add_llm_args()`.
+- `pqn-validate` ships with three checks (`filename_uniqueness`,
+  `frontmatter_yaml`, `backmatter_yaml`) mirroring the legacy
+  `validate-note-integrity` SKILL. Read-only, no LLM. JSON contract
+  in [`docs/workflows/validate.md`](workflows/validate.md).
+- Library entry points: `validate_vault`, `validate_paths`,
+  `check_basename_available` in
+  `para_quest_notes.workflows.validate.api`.
+- `pqn-ingest`'s `propose_filename` step now delegates collision
+  detection to `check_basename_available` — single source of truth.
+
+**Remaining (re-plan after first slice):**
+
+1. `create-note` (light LLM use) → `pqn-create`.
+2. `archive-note` (LLM for Outcome summarization) → `pqn-archive`.
+3. `daily-note-ingest` (mostly script, narrow LLM tiebreak) →
    `pqn-daily`.
 
 Each gets the same: workflow + CLI entry point + per-step fixtures +
-documented JSON contract.
+documented JSON contract. Watch for prompt-template family explosion
+across `pqn-ingest` and `pqn-create` (both will likely have a
+`pick_quest`-style step) — share the prompt rather than copy-paste.
+The eval harness's `EVALUABLE_STEPS` tuple stays vault-wide for now;
+flip to per-workflow scoping the day `pqn-create` adds its first
+fixture.
 
 ### Phase 6 - Polish and release
 - README quickstart that runs end-to-end against the bundled sample

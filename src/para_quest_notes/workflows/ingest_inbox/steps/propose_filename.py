@@ -1,9 +1,9 @@
 """Step 4: propose_filename (LLM).
 
 LLM proposes a Title Case filename. We validate it locally (no slashes,
-.md suffix, non-empty), then check for collisions across the vault
-excluding ``archive/``. On collision the step escalates with
-candidate alternatives.
+.md suffix, non-empty), then ask :mod:`para_quest_notes.workflows.validate`
+whether the basename would collide with an existing note. On collision
+the step escalates with candidate alternatives.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from para_quest_notes.adapter.prompts import Prompt
 from para_quest_notes.adapter.step import StepContext, StepResult
 from para_quest_notes.workflows.ingest_inbox.steps._llm import call_llm_json, require
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
+from para_quest_notes.workflows.validate.api import check_basename_available
 
 # Allowed characters: letters, digits, spaces, and a small punctuation set.
 # Notably no underscore (rejects snake_case stems).
@@ -87,16 +88,15 @@ class ProposeFilename:
                 context={"filename": filename},
             )
 
-        collisions = _find_collisions(vault, filename, ignore=scan.source)
-        if collisions:
+        collision_issues = check_basename_available(vault, filename, ignore_path=scan.source)
+        if collision_issues:
+            issue = collision_issues[0]
+            existing = [{"filename": filename, "existing": rel} for rel in issue.related]
             raise EscalateToUser(
                 step=self.name,
                 reason="filename collides with existing note(s)",
-                options=[
-                    {"filename": filename, "existing": str(p.relative_to(vault).as_posix())}
-                    for p in collisions
-                ],
-                context={"reason": reason},
+                options=existing,
+                context={"reason": reason, "validate_message": issue.message},
             )
 
         ctx.scratchpad["filename"] = filename
@@ -105,20 +105,3 @@ class ProposeFilename:
             output={"filename": filename, "reason": reason},
             meta={"filename": filename},
         )
-
-
-def _find_collisions(vault: Path, filename: str, *, ignore: Path) -> list[Path]:
-    target_lower = filename.lower()
-    matches: list[Path] = []
-    for md in vault.rglob("*.md"):
-        try:
-            rel = md.relative_to(vault)
-        except ValueError:
-            continue
-        if rel.parts and rel.parts[0] == "archive":
-            continue
-        if md.resolve() == ignore.resolve():
-            continue
-        if md.name.lower() == target_lower:
-            matches.append(md)
-    return matches

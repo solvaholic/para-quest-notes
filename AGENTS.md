@@ -48,6 +48,8 @@ In order, before doing any work:
 para-quest-notes/
 ├── src/para_quest_notes/      # all production code
 │   ├── adapter/               # Phase 1: thin runtime (Ollama, Step, etc.)
+│   ├── vault/                 # Phase 5: shared vault helpers
+│   │                          #   (frontmatter parser, quest discovery)
 │   ├── workflows/<name>/      # one dir per workflow
 │   ├── corpus/                # Phase 2: synthetic note generator
 │   └── eval/                  # Phase 4: per-step eval harness
@@ -69,6 +71,13 @@ See `docs/PLAN.md` for the full breakdown.
   [`docs/eval.md`](docs/eval.md), [`eval/fixtures/`](eval/fixtures/));
   fixture set still small (~7), grow toward ~30 before declaring done
 - [ ] **Phase 5** - translate remaining workflows
+  - [x] shared-infra lift: `vault/` package (frontmatter + quests),
+    `adapter/cli.py` base parser
+  - [x] `pqn-validate` (no LLM), wired into `pqn-ingest` via
+    `validate.api.check_basename_available` (see
+    [`docs/workflows/validate.md`](docs/workflows/validate.md))
+  - [ ] `pqn-create`, `pqn-archive`, `pqn-daily` (re-plan after
+    validate lands)
 - [ ] **Phase 6** - polish + v0.1
 - [ ] **Phase 7** (deferred) - agent SKILL.md wrappers
 
