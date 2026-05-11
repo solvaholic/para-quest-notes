@@ -8,6 +8,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from para_quest_notes.adapter.cli import add_llm_args, build_base_parser
 from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.llm import OllamaClient
@@ -18,38 +19,21 @@ from para_quest_notes.workflows.ingest_inbox.pipeline import ingest_inbox
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
+    p = build_base_parser(
         prog="pqn-ingest",
         description="Triage notes from <vault>/inbox/ into PARA + Quest locations.",
     )
-    p.add_argument("--vault", type=Path, default=None, help="Path to the vault.")
+    add_llm_args(p)
     p.add_argument(
         "--apply",
         action="store_true",
         help="Apply moves and rewrites. Without this flag, runs as a dry-run.",
     )
     p.add_argument(
-        "--model",
-        default=None,
-        help="Override the default Ollama model for this run.",
-    )
-    p.add_argument(
-        "--format",
-        choices=("json", "text"),
-        default="text",
-        help="Output format. Default: text.",
-    )
-    p.add_argument(
         "--file",
         type=Path,
         action="append",
         help="Process only this file (relative to the vault or absolute). Repeatable.",
-    )
-    p.add_argument(
-        "--config",
-        type=Path,
-        default=None,
-        help="Path to config.yaml (overrides the XDG default).",
     )
     return p
 
