@@ -279,6 +279,66 @@ def test_propose_filename_appends_md_suffix(tmp_path: Path):
     assert out.output["filename"] == "Already Title.md"
 
 
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "BeginMovementEffortWill.md",  # PascalCase
+        "buildRaisedBeds.md",  # camelCase
+        "iPhoneNotes.md",  # PascalCase with embedded acronym
+    ],
+)
+def test_propose_filename_rejects_pascal_or_camel_case(tmp_path: Path, bad: str):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# Raw\n")
+    llm = FakeLLM()
+    llm.queue(json.dumps({"filename": bad}))
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    with pytest.raises(EscalateToUser) as exc:
+        ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert "case" in exc.value.reason.lower()
+
+
+def test_propose_filename_rejects_snake_case(tmp_path: Path):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# Raw\n")
+    llm = FakeLLM()
+    llm.queue(json.dumps({"filename": "build_raised_beds.md"}))
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    with pytest.raises(EscalateToUser) as exc:
+        ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    # Snake case fails the character regex, not the title-case check.
+    assert "disallowed" in exc.value.reason
+
+
+@pytest.mark.parametrize(
+    "good",
+    [
+        "Run a 5K.md",  # digits + lowercase article
+        "Health.md",  # single word
+        "Notes on Sourdough.md",  # multi-word with prepositions
+        "Build Raised Beds.md",
+        "Plan Family Reunion.md",
+    ],
+)
+def test_propose_filename_accepts_real_title_case(tmp_path: Path, good: str):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# Raw\n")
+    llm = FakeLLM()
+    llm.queue(json.dumps({"filename": good}))
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    out = ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert out.output["filename"] == good
+
+
 # ---- plan_destination ---------------------------------------------------
 
 

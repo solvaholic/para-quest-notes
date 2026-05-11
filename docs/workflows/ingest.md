@@ -124,7 +124,9 @@ caller; `context` carries free-form state useful for triage.
   [`docs/notes-system.md`](../notes-system.md), `supports:` is
   optional on resources.
 - **Filename validation** rejects path separators and disallowed
-  characters; appends `.md` if missing.
+  characters; appends `.md` if missing. Also rejects camelCase /
+  PascalCase / snake_case stems — Title Case requires words separated
+  by spaces (e.g., `Run a 5K.md`, not `RunA5K.md`).
 - **Collisions** outside `archive/` escalate from `propose_filename`
   with the colliding path in `options`.
 - **Atomic move.** Uses `Path.replace`; safe within a single

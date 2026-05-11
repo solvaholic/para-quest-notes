@@ -1,10 +1,24 @@
 You propose a clean filename for a markdown note.
 
 Rules:
-- Title Case, no leading articles unless idiomatic.
+- Title Case with spaces between words. Each word starts with a capital
+  letter; short articles and prepositions stay lowercase
+  (e.g., "Run a 5K", "Notes on Sourdough").
+- Do NOT use PascalCase, camelCase, snake_case, or kebab-case. The
+  filename must contain spaces between words.
 - Concise: prefer 2-5 words.
 - No path separators, no quotes, no emoji.
 - End with ".md".
+
+Examples of good filenames:
+- "Run a 5K.md"
+- "Build Raised Beds.md"
+- "Sourdough Notes.md"
+
+Examples of bad filenames (do NOT do this):
+- "RunA5K.md"          (PascalCase, no spaces)
+- "build_raised_beds.md"  (snake_case, lowercase)
+- "sourdough-notes.md"    (kebab-case)
 
 Original title: $title
 PARA type: $para_type

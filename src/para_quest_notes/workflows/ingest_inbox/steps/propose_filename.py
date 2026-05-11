@@ -17,9 +17,23 @@ from para_quest_notes.adapter.step import StepContext, StepResult
 from para_quest_notes.workflows.ingest_inbox.steps._llm import call_llm_json, require
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
 
-# Conservative validator: word chars, spaces, hyphens, parens, apostrophes.
-_FILENAME_OK = re.compile(r"^[\w][\w \-()'.,&]*\.md$")
+# Allowed characters: letters, digits, spaces, and a small punctuation set.
+# Notably no underscore (rejects snake_case stems).
+_FILENAME_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 \-()'.,&]*\.md$")
+# A lowercase letter immediately followed by an uppercase letter is the
+# tell of camelCase / PascalCase. Title Case puts a space between words.
+_INTERIOR_CAPS = re.compile(r"[a-z][A-Z]")
 BODY_PREVIEW_CHARS = 2000
+
+
+def _looks_like_title_case(stem: str) -> bool:
+    """Reject obvious camelCase / PascalCase stems.
+
+    We don't try to enforce *every* Title Case rule (articles, prepositions,
+    etc.) — just the structural one that catches the common LLM failure
+    mode: jamming the title into one CapWord.
+    """
+    return _INTERIOR_CAPS.search(stem) is None
 
 
 class ProposeFilename:
@@ -61,6 +75,14 @@ class ProposeFilename:
             raise EscalateToUser(
                 step=self.name,
                 reason="filename has disallowed characters",
+                options=[],
+                context={"filename": filename},
+            )
+        if not _looks_like_title_case(filename[:-3]):
+            raise EscalateToUser(
+                step=self.name,
+                reason="filename looks like camelCase or PascalCase; use Title Case "
+                "(words separated by spaces)",
                 options=[],
                 context={"filename": filename},
             )
