@@ -101,7 +101,7 @@ para-quest-notes/
 │   │       ├── cli.py              # entry-point: pqn-ingest
 │   │       ├── pipeline.py
 │   │       ├── steps/
-│   │       │   ├── classify_location.py    # location_kind detection, pure code
+│   │       │   ├── scan_note.py           # read frontmatter + body, find attachments
 │   │       │   ├── classify_para.py       # LLM step
 │   │       │   ├── pick_quest.py          # LLM step
 │   │       │   ├── propose_filename.py    # LLM step
@@ -176,23 +176,30 @@ Phases are dependency-ordered. No time estimates.
 - `python -m para_quest_notes.corpus` only — no `pqn-corpus` console
   script in v1 (the audience is maintainers + README quickstart, not
   end users with their own vaults).
-- **Note for Phase 3:** the pilot's location-detection step should be
-  named after what it does (e.g., `classify_location.py`). The
-  architecture sketch above used to call it `detect_shape.py` with a
-  `gen1/gen2/gen3` reference — that's solvaholic-specific heritage
-  and is intentionally absent from the public product.
+- **Note for Phase 3:** the pilot's first step is `scan_note.py`
+  (pure: read frontmatter + body, detect sibling attachments). The
+  sketch and an earlier draft of this section called it
+  `classify_location.py` — but for an inbox-only workflow the
+  location is always inbox, so a "classify" verb would have been
+  dishonest. An older revision of the sketch used `detect_shape.py`
+  with a `gen1/gen2/gen3` reference — that's solvaholic-specific
+  heritage and is intentionally absent from the public product.
 
-### Phase 3 - Pilot workflow: `ingest_inbox`
-- Translate the existing `ingest-inbox-notes` SKILL.md into discrete
-  steps (see steps/ in sketch above). Each LLM step has its own
-  prompt and JSON output schema.
+### Phase 3 - Pilot workflow: `ingest_inbox` ✅
+- Translated the legacy `ingest-inbox-notes` SKILL into discrete
+  steps: `scan_note` → `classify_para` → `pick_quest` →
+  `propose_filename` → `plan_destination` → `apply_move`. Each LLM
+  step has its own prompt and validates its JSON output.
 - CLI entry point `pqn-ingest`:
-  `pqn-ingest [--vault PATH] [--apply] [--model ...] [--format json|text]`.
-- Default is dry-run; `--apply` performs moves + rename rewrites.
+  `pqn-ingest [--vault PATH] [--apply] [--model ...] [--format json|text] [--file PATH]`.
+- Default is dry-run; `--apply` performs moves, attachment moves,
+  frontmatter merge, and incoming-wikilink rewrites across the vault
+  excluding `archive/`.
 - Escalation payload includes: file, step that escalated, reason,
   candidate options for the user.
-- Document the JSON output contract (this is the future agent
-  interface too).
+- JSON output contract documented in
+  [`docs/workflows/ingest.md`](workflows/ingest.md). That's the
+  future agent interface too.
 
 ### Phase 4 - Eval harness
 - `eval/fixtures/` - hand-labeled subset of generated corpus with

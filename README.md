@@ -68,6 +68,62 @@ uv run python -m para_quest_notes.corpus \
 
 See [`docs/corpus.md`](docs/corpus.md) for the full shape taxonomy.
 
+## Try the pilot (`pqn-ingest`)
+
+Phase 3 ships a working pilot: `pqn-ingest` triages notes from
+`<vault>/inbox/` into PARA + Quest locations. Defaults to dry-run;
+`--apply` does the actual moves.
+
+You'll need [Ollama](https://ollama.com) running locally with at
+least one model pulled. The default is `granite4.1:30b` (~18 GB);
+override with `--model` if you have something smaller. Examples
+below use `llama3.2:3b` because it's tiny; pick whatever you've got.
+
+```bash
+# 1. Set up the repo
+git clone https://github.com/solvaholic/para-quest-notes.git
+cd para-quest-notes
+uv sync --dev
+
+# 2. Make a vault to play with (don't risk your real notes yet)
+cp -R samples/vault /tmp/demo-vault
+
+# 3. Dry-run: see what pqn-ingest would do, touch nothing
+uv run pqn-ingest --vault /tmp/demo-vault --model llama3.2:3b
+
+# 4. Inspect one file at a time, JSON output for piping to jq
+uv run pqn-ingest --vault /tmp/demo-vault --model llama3.2:3b \
+    --file inbox/Possible\ trial\ smile.md --format json | jq
+
+# 5. When you're convinced, --apply does the moves
+uv run pqn-ingest --vault /tmp/demo-vault --model llama3.2:3b --apply
+```
+
+Each run writes a JSONL trace under
+`~/.local/state/para-quest-notes/runs/`; the path is printed in text
+output. Read it to see exactly which prompt produced which decision.
+
+### Trying it on your own notes
+
+`pqn-ingest` keys off vault structure: any directory with both
+`areas/` and `projects/` at its root counts as a vault. Notes to
+triage go in `<vault>/inbox/` as `.md` files. Vault discovery resolves
+in this order: `--vault PATH` → `PARA_QUEST_VAULT` env var → walking
+up from `cwd` → `vault:` in `~/.config/para-quest-notes/config.yaml`.
+
+Two reasons to keep `--apply` off until you trust a given model:
+
+- The pilot **rewrites incoming wikilinks** across the vault when it
+  renames a note (skipping `archive/`). Reverting that by hand is
+  tedious.
+- Sample-vault inbox notes are Faker-generated nonsense; the LLM
+  will often escalate. That's fine for adapter testing, less great
+  for "look how clever this is." Hand-write a few plausible inbox
+  notes for a real demo.
+
+See [`docs/workflows/ingest.md`](docs/workflows/ingest.md) for the
+full JSON contract, escalation shape, and known limitations.
+
 ## Install (eventually)
 
 ```bash
