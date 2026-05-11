@@ -1,8 +1,9 @@
 # Eval harness
 
 Per-step golden-judging eval for `pqn-ingest` (Phase 4 in
-[`PLAN.md`](PLAN.md)). Maintainer tool — no `pqn-eval` console
-script; invoke via `python -m para_quest_notes.eval`.
+[`PLAN.md`](PLAN.md)). Exposed as the `pqn-eval` console script so
+users can compare model choices on their own; also runnable via
+`python -m para_quest_notes.eval`.
 
 ## What it does
 
@@ -45,22 +46,36 @@ this loop locally — it will thrash or OOM. Hosted inference
 ```bash
 # CI-safe: FakeLLM returns each fixture's expected JSON. Verifies
 # the harness end-to-end without touching Ollama.
-uv run python -m para_quest_notes.eval --fake
+pqn-eval --fake
 
 # Real Ollama, one or more models, run sequentially.
-uv run python -m para_quest_notes.eval --models granite4.1:30b,qwen3:30b
+pqn-eval --models granite4.1:30b,qwen3:30b
 
 # Subset of steps.
-uv run python -m para_quest_notes.eval --fake --steps classify_para,pick_quest
+pqn-eval --fake --steps classify_para,pick_quest
 
 # Custom fixture set or output dir.
-uv run python -m para_quest_notes.eval --fake \
+pqn-eval --fake \
   --fixtures path/to/fixtures \
   --out /tmp/eval-run
 ```
 
+(All examples also work as `uv run python -m para_quest_notes.eval ...`
+when the package isn't installed.)
+
 Exit code: `0` if every cell passed, `1` otherwise, `2` if no
 fixtures were found.
+
+## Report sections
+
+`report.md` contains:
+
+- **Responds-at-all baseline** — % of LLM cells that emitted parseable JSON.
+- **Performance** — per model: LLM-cell count, total wall, mean / p50 / p95 / max latency.
+  Computed from per-cell `latency_ms` (LLM steps only; pure-code steps excluded).
+  Use this to spot the "gemma3:27b takes 13m, granite4.1:30b takes 1.5m" gap at a glance.
+- **Accuracy by step** — pass/total per (model, step) plus an Overall column.
+- **Per-step detail** — every cell with verdict and reason.
 
 ## Fixtures
 

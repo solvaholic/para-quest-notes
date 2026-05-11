@@ -25,7 +25,10 @@ def _summary() -> RunSummary:
             fixture_id="fx1",
             step="classify_para",
             run=StepRunResult(
-                step="classify_para", output={"type": "project"}, raw_text='{"type":"project"}'
+                step="classify_para",
+                output={"type": "project"},
+                raw_text='{"type":"project"}',
+                latency_ms=2500,
             ),
             verdict=Verdict(step="classify_para", ok=True),
             responds=Verdict(step="responds", ok=True),
@@ -36,7 +39,10 @@ def _summary() -> RunSummary:
             fixture_id="fx2",
             step="classify_para",
             run=StepRunResult(
-                step="classify_para", output={"type": "area"}, raw_text='{"type":"area"}'
+                step="classify_para",
+                output={"type": "area"},
+                raw_text='{"type":"area"}',
+                latency_ms=4500,
             ),
             verdict=Verdict(
                 step="classify_para", ok=False, reason="expected 'project', got 'area'"
@@ -86,3 +92,33 @@ def test_markdown_handles_empty_summary() -> None:
     md = render_markdown(s)
     assert "_No models in run._" in md
     assert "_No cells._" in md
+
+
+def test_markdown_includes_performance_section() -> None:
+    md = render_markdown(_summary())
+    assert "## Performance" in md
+    # model-a has two LLM cells with non-zero latency
+    assert "2 |" in md  # LLM-cell count for model-a
+    # Total of 7000 ms should render as seconds
+    assert "7.00 s" in md
+    # model-b has no non-zero latency cells
+    assert "_n/a_" in md
+
+
+def test_fmt_duration_units() -> None:
+    from para_quest_notes.eval.report import _fmt_duration_ms
+
+    assert _fmt_duration_ms(750) == "750 ms"
+    assert _fmt_duration_ms(1500) == "1.50 s"
+    assert _fmt_duration_ms(90_000) == "1m 30.0s"
+    assert _fmt_duration_ms(13 * 60_000) == "13m 0.0s"
+
+
+def test_percentile_basic() -> None:
+    from para_quest_notes.eval.report import _percentile
+
+    assert _percentile([], 50) == 0.0
+    assert _percentile([42], 95) == 42.0
+    assert _percentile([1, 2, 3, 4, 5], 50) == 3.0
+    # p95 of 1..100 lands near the top
+    assert 94.0 <= _percentile(list(range(1, 101)), 95) <= 96.0

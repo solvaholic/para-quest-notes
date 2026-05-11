@@ -68,6 +68,38 @@ def render_markdown(summary: RunSummary) -> str:
             buf.append(f"| `{model}` | {cell} |")
     buf.append("")
 
+    # Performance per model: total wall time, per-cell latency stats.
+    # Wall = sum of per-cell latencies (LLM steps only). For local
+    # Ollama runs this approximates the time the model held the GPU/CPU
+    # for this run; pure-code steps (latency_ms == 0) are excluded.
+    buf.append("## Performance")
+    buf.append("")
+    buf.append("Per-model wall time and latency, computed from per-cell `latency_ms`")
+    buf.append("(LLM steps only; pure-code steps like `plan_destination` are excluded).")
+    buf.append("")
+    if not summary.models:
+        buf.append("_No models in run._")
+    else:
+        buf.append("| Model | LLM cells | Total | Mean | p50 | p95 | Max |")
+        buf.append("|---|---:|---:|---:|---:|---:|---:|")
+        for model in summary.models:
+            lats = [
+                c.run.latency_ms for c in summary.cells if c.model == model and c.run.latency_ms > 0
+            ]
+            buf.append(
+                "| `{m}` | {n} | {tot} | {mean} | {p50} | {p95} | {mx} |".format(
+                    m=model,
+                    n=len(lats),
+                    tot=_fmt_duration_ms(sum(lats)) if lats else "_n/a_",
+                    mean=_fmt_duration_ms(sum(lats) / len(lats)) if lats else "_n/a_",
+                    p50=_fmt_duration_ms(_percentile(lats, 50)) if lats else "_n/a_",
+                    p95=_fmt_duration_ms(_percentile(lats, 95)) if lats else "_n/a_",
+                    mx=_fmt_duration_ms(max(lats)) if lats else "_n/a_",
+                )
+            )
+    buf.append("")
+
+    # Summary matrix.
     buf.append("## Accuracy by step")
     buf.append("")
     if not steps_present or not summary.models:
@@ -166,6 +198,31 @@ def _pct(num: int, den: int) -> str:
     if den == 0:
         return "0%"
     return f"{(100 * num / den):.0f}%"
+
+
+def _percentile(values: list[int], pct: float) -> float:
+    if not values:
+        return 0.0
+    s = sorted(values)
+    if len(s) == 1:
+        return float(s[0])
+    # Linear interpolation between closest ranks.
+    k = (len(s) - 1) * (pct / 100.0)
+    lo = int(k)
+    hi = min(lo + 1, len(s) - 1)
+    frac = k - lo
+    return s[lo] + (s[hi] - s[lo]) * frac
+
+
+def _fmt_duration_ms(ms: float) -> str:
+    """Human-friendly duration. Picks unit so a reviewer can eyeball ratios."""
+    if ms < 1000:
+        return f"{ms:.0f} ms"
+    secs = ms / 1000.0
+    if secs < 60:
+        return f"{secs:.2f} s"
+    mins, secs = divmod(secs, 60)
+    return f"{int(mins)}m {secs:0.1f}s"
 
 
 def _escape(s: str) -> str:

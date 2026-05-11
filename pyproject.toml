@@ -27,6 +27,7 @@ dependencies = [
 # CLI entry points are added per-workflow as they land.
 [project.scripts]
 pqn-ingest = "para_quest_notes.workflows.ingest_inbox.cli:main"
+pqn-eval = "para_quest_notes.eval.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/solvaholic/para-quest-notes"
