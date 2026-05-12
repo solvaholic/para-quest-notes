@@ -11,13 +11,13 @@ from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.fake_llm import FakeLLM
 from para_quest_notes.adapter.prompts import Prompt
 from para_quest_notes.adapter.step import StepContext
+from para_quest_notes.vault.quests import Quest
 from para_quest_notes.workflows.ingest_inbox.steps.apply_move import ApplyMove
 from para_quest_notes.workflows.ingest_inbox.steps.classify_para import ClassifyPara
 from para_quest_notes.workflows.ingest_inbox.steps.pick_quest import PickQuest
 from para_quest_notes.workflows.ingest_inbox.steps.plan_destination import PlanDestination
 from para_quest_notes.workflows.ingest_inbox.steps.propose_filename import ProposeFilename
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanNote
-from para_quest_notes.workflows.ingest_inbox.vault_quests import Quest
 
 
 def _ctx(vault: Path, llm: FakeLLM | None = None) -> StepContext:

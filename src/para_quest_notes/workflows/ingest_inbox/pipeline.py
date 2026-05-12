@@ -15,6 +15,7 @@ from para_quest_notes.adapter.config import Config
 from para_quest_notes.adapter.prompts import PromptLoader
 from para_quest_notes.adapter.step import Workflow, WorkflowResult
 from para_quest_notes.adapter.trace import TraceWriter
+from para_quest_notes.vault.quests import Quest, discover_quests
 from para_quest_notes.workflows.ingest_inbox.contract import (
     AppliedChange,
     Decisions,
@@ -27,7 +28,6 @@ from para_quest_notes.workflows.ingest_inbox.steps.pick_quest import PickQuest
 from para_quest_notes.workflows.ingest_inbox.steps.plan_destination import PlanDestination
 from para_quest_notes.workflows.ingest_inbox.steps.propose_filename import ProposeFilename
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanNote
-from para_quest_notes.workflows.ingest_inbox.vault_quests import Quest, discover_quests
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 

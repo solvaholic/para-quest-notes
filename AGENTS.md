@@ -48,6 +48,8 @@ In order, before doing any work:
 para-quest-notes/
 ├── src/para_quest_notes/      # all production code
 │   ├── adapter/               # Phase 1: thin runtime (Ollama, Step, etc.)
+│   ├── vault/                 # Phase 5: shared vault helpers
+│   │                          #   (frontmatter parser, quest discovery)
 │   ├── workflows/<name>/      # one dir per workflow
 │   ├── corpus/                # Phase 2: synthetic note generator
 │   └── eval/                  # Phase 4: per-step eval harness
@@ -69,6 +71,19 @@ See `docs/PLAN.md` for the full breakdown.
   [`docs/eval.md`](docs/eval.md), [`eval/fixtures/`](eval/fixtures/));
   fixture set still small (~7), grow toward ~30 before declaring done
 - [ ] **Phase 5** - translate remaining workflows
+  - [x] Slice 1: shared-infra lift (`vault/` package,
+    `adapter/cli.py` base parser) + `pqn-validate` (no LLM,
+    wired into `pqn-ingest` via
+    `validate.api.check_basename_available`) + frontmatter locked
+    as canonical metadata location (backmatter tolerated on read,
+    migrated on touch).
+  - [ ] Slice 2: `pqn-create` (next; light LLM, shares
+    `pick_quest` prompt with ingest, drives shared frontmatter
+    writer in `vault/frontmatter.py`).
+  - [ ] Slice 3: `pqn-archive` (Projects only in v1; LLM
+    `## Outcome` drafting, fence-aware task rewrites).
+  - [ ] Slice 4: `pqn-daily` (single-file only; bulk migration
+    out of scope).
 - [ ] **Phase 6** - polish + v0.1
 - [ ] **Phase 7** (deferred) - agent SKILL.md wrappers
 

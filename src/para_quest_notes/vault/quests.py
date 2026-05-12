@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from para_quest_notes.workflows.ingest_inbox.frontmatter import parse
+from para_quest_notes.vault.frontmatter import parse
 
 
 @dataclass(frozen=True)

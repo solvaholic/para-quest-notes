@@ -43,9 +43,15 @@ The workflows preserve that reasoning, locally.
       [`samples/vault/`](samples/vault/))
 - [x] Phase 3: pilot workflow - `pqn-ingest` (inbox → PARA + Quest)
       — see [`docs/workflows/ingest.md`](docs/workflows/ingest.md)
-- [ ] Phase 4: per-step eval harness (matrix over models / prompts)
-- [ ] Phase 5: translate remaining workflows (`validate`, `create`,
-      `archive`, `daily`)
+- [ ] Phase 4: per-step eval harness (matrix over models / prompts) —
+      landed with a starter fixture set; growing toward ~30 fixtures
+      before declaring done. See [`docs/eval.md`](docs/eval.md).
+- [ ] Phase 5: translate remaining workflows
+  - [x] Slice 1: shared `vault/` + `adapter/cli.py` + `pqn-validate`
+        (see [`docs/workflows/validate.md`](docs/workflows/validate.md))
+  - [ ] Slice 2: `pqn-create`
+  - [ ] Slice 3: `pqn-archive`
+  - [ ] Slice 4: `pqn-daily`
 - [ ] Phase 6: polish + v0.1 release
 - [ ] Phase 7 (deferred): agent SKILL.md wrappers
 

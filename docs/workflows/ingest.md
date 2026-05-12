@@ -137,7 +137,20 @@ caller; `context` carries free-form state useful for triage.
 
 ## Known limitations (v1)
 
-- Wikilinks inside `archive/` are not rewritten.
+- Wikilinks inside `archive/` are not rewritten. (Whether that's the
+  right call long-term is an open question — see `docs/PLAN.md`.)
+- **Wikilink rewrite matches by basename, not path.** If a renamed
+  inbox file shares its stem with an unrelated note elsewhere in the
+  vault, links to the unrelated note will also be rewritten. Obsidian's
+  "shortest-path-when-unique" resolution makes the boundary fuzzy.
+  Mitigation today: keep basenames unique vault-wide (`pqn-validate`'s
+  `filename_uniqueness` check enforces this).
+- **Batch processing is per-file atomic, not batch atomic.** Each
+  inbox file is moved + has its incoming wikilinks rewritten as a
+  unit. If a multi-file run is interrupted (Ctrl-C, error), the files
+  already processed are fully consistent, and the unprocessed files
+  still sit in `inbox/` with their original names. Inbox→inbox links
+  survive renames because the rewrite scope includes `inbox/`.
 - Destination layout is flat under the PARA top-dir; mirroring an
   existing sub-structure is a planned enhancement.
 - On escalation, the workflow stops the file. There's no resume — fix
