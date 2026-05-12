@@ -280,25 +280,35 @@ extraction and for confirming the per-slice branch flow.
 - Known limitation: Areas without tasks must still pass `--supports`
   in v0.1; documented in `docs/workflows/create.md`.
 
-#### Slice 3 — `pqn-archive` (Projects only in v1)
+#### Slice 3 — `pqn-archive` (shipped, Projects only, no-LLM)
 
-Exercises the LLM-prose summarization path (`## Outcome` drafting),
-fence-aware task rewriting, and mirror-to-`archive/` move.
-Areas/Resources escalate.
+Shipped as a no-LLM workflow on branch `phase5-archive`. Fence-aware
+task rewriting, atomic write-then-remove move, legacy-backmatter
+migration. Areas/Resources escalate as planned.
 
-- New `workflows/archive/` + `pqn-archive` + `docs/workflows/archive.md`.
-- Steps (sketch): `resolve_target`, `verify_project`,
-  `count_open_tasks` (fence-aware), `decide_task_action`
-  (escalation gate when open tasks exist), `draft_outcome`
-  (LLM, only when no `## Outcome` section present),
-  `apply_changes` (`--apply`-gated; insert `## Outcome` before the
-  trailing metadata block, rewrite cancelled tasks
-  `[ ]`/`[/]` → `[-] … ❌ YYYY-MM-DD`, block-id-aware),
-  `move_to_archive` (mirror sub-path, refuse to overwrite),
-  `validate_after`.
-- This is the first place we generate LLM *prose* (vs. structured
-  JSON). Confirm the adapter has a clean raw-text path or document
-  the bypass.
+- Lands `workflows/archive/` + `pqn-archive` console script + per-step
+  tests + `docs/workflows/archive.md` JSON contract.
+- Steps as built: `resolve_target` (path-or-basename lookup under
+  `projects/` only), `verify_project` (frontmatter + tail-backmatter
+  read, requires `type: project`), `scan_open_tasks` (fence-aware
+  candidate list), `decide_task_action` (escalation gate; opt-in via
+  `--cancel-open-tasks`), `prepare_outcome` (require `--outcome "..."`
+  when the body has no `## Outcome` heading; LLM drafting deferred),
+  `compose_archive` (canonical frontmatter merge, block-id-aware task
+  cancellation `[ ]`/`[/]` → `[-] … ❌ <today>`, Outcome append,
+  destination = mirror sub-path under `archive/`), `write_and_move`
+  (`--apply`-gated atomic write then `unlink` source; refuses
+  overwrite), `validate_after` (scoped to new path).
+- Default dry-run; `--apply` to write.
+- **Shared-infra landed:** added `vault.frontmatter.split_note()` for
+  reading legacy notes with deprecated tail backmatter. Frontmatter
+  is canonical on write; tail backmatter is migrated and dropped.
+- **Deferred to a later slice (no consumer yet):**
+  - LLM `--draft-outcome` step. This was the first prose-output
+    prompt in the codebase — punted until the user actively wants it.
+- **Known limitation flagged in docs:** v0.1 escalates when an open
+  task carries Obsidian Tasks scheduling emoji (📅 ⏳ 🛫 🔁 ✅ ❌)
+  rather than silently rewriting around them.
 
 #### Slice 4 — `pqn-daily` (single-file only)
 
