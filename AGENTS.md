@@ -82,8 +82,8 @@ See `docs/PLAN.md` for the full breakdown.
     [`docs/PLAN.md`](docs/PLAN.md))
   - [x] Slice 3: `pqn-archive` (shipped Projects-only, no-LLM;
     `--draft-outcome` deferred — see [`docs/PLAN.md`](docs/PLAN.md))
-  - [ ] Slice 4: `pqn-daily` (single-file only; bulk migration
-    out of scope).
+  - [x] Slice 4: `pqn-daily` (filing-only; no LLM; bulk migration
+    out of scope; authoring deferred to post-v1).
 - [ ] **Phase 5.5** - LLM polish (folds in the deferrals from
   slices 2/3 before the release polish phase: shared prompts
   location, `pqn-create --resolve-quest`, `pqn-archive

@@ -310,20 +310,39 @@ migration. Areas/Resources escalate as planned.
   task carries Obsidian Tasks scheduling emoji (📅 ⏳ 🛫 🔁 ✅ ❌)
   rather than silently rewriting around them.
 
-#### Slice 4 — `pqn-daily` (single-file only)
+#### Slice 4 — `pqn-daily` (shipped, filing-only, no-LLM)
 
-Smallest LLM surface (narrow tiebreak only); introduces the
-`resources/daily_notes/YYYY/MM/` path family and date-shape
-detection. **Bulk legacy migration is out of scope** — single
-file per invocation, matching the project's preference for
-predictable per-invocation behavior.
+Shipped as a no-LLM workflow. Files one date-shaped note
+(`YYYY-MM-DD.md`) into `resources/daily_notes/YYYY/MM/`.
+Idempotent re-run on an already-filed note is a no-op success
+(cron-safe). Authoring (creating today's empty daily note from
+scratch) is deferred — see "Post-v1 candidates" below.
 
-- New `workflows/daily/` + `pqn-daily` + `docs/workflows/daily.md`.
-- Steps (sketch): `detect_shape` (`^\d{4}-\d{2}-\d{2}\.md$`),
-  `inspect_parent` (escalate when parent path implies a different
-  PARA home), `compute_destination`, `check_collision` (no silent
-  merge), `apply_h1` (prepend `# YYYY-MM-DD` if absent), `move_file`
-  (`--apply`-gated), `validate_after`.
+- Lands `workflows/daily/` + `pqn-daily` console script + per-step
+  tests + `docs/workflows/daily.md` JSON contract.
+- Steps as built: `resolve_target` (basename search scoped to vault
+  root + `inbox/` + `resources/daily_notes/`; explicit paths accepted
+  anywhere), `detect_shape` (regex + real-calendar-date check, so
+  `2026-02-31.md` is rejected here, not later), `inspect_parent`
+  (escalates when source lives under `projects/`, `areas/`,
+  `archive/`, or any other `resources/<...>/` subtree), `compute_destination`
+  (sets `already_at_destination` when source already at canonical
+  path), `check_collision` (uses `validate.api.check_basename_available`
+  with `ignore_path=source` so source doesn't collide with itself;
+  skipped on idempotent re-run), `compose_note` (preserves user
+  frontmatter as-is — daily notes don't get canonical PARA
+  frontmatter injected since they inherit Quest context from
+  contents per the spec; migrates legacy tail backmatter on touch;
+  prepends `# YYYY-MM-DD` H1 if absent), `move_file` (`--apply`-gated
+  atomic write+unlink; in-place rewrite when already at destination
+  but content changed), `validate_after` (scoped to new path).
+- Default dry-run; `--apply` to write.
+- **Shared-infra reuse:** no new shared helpers needed — the
+  `ignore_path` parameter on `check_basename_available` already
+  existed (added during slice 1 for `pqn-ingest`'s self-rename case).
+- **Out of scope:** authoring (`--today` / `--date` to create empty
+  daily notes; tracked under "Post-v1 candidates" below), bulk
+  migration of legacy daily notes, task roundup sections.
 
 #### Workflow conventions for all remaining slices
 
@@ -389,6 +408,18 @@ each can land on its own branch and ship independently.
 
 Not promised for v0.1. Listed here so we don't lose them and don't
 let them creep into the v1 release.
+
+- **`pqn-daily` authoring mode.** A `--today` / `--date 2026-05-12`
+  flag (no positional `target`) that creates the empty daily note
+  in place at `resources/daily_notes/YYYY/MM/YYYY-MM-DD.md` if it
+  doesn't exist. Open design choices: where the H1-only template
+  lives (likely just the H1 and a blank body in v0.1), whether to
+  seed any frontmatter (the spec says daily notes don't carry
+  frontmatter — leaning "no"), whether to pre-populate routine
+  tasks from Areas (see "Task roundup" below — same data source).
+  Why not in v1: filing-mode usage will tell us what shape the
+  authored note should have. Better as an additive flag on a
+  stable filing CLI than a rushed inclusion.
 
 - **Task roundup in daily note.** A step on top of `pqn-daily` that
   scans the active vault (`areas/`, `projects/`) for tasks with
