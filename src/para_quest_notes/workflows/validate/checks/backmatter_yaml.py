@@ -1,7 +1,7 @@
 """Validate that the optional YAML backmatter block parses cleanly.
 
 Backmatter is the ``---...---`` fence at the **bottom** of a note (used
-in ``solvaholic/at-home`` for archive Outcome statements). It is
+by archive workflows for Outcome statements, for example). It is
 optional; absence is not an issue.
 """
 

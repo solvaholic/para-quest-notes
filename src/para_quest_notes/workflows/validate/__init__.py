@@ -6,8 +6,7 @@ Audits a vault for issues that quietly break wikilinks or note metadata:
 * invalid YAML frontmatter (the top ``---...---`` block)
 * invalid YAML backmatter (the optional bottom ``---...---`` block)
 
-Mirrors the scope of the legacy ``validate-note-integrity`` SKILL. By
-design this workflow does **not** validate wikilink targets, orphan
-detection, or PARA placement — those are out of scope until a concrete
-need surfaces.
+Out of scope today: wikilink target validation, orphan detection,
+attachment-reference checks, and PARA placement (the structural
+``type:`` vs directory check is a known follow-up).
 """

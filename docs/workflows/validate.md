@@ -5,9 +5,7 @@ Read-only. No LLM.
 
 ## What it does
 
-Three checks, all derived from the legacy
-[`validate-note-integrity`](https://github.com/solvaholic/at-home/blob/main/.agents/skills/validate-note-integrity/SKILL.md)
-SKILL:
+Three checks:
 
 1. **`filename_uniqueness`** — flags any basename that appears in more
    than one directory. Wikilinks resolve by basename, so duplicates
@@ -123,11 +121,16 @@ report = validate_vault(vault)
 
 ## Limitations
 
-Inherited from the legacy SKILL — these are not bugs:
+Out of scope by design — these are not bugs:
 
 * No wikilink target validation (`[[Foo]]` pointing at a missing
-  `Foo.md` is not flagged).
-* No orphan or attachment-reference checks.
+  `Foo.md` is not flagged). Will become useful once a workflow
+  renames notes.
+* No PARA placement check (frontmatter `type:` vs containing
+  directory). Tracked as a follow-up — it's a no-LLM check that
+  should land here.
+* No orphan or attachment-reference checks. Same trigger as
+  wikilinks: needed once a workflow moves attachments.
 * No inline tag syntax validation.
 * YAML is checked syntactically, not semantically — any well-formed
   YAML passes, even if the keys make no sense for your vault.
