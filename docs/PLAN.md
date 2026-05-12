@@ -270,6 +270,26 @@ fixture.
 - Out of scope for v1; revisit once the CLIs have stabilized and
   there's a real second user (other than the author) asking for it.
 
+### Post-v1 candidates (v0.2 and beyond)
+
+Not promised for v0.1. Listed here so we don't lose them and don't
+let them creep into the v1 release.
+
+- **Task roundup in daily note.** A step on top of `pqn-daily` that
+  scans the active vault (`areas/`, `projects/`) for tasks with
+  scheduled/due metadata and writes a roundup section into today's
+  daily note (overdue, due today, scheduled this week). Idempotent
+  re-run (replace, don't append). Zero new dependencies; mirrors what
+  Obsidian Tasks-style queries provide without requiring the plugin.
+  - **Open design choice:** which task syntax to parse? Obsidian
+    Tasks emoji (`📅 2026-05-15`), Dataview inline fields
+    (`[due:: 2026-05-15]`), plain Markdown checkboxes, or all three.
+    One-way door — pick after `pqn-daily` ships its bare-bones
+    version so we have a feel for the data.
+  - Why not in v1: v0.1's pitch is "PARA+Quest hygiene, locally."
+    Task scheduling is adjacent, not core. Better as an additive
+    step on a stable `pqn-daily` than as a rushed inclusion.
+
 ## Key risks and mitigations
 
 - **Local models hallucinate Quest assignments.** Mitigated by
@@ -305,6 +325,28 @@ fixture.
 
 ## Open questions to revisit during implementation
 
+- **Frontmatter vs. backmatter — consolidate to one?** Today
+  `notes-system.md` puts the PARA+Quest schema (`type`, `quest`,
+  `supports`) in *backmatter*; the parsers tolerate both. Author's
+  original motivation for backmatter: keep frontmatter visually out
+  of the way at the top of notes. Costs of supporting both: every
+  workflow has two read/write paths, prompts have to teach the
+  distinction, validation surface doubles, and the wider Markdown
+  ecosystem (Obsidian Properties, Dataview, pandoc, SSGs) all assume
+  frontmatter — so backmatter is invisible to those tools. Author has
+  confirmed they don't want both in one note. Lean: pick
+  **frontmatter** as the single canonical location, treat backmatter
+  as deprecated-but-tolerated on read, and migrate on touch
+  (`pqn-validate --fix` or `pqn-ingest --apply`). Decide during or
+  after Phase 5; once `pqn-create`/`pqn-archive`/`pqn-daily` are in,
+  the cost of carrying both will be obvious.
+- **Should `archive/` really be left out of wikilink rewrites?**
+  Today `pqn-ingest` excludes `archive/` from rewrite scope on the
+  theory that archived notes should preserve the historical name
+  they linked to. Author isn't fully convinced. Wait until it bites
+  someone (a confused archived link surfaced during a real lookup),
+  then revisit with a concrete case rather than re-debating in the
+  abstract.
 - **Project name.** Provisionally `para-quest-notes` (CLI prefix
   `pqn-`). Picked early so Phase 0 had something to type; not
   permanently locked. If a better name emerges, renaming touches:
