@@ -244,36 +244,41 @@ location (see "Open questions" — decided 2026-05-12), so write-path
 slices below all emit frontmatter and migrate any backmatter they
 encounter on touch.
 
-#### Slice 2 — `pqn-create` (next)
+#### Slice 2 — `pqn-create` (shipped, no-LLM)
 
-Light LLM use; naturally shares the `pick_quest` prompt with
-`pqn-ingest`. Good forcing function for the next round of
-shared-infra extraction without the move/rewrite complexity of
-ingest.
+Shipped as a no-LLM workflow on branch `phase5-create`. The user
+supplies type + title + supports up front, so no `resolve_quest`
+step was needed. Good forcing function for the `dump_frontmatter()`
+extraction and for confirming the per-slice branch flow.
 
-- New `workflows/create/` + `pqn-create` console script + per-step
-  fixtures + `docs/workflows/create.md` JSON contract.
-- Steps (sketch): `validate_inputs` (Rule 1 check), `resolve_quest`
-  (LLM, only when user didn't supply `--supports`), `compute_destination`,
-  `check_collision` (delegates to `validate.api.check_basename_available`),
-  `compose_body` (type-default skeleton), `compose_frontmatter`,
-  `write_note` (`--apply`-gated, refuses to overwrite),
-  `validate_after`.
+- Lands `workflows/create/` + `pqn-create` console script + per-step
+  tests + `docs/workflows/create.md` JSON contract.
+- Steps as built: `validate_inputs` (Rule 1 + title regex + wikilink
+  format), `compute_destination`, `check_collision` (delegates to
+  `validate.api.check_basename_available`), `compose_note`
+  (canonical frontmatter via shared `dump_frontmatter()` + body
+  skeleton per type), `write_note` (`--apply`-gated atomic write,
+  refuses to overwrite, TOCTOU re-check), `validate_after` (scoped
+  to the new file).
 - Default dry-run, like `pqn-ingest`.
-- **Drives shared-infra extractions:** move `pick_quest.txt` to a
-  shared prompts location so both workflows load from one source of
-  truth (PLAN.md flagged this risk); add a `dump_frontmatter()`
-  emitter to `vault/frontmatter.py` (canonical key order, quoted
-  wikilinks, omit empty `supports:`).
-- Out of scope: Capability index notes (escalate and stop —
-  see "Open questions"), Daily notes (slice 4), modifying any
-  existing file, auto-linking the new note from a Quest landing
-  page.
-- Cross-cutting decisions slice 2 still has to make: prompt
-  template language (Jinja2 vs `string.Template` — keep parity
-  with the first prompt that landed); flip the eval harness's
-  `EVALUABLE_STEPS` to per-workflow scoping the day `pqn-create`
-  adds its first fixture.
+- **Shared-infra landed:** `vault/frontmatter.py` now exports
+  `canonical_frontmatter()` and `dump_frontmatter()`; `pqn-ingest`'s
+  `apply_move` step routes its frontmatter merge through the same
+  helpers, so writers stay in lockstep.
+- **Deferred to a later slice (no consumer yet):**
+  - LLM `resolve_quest` step for `pqn-create` — defer until a real
+    user hits the "I don't know which Quest" case.
+  - Moving `pick_quest.txt` to a shared prompts location — defer
+    until a second workflow needs it (shared infra without a second
+    consumer is speculation).
+  - Flipping the eval harness's `EVALUABLE_STEPS` to per-workflow
+    scoping — defer until a non-ingest workflow adds its first
+    fixture.
+- Out of scope: Capability index notes (escalate and stop — see
+  "Open questions"), Daily notes (slice 4), modifying any existing
+  file, auto-linking the new note from a Quest landing page.
+- Known limitation: Areas without tasks must still pass `--supports`
+  in v0.1; documented in `docs/workflows/create.md`.
 
 #### Slice 3 — `pqn-archive` (Projects only in v1)
 

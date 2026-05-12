@@ -77,9 +77,9 @@ See `docs/PLAN.md` for the full breakdown.
     `validate.api.check_basename_available`) + frontmatter locked
     as canonical metadata location (backmatter tolerated on read,
     migrated on touch).
-  - [ ] Slice 2: `pqn-create` (next; light LLM, shares
-    `pick_quest` prompt with ingest, drives shared frontmatter
-    writer in `vault/frontmatter.py`).
+  - [x] Slice 2: `pqn-create` (shipped no-LLM; LLM `resolve_quest`
+    and shared `pick_quest.txt` extraction deferred — see
+    [`docs/PLAN.md`](docs/PLAN.md))
   - [ ] Slice 3: `pqn-archive` (Projects only in v1; LLM
     `## Outcome` drafting, fence-aware task rewrites).
   - [ ] Slice 4: `pqn-daily` (single-file only; bulk migration
