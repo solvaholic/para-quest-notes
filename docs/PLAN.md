@@ -333,6 +333,41 @@ integration. Branch naming: one `phase5-<workflow>` branch per
 slice, merged to `main` as it lands; never more than two active
 branches.
 
+### Phase 5.5 - LLM polish (post-slice-4, pre-v0.1)
+
+Slices 2 and 3 shipped no-LLM to keep scope tight; slice 4 will too
+unless its tiebreak proves unavoidable. This phase folds the deferred
+LLM capabilities back in **before** Phase 6's release polish, so v0.1
+matches the project's stated philosophy ("LLM is used for judgment
+calls and natural-language summarization"). One sub-slice per item;
+each can land on its own branch and ship independently.
+
+- **5.5a — Shared prompts location.** Move `pick_quest.txt` (and any
+  other workflow prompts that exist by then) into a single
+  `src/para_quest_notes/prompts/` tree. Update `pqn-ingest` to load
+  from the new location. Document the layout in
+  `docs/configuration.md`. Prereq for 5.5b and 5.5d so both
+  workflows load `pick_quest` from one source of truth.
+- **5.5b — `pqn-create --resolve-quest` (LLM).** Add an opt-in step
+  that calls the shared `pick_quest` prompt when the user runs
+  `pqn-create` without `--supports`. Same low-confidence escalation
+  shape as `pqn-ingest`'s version. Default behavior (no flag) stays
+  the current strict Rule 1 enforcement.
+- **5.5c — `pqn-archive --draft-outcome` (LLM, prose).** First
+  prose-output prompt in the codebase. Adapter work: confirm
+  `OllamaClient` has a clean raw-text path (no JSON parsing); add a
+  fake-LLM fixture pattern for prose responses. Step drafts an
+  `## Outcome` section from the note's body + completed-task lines
+  + inbound wikilink context; presents the draft via the JSON
+  contract (`plan.outcome_action = "drafted"` + `plan.outcome_text`)
+  rather than writing it. The user re-runs with `--outcome "..."`
+  to commit. (No interactive iterate in the CLI form.)
+- **5.5d — Per-workflow eval scoping.** Flip the eval harness's
+  `EVALUABLE_STEPS` from a global constant to per-workflow scoping.
+  Add the first non-ingest fixtures: at least one for
+  `pqn-create:resolve_quest` and one for `pqn-archive:draft_outcome`.
+  Grow the overall fixture count toward the ~30 target from Phase 4.
+
 ### Phase 6 - Polish and release
 - README quickstart that runs end-to-end against the bundled sample
   vault (no LLM-free fallback path required, but document model
