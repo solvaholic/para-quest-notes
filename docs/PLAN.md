@@ -238,20 +238,85 @@ Phases are dependency-ordered. No time estimates.
 - `pqn-ingest`'s `propose_filename` step now delegates collision
   detection to `check_basename_available` — single source of truth.
 
-**Remaining (re-plan after first slice):**
+**Remaining slices.** Each is independently shippable; re-plan when
+the previous one lands. Frontmatter is now the canonical metadata
+location (see "Open questions" — decided 2026-05-12), so write-path
+slices below all emit frontmatter and migrate any backmatter they
+encounter on touch.
 
-1. `create-note` (light LLM use) → `pqn-create`.
-2. `archive-note` (LLM for Outcome summarization) → `pqn-archive`.
-3. `daily-note-ingest` (mostly script, narrow LLM tiebreak) →
-   `pqn-daily`.
+#### Slice 2 — `pqn-create` (next)
 
-Each gets the same: workflow + CLI entry point + per-step fixtures +
-documented JSON contract. Watch for prompt-template family explosion
-across `pqn-ingest` and `pqn-create` (both will likely have a
-`pick_quest`-style step) — share the prompt rather than copy-paste.
-The eval harness's `EVALUABLE_STEPS` tuple stays vault-wide for now;
-flip to per-workflow scoping the day `pqn-create` adds its first
-fixture.
+Light LLM use; naturally shares the `pick_quest` prompt with
+`pqn-ingest`. Good forcing function for the next round of
+shared-infra extraction without the move/rewrite complexity of
+ingest.
+
+- New `workflows/create/` + `pqn-create` console script + per-step
+  fixtures + `docs/workflows/create.md` JSON contract.
+- Steps (sketch): `validate_inputs` (Rule 1 check), `resolve_quest`
+  (LLM, only when user didn't supply `--supports`), `compute_destination`,
+  `check_collision` (delegates to `validate.api.check_basename_available`),
+  `compose_body` (type-default skeleton), `compose_frontmatter`,
+  `write_note` (`--apply`-gated, refuses to overwrite),
+  `validate_after`.
+- Default dry-run, like `pqn-ingest`.
+- **Drives shared-infra extractions:** move `pick_quest.txt` to a
+  shared prompts location so both workflows load from one source of
+  truth (PLAN.md flagged this risk); add a `dump_frontmatter()`
+  emitter to `vault/frontmatter.py` (canonical key order, quoted
+  wikilinks, omit empty `supports:`).
+- Out of scope: Capability index notes (escalate and stop —
+  see "Open questions"), Daily notes (slice 4), modifying any
+  existing file, auto-linking the new note from a Quest landing
+  page.
+- Cross-cutting decisions slice 2 still has to make: prompt
+  template language (Jinja2 vs `string.Template` — keep parity
+  with the first prompt that landed); flip the eval harness's
+  `EVALUABLE_STEPS` to per-workflow scoping the day `pqn-create`
+  adds its first fixture.
+
+#### Slice 3 — `pqn-archive` (Projects only in v1)
+
+Exercises the LLM-prose summarization path (`## Outcome` drafting),
+fence-aware task rewriting, and mirror-to-`archive/` move.
+Areas/Resources escalate.
+
+- New `workflows/archive/` + `pqn-archive` + `docs/workflows/archive.md`.
+- Steps (sketch): `resolve_target`, `verify_project`,
+  `count_open_tasks` (fence-aware), `decide_task_action`
+  (escalation gate when open tasks exist), `draft_outcome`
+  (LLM, only when no `## Outcome` section present),
+  `apply_changes` (`--apply`-gated; insert `## Outcome` before the
+  trailing metadata block, rewrite cancelled tasks
+  `[ ]`/`[/]` → `[-] … ❌ YYYY-MM-DD`, block-id-aware),
+  `move_to_archive` (mirror sub-path, refuse to overwrite),
+  `validate_after`.
+- This is the first place we generate LLM *prose* (vs. structured
+  JSON). Confirm the adapter has a clean raw-text path or document
+  the bypass.
+
+#### Slice 4 — `pqn-daily` (single-file only)
+
+Smallest LLM surface (narrow tiebreak only); introduces the
+`resources/daily_notes/YYYY/MM/` path family and date-shape
+detection. **Bulk legacy migration is out of scope** — single
+file per invocation, matching the project's preference for
+predictable per-invocation behavior.
+
+- New `workflows/daily/` + `pqn-daily` + `docs/workflows/daily.md`.
+- Steps (sketch): `detect_shape` (`^\d{4}-\d{2}-\d{2}\.md$`),
+  `inspect_parent` (escalate when parent path implies a different
+  PARA home), `compute_destination`, `check_collision` (no silent
+  merge), `apply_h1` (prepend `# YYYY-MM-DD` if absent), `move_file`
+  (`--apply`-gated), `validate_after`.
+
+#### Workflow conventions for all remaining slices
+
+Each slice ships: workflow + CLI entry point + per-step fixtures +
+documented JSON contract + (where it pays off) ingest/eval
+integration. Branch naming: one `phase5-<workflow>` branch per
+slice, merged to `main` as it lands; never more than two active
+branches.
 
 ### Phase 6 - Polish and release
 - README quickstart that runs end-to-end against the bundled sample
@@ -325,21 +390,19 @@ let them creep into the v1 release.
 
 ## Open questions to revisit during implementation
 
-- **Frontmatter vs. backmatter — consolidate to one?** Today
-  `notes-system.md` puts the PARA+Quest schema (`type`, `quest`,
-  `supports`) in *backmatter*; the parsers tolerate both. Author's
-  original motivation for backmatter: keep frontmatter visually out
-  of the way at the top of notes. Costs of supporting both: every
-  workflow has two read/write paths, prompts have to teach the
-  distinction, validation surface doubles, and the wider Markdown
-  ecosystem (Obsidian Properties, Dataview, pandoc, SSGs) all assume
-  frontmatter — so backmatter is invisible to those tools. Author has
-  confirmed they don't want both in one note. Lean: pick
-  **frontmatter** as the single canonical location, treat backmatter
-  as deprecated-but-tolerated on read, and migrate on touch
-  (`pqn-validate --fix` or `pqn-ingest --apply`). Decide during or
-  after Phase 5; once `pqn-create`/`pqn-archive`/`pqn-daily` are in,
-  the cost of carrying both will be obvious.
+- **Frontmatter vs. backmatter — consolidate to one?** **Decided
+  2026-05-12 (during Phase 5 slice 1 → slice 2 handoff): frontmatter
+  is canonical.** Backmatter (a trailing fenced YAML block) is
+  tolerated on read for legacy notes and migrated to frontmatter on
+  touch by write-path workflows (`pqn-ingest --apply` today;
+  `pqn-create` and `pqn-archive` will follow; a `pqn-validate --fix`
+  mode is a post-v1 candidate). Reflected in
+  `docs/notes-system.md` ("Metadata schema (frontmatter)" section).
+  Rationale: every workflow having two read/write paths doubles the
+  validation surface, prompts have to teach the distinction, and the
+  wider Markdown ecosystem (Obsidian Properties, Dataview, pandoc,
+  SSGs) all assume frontmatter — so backmatter is invisible to those
+  tools. The author confirmed they don't want both in one note.
 - **Should `archive/` really be left out of wikilink rewrites?**
   Today `pqn-ingest` excludes `archive/` from rewrite scope on the
   theory that archived notes should preserve the historical name

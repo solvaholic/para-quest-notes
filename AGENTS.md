@@ -71,13 +71,19 @@ See `docs/PLAN.md` for the full breakdown.
   [`docs/eval.md`](docs/eval.md), [`eval/fixtures/`](eval/fixtures/));
   fixture set still small (~7), grow toward ~30 before declaring done
 - [ ] **Phase 5** - translate remaining workflows
-  - [x] shared-infra lift: `vault/` package (frontmatter + quests),
-    `adapter/cli.py` base parser
-  - [x] `pqn-validate` (no LLM), wired into `pqn-ingest` via
-    `validate.api.check_basename_available` (see
-    [`docs/workflows/validate.md`](docs/workflows/validate.md))
-  - [ ] `pqn-create`, `pqn-archive`, `pqn-daily` (re-plan after
-    validate lands)
+  - [x] Slice 1: shared-infra lift (`vault/` package,
+    `adapter/cli.py` base parser) + `pqn-validate` (no LLM,
+    wired into `pqn-ingest` via
+    `validate.api.check_basename_available`) + frontmatter locked
+    as canonical metadata location (backmatter tolerated on read,
+    migrated on touch).
+  - [ ] Slice 2: `pqn-create` (next; light LLM, shares
+    `pick_quest` prompt with ingest, drives shared frontmatter
+    writer in `vault/frontmatter.py`).
+  - [ ] Slice 3: `pqn-archive` (Projects only in v1; LLM
+    `## Outcome` drafting, fence-aware task rewrites).
+  - [ ] Slice 4: `pqn-daily` (single-file only; bulk migration
+    out of scope).
 - [ ] **Phase 6** - polish + v0.1
 - [ ] **Phase 7** (deferred) - agent SKILL.md wrappers
 

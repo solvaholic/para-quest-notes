@@ -52,13 +52,13 @@ expected to evolve. The synthetic corpus generator
 
 A Side Quest like **Maintain Home** might serve multiple Main Quests
 (Health via a safe living space, Create via a workshop). That
-multi-Quest reach is declared in its own backmatter via `supports:`.
+multi-Quest reach is declared in its own frontmatter via `supports:`.
 Related Areas like `Garden`, `Workshop`, or `Vehicles` are plain Areas
 that support `[[Maintain Home]]`, not Side Quests in their own right.
 
 Side Quests don't sit "under" Main Quests in the directory tree - the
 layout is PARA-first, so all Quest notes live in `areas/`. The
-relationship is declared in backmatter: each Side Quest note's
+relationship is declared in frontmatter: each Side Quest note's
 `supports:` field lists the Main Quest(s) it serves. The index
 generator picks up the relationship from there.
 
@@ -66,12 +66,12 @@ Resource notes are discovered via **incoming wikilinks** from active
 Areas and Projects, not by forward links from the Resource itself. An
 active Area or Project that uses a Resource links to it; the Areas
 and Projects appear as backlinks on the Resource notes. No required
-backmatter on Resources.
+frontmatter on Resources.
 
-Optional backmatter on a Resource is fine when it helps - for example,
+Optional frontmatter on a Resource is fine when it helps - for example,
 a Resource created before its consuming Project exists, or one that
 serves many things and explicit forward links add value. When used,
-the backmatter follows the schema in "Backmatter schema (provisional)"
+the frontmatter follows the schema in "Metadata schema (frontmatter)"
 below:
 
 ```yaml
@@ -94,7 +94,7 @@ PARA dictates the *top-level* directory for each note. Below that,
 organize freely - `resources/Home/Water Heater Models.md` is fine, so
 is `projects/2026/Replace Water Heater.md`. Sub-structure is for
 human browseability; tooling keys off the PARA top-level and
-backmatter, not the deeper path.
+frontmatter, not the deeper path.
 
 ```
 <vault>/
@@ -140,7 +140,7 @@ Capabilities are still Areas. Per Rule 1, a Capability with tasks
 must support at least one Quest in `supports:`; cross-cutting
 Capabilities list every Quest they serve. The index generator should
 surface them in their own section (e.g., flagged with
-`capability: true` in backmatter) rather than duplicating them under
+`capability: true` in frontmatter) rather than duplicating them under
 every Quest they touch.
 
 ## Daily notes
@@ -149,7 +149,7 @@ Daily notes are a special Resource. They live at
 `resources/daily_notes/YYYY/MM/YYYY-MM-DD.md`. Tasks emitted by the
 routine generator (see "Repetitive, ongoing work" below) land in
 daily notes by default. Daily notes inherit Quest context from the
-tasks and links they contain, not from backmatter.
+tasks and links they contain, not from frontmatter.
 
 ## Quest index
 
@@ -159,21 +159,27 @@ hand-maintained. Inputs:
 - Hand-authored Main Quest notes (one per Main Quest, e.g.,
   `areas/Health.md`) provide the name, purpose, and ordering
 - Areas and Projects across the vault declare their Quest in
-  backmatter (wikilink to the Main or Side Quest note)
+  frontmatter (wikilink to the Main or Side Quest note)
 - Resources are surfaced via incoming wikilinks from active Areas and
-  Projects (no required backmatter)
+  Projects (no required frontmatter)
 
 The generator walks the vault, groups by Quest, and emits an index
 note (e.g., `index.md`). Regenerating is cheap and idempotent. Areas
 or Projects with no Quest tag, and Resources with no incoming links,
 are listed under "Unassigned" so they can be triaged.
 
-## Backmatter schema (provisional)
+## Metadata schema (frontmatter)
 
 This schema is a starting point. Expect it to evolve with use;
 capture deviations and revise this section.
 
-Every note that needs backmatter declares two things: its **PARA
+**Canonical location: frontmatter** (the leading `---...---` YAML
+block). Some legacy notes carry the same schema in *backmatter* (a
+trailing `---...---` YAML block at the end of the file); workflows
+tolerate it on read and migrate it to frontmatter on touch (e.g.
+`pqn-ingest --apply`). New notes should always use frontmatter.
+
+Every note that needs metadata declares two things: its **PARA
 type** and its **Quest type**. Notes that support one or more Quests
 list those Quests in `supports:`.
 
@@ -225,7 +231,7 @@ Archived notes keep their pre-archive `type`, `quest`, and
 ## Rules, with examples
 
 1. **Notes with tasks must support one or more Quests.** Areas and
-   Projects declare support via `supports:` in backmatter. Main Quest
+   Projects declare support via `supports:` in frontmatter. Main Quest
    notes (`quest: main`) with tasks list themselves in `supports`;
    Side Quest notes (`quest: side`) with tasks must list one or more
    Main Quests. `inbox/` and `resources/daily_notes/` are exempt -
@@ -234,7 +240,7 @@ Archived notes keep their pre-archive `type`, `quest`, and
    contain.
 
    - OK: `projects/Replace Water Heater.md` has tasks and
-     `supports: ["[[Maintain Home]]"]` in backmatter.
+     `supports: ["[[Maintain Home]]"]` in frontmatter.
    - Not OK: `areas/Random Topic.md` has tasks but no `supports:`
      entry. Add one, or it's not really an Area worth keeping.
 
@@ -244,7 +250,7 @@ Archived notes keep their pre-archive `type`, `quest`, and
 
 3. **Every active Resource must be linked from at least one active
    Area or Project.** Resources discovered via incoming wikilinks;
-   backmatter Quest tags optional. A Resource with no incoming links
+   frontmatter Quest tags optional. A Resource with no incoming links
    from active notes is a candidate for `archive/resources/`.
 
 4. **Areas don't end; Projects do.** When a Project's outcome is
@@ -312,4 +318,4 @@ satisfied without per-task tagging.
   `archive/areas/old-area.md` with a "why" note.)
 - Do Capabilities need their own top-level dir, or do they live in
   `areas/` with a flag? (Leaning toward `areas/` with
-  `capability: true` in backmatter.)
+  `capability: true` in frontmatter.)
