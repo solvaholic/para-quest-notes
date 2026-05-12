@@ -7,6 +7,7 @@ from para_quest_notes.vault.frontmatter import (
     dump_frontmatter,
     merge,
     parse,
+    split_note,
 )
 
 
@@ -124,3 +125,42 @@ def test_dump_frontmatter_empty_returns_empty_string():
 def test_dump_frontmatter_omits_empty_supports():
     text = dump_frontmatter({"type": "resource", "quest": "none", "supports": []})
     assert "supports" not in text
+
+
+def test_split_note_frontmatter_only():
+    text = "---\ntype: project\n---\nbody\n"
+    s = split_note(text)
+    assert s.had_frontmatter is True
+    assert s.had_backmatter is False
+    assert s.frontmatter == {"type": "project"}
+    assert s.body == "body\n"
+
+
+def test_split_note_tail_backmatter():
+    text = "# X\n\nbody\n\n---\ntype: project\nquest: none\n---\n"
+    s = split_note(text)
+    assert s.had_frontmatter is False
+    assert s.had_backmatter is True
+    assert s.backmatter == {"type": "project", "quest": "none"}
+    assert s.body.rstrip("\n") == "# X\n\nbody"
+
+
+def test_split_note_front_and_back():
+    text = "---\ntype: project\n---\nmiddle\n\n---\nquest: none\n---\n"
+    s = split_note(text)
+    assert s.frontmatter == {"type": "project"}
+    assert s.backmatter == {"quest": "none"}
+    assert "middle" in s.body
+
+
+def test_split_note_no_fences_at_all():
+    text = "just a body\n"
+    s = split_note(text)
+    assert not s.had_frontmatter
+    assert not s.had_backmatter
+
+
+def test_split_note_malformed_backmatter_left_alone():
+    text = "body\n\n---\n: not valid yaml :::\n---\n"
+    s = split_note(text)
+    assert not s.had_backmatter

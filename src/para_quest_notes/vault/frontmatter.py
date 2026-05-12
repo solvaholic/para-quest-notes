@@ -182,3 +182,78 @@ def dump_frontmatter(
     if not canon:
         return ""
     return ParsedNote(frontmatter=canon, body="", had_frontmatter=True).render()
+
+
+@dataclass
+class SplitNote:
+    """A note split into frontmatter + body + (optional) tail backmatter.
+
+    Backmatter is the deprecated trailing ``---...---`` block some legacy
+    notes still carry. Write-path workflows migrate it into frontmatter
+    on touch (see ``docs/PLAN.md`` "Open questions — decided 2026-05-12").
+
+    ``body`` excludes both fences. ``trailing_whitespace`` preserves any
+    whitespace that appeared after the backmatter so round-tripping
+    doesn't churn the file's tail.
+    """
+
+    frontmatter: dict[str, Any] = field(default_factory=dict)
+    body: str = ""
+    backmatter: dict[str, Any] = field(default_factory=dict)
+    had_frontmatter: bool = False
+    had_backmatter: bool = False
+    trailing_whitespace: str = ""
+
+
+def split_note(text: str) -> SplitNote:
+    """Parse a note into frontmatter + body + (optional) backmatter.
+
+    Tolerates malformed backmatter the same way :func:`parse` tolerates
+    malformed frontmatter: if the trailing fence isn't a valid YAML
+    mapping, we leave it in the body untouched.
+    """
+    parsed = parse(text)
+    body = parsed.body
+    split = SplitNote(
+        frontmatter=parsed.frontmatter,
+        body=body,
+        had_frontmatter=parsed.had_frontmatter,
+    )
+
+    # Find the trailing ``---`` line, ignoring blank trailing lines.
+    trailing_ws_len = len(body) - len(body.rstrip())
+    trailing_ws = body[len(body) - trailing_ws_len :] if trailing_ws_len else ""
+    body_stripped = body.rstrip()
+    if not body_stripped.endswith(DELIM):
+        return split
+
+    # Walk lines from the end to find the closing fence and opener.
+    lines = body_stripped.splitlines()
+    if not lines or lines[-1] != DELIM:
+        return split
+    close_idx = len(lines) - 1
+    open_idx: int | None = None
+    for i in range(close_idx - 1, -1, -1):
+        if lines[i] == DELIM:
+            open_idx = i
+            break
+    # Need at least one line between open and close (`---\n---` isn't BM).
+    if open_idx is None or open_idx >= close_idx - 1:
+        return split
+
+    bm_text = "\n".join(lines[open_idx + 1 : close_idx])
+    try:
+        loaded = yaml.safe_load(bm_text) or {}
+    except yaml.YAMLError:
+        return split
+    if not isinstance(loaded, dict):
+        return split
+
+    pre_body = "\n".join(lines[:open_idx])
+    if open_idx > 0:
+        pre_body += "\n"
+    split.body = pre_body
+    split.backmatter = loaded
+    split.had_backmatter = True
+    split.trailing_whitespace = trailing_ws
+    return split

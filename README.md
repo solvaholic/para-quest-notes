@@ -50,7 +50,7 @@ The workflows preserve that reasoning, locally.
   - [x] Slice 1: shared `vault/` + `adapter/cli.py` + `pqn-validate`
         (see [`docs/workflows/validate.md`](docs/workflows/validate.md))
   - [x] Slice 2: `pqn-create` (no-LLM)
-  - [ ] Slice 3: `pqn-archive`
+  - [x] Slice 3: `pqn-archive` (Projects only, no-LLM)
   - [ ] Slice 4: `pqn-daily`
 - [ ] Phase 6: polish + v0.1 release
 - [ ] Phase 7 (deferred): agent SKILL.md wrappers
