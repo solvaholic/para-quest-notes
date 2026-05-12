@@ -84,6 +84,11 @@ See `docs/PLAN.md` for the full breakdown.
     `--draft-outcome` deferred — see [`docs/PLAN.md`](docs/PLAN.md))
   - [ ] Slice 4: `pqn-daily` (single-file only; bulk migration
     out of scope).
+- [ ] **Phase 5.5** - LLM polish (folds in the deferrals from
+  slices 2/3 before the release polish phase: shared prompts
+  location, `pqn-create --resolve-quest`, `pqn-archive
+  --draft-outcome`, per-workflow eval scoping). See
+  [`docs/PLAN.md`](docs/PLAN.md).
 - [ ] **Phase 6** - polish + v0.1
 - [ ] **Phase 7** (deferred) - agent SKILL.md wrappers
 
