@@ -49,7 +49,7 @@ The workflows preserve that reasoning, locally.
 - [ ] Phase 5: translate remaining workflows
   - [x] Slice 1: shared `vault/` + `adapter/cli.py` + `pqn-validate`
         (see [`docs/workflows/validate.md`](docs/workflows/validate.md))
-  - [ ] Slice 2: `pqn-create`
+  - [x] Slice 2: `pqn-create` (no-LLM)
   - [ ] Slice 3: `pqn-archive`
   - [ ] Slice 4: `pqn-daily`
 - [ ] Phase 6: polish + v0.1 release

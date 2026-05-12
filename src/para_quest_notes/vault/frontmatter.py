@@ -6,16 +6,33 @@ no frontmatter — we don't try to insert one in a weird place.
 
 We keep the exact body string (everything after the closing ``---``) so
 round-tripping doesn't churn whitespace.
+
+This module is also the single source of truth for *canonical* frontmatter
+shape used by write-path workflows (``pqn-create``, ``pqn-ingest --apply``,
+and eventually ``pqn-archive``). See :func:`canonical_frontmatter` and
+:func:`dump_frontmatter`.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 import yaml
 
 DELIM = "---"
+
+# Canonical key order for the PARA + Quest schema. Keys outside this set
+# (legacy keys, user-added keys) follow in their original order. Driven by
+# docs/notes-system.md "Metadata schema (frontmatter)".
+CANONICAL_KEY_ORDER: tuple[str, ...] = (
+    "type",
+    "quest",
+    "supports",
+    "source_url",
+    "created",
+)
 
 
 @dataclass
@@ -110,3 +127,58 @@ def merge(existing: dict[str, Any], updates: dict[str, Any]) -> dict[str, Any]:
         if k not in merged:
             merged[k] = v
     return merged
+
+
+def canonical_frontmatter(
+    data: dict[str, Any],
+    *,
+    key_order: Sequence[str] = CANONICAL_KEY_ORDER,
+) -> dict[str, Any]:
+    """Reorder and prune ``data`` into canonical PARA + Quest shape.
+
+    - Keys in ``key_order`` come first, in that order, when present.
+    - Other keys follow in their original insertion order.
+    - Keys with value ``None`` are dropped.
+    - ``supports`` is dropped when empty (``[]`` or ``None``); the spec
+      says omit the key rather than emit ``supports: []``.
+
+    Doesn't validate values — schema enforcement is the workflow's job.
+    """
+    out: dict[str, Any] = {}
+    for key in key_order:
+        if key not in data:
+            continue
+        value = data[key]
+        if value is None:
+            continue
+        if key == "supports" and not value:
+            continue
+        out[key] = value
+    for key, value in data.items():
+        if key in key_order or key in out:
+            continue
+        if value is None:
+            continue
+        out[key] = value
+    return out
+
+
+def dump_frontmatter(
+    data: dict[str, Any],
+    *,
+    key_order: Sequence[str] = CANONICAL_KEY_ORDER,
+) -> str:
+    """Render ``data`` as a canonical ``---...---`` frontmatter block.
+
+    Returns a string that ends with a newline. Empty input renders as the
+    empty string (no block at all) — callers compose their own body.
+
+    Wikilink strings (``[[Foo]]``) are emitted quoted because ``[`` opens
+    a YAML flow sequence; PyYAML handles this for us when scalars contain
+    flow indicators, but we double-check via the existing ``ParsedNote``
+    rendering path so the two stay in lockstep.
+    """
+    canon = canonical_frontmatter(data, key_order=key_order)
+    if not canon:
+        return ""
+    return ParsedNote(frontmatter=canon, body="", had_frontmatter=True).render()

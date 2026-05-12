@@ -25,7 +25,7 @@ from typing import Any
 
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.step import StepContext, StepResult
-from para_quest_notes.vault.frontmatter import ParsedNote, merge
+from para_quest_notes.vault.frontmatter import ParsedNote, canonical_frontmatter, merge
 from para_quest_notes.workflows.ingest_inbox.contract import AppliedChange
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
 
@@ -125,8 +125,14 @@ class ApplyMove:
 def _build_frontmatter(
     existing: dict[str, Any], para_type: str, quests: list[str]
 ) -> dict[str, Any]:
+    """Merge spec keys into existing frontmatter, then canonicalize order.
+
+    The spec keys (``type``, ``quest``, ``supports``) overwrite values
+    authoritatively; other existing keys are preserved.
+    ``canonical_frontmatter`` is the single source of truth for key order
+    and for omitting empty ``supports``.
+    """
     if para_type == "resource":
-        # Resources: type required; quest defaults to "none"; supports optional.
         updates: dict[str, Any] = {"type": "resource", "quest": "none"}
         if quests:
             updates["supports"] = [f"[[{q}]]" for q in quests]
@@ -140,7 +146,7 @@ def _build_frontmatter(
             "quest": "none",
             "supports": [f"[[{q}]]" for q in quests],
         }
-    return merge(existing, updates)
+    return canonical_frontmatter(merge(existing, updates))
 
 
 def _rename_attachment(name: str, old_stem: str, new_stem: str) -> str:
