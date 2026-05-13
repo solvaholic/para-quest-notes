@@ -88,7 +88,7 @@ def test_cli_escalation_returns_1(tmp_path: Path, capsys, monkeypatch):
             "--type",
             "project",
             "--title",
-            "x",  # missing --supports
+            "x/y",
         ]
     )
     payload = json.loads(capsys.readouterr().out)

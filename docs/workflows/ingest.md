@@ -123,6 +123,9 @@ caller; `context` carries free-form state useful for triage.
 - **Resources skip the Quest step.** Per
   [`docs/notes-system.md`](../notes-system.md), `supports:` is
   optional on resources.
+- **Pre-set `type:` frontmatter is authoritative.** If an inbox note
+  already has `type: project`, `type: area`, or `type: resource`,
+  `classify_para` is skipped and the existing value is used.
 - **Filename validation** rejects path separators and disallowed
   characters; appends `.md` if missing. Also rejects camelCase /
   PascalCase / snake_case stems — Title Case requires words separated

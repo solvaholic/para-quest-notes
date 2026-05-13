@@ -15,7 +15,7 @@ from datetime import date
 from typing import Any
 
 from para_quest_notes.adapter.step import StepContext, StepResult
-from para_quest_notes.vault.frontmatter import dump_frontmatter
+from para_quest_notes.vault.frontmatter import canonical_frontmatter, dump_frontmatter
 from para_quest_notes.workflows.create.contract import CreateInputs
 
 _PROJECT_BODY = """# {title}
@@ -98,7 +98,7 @@ class ComposeNote:
         title: str = ctx.scratchpad["title"]
         today = self._today or date.today().isoformat()
 
-        fm = _frontmatter_for(inputs, today=today)
+        fm = canonical_frontmatter(_frontmatter_for(inputs, today=today))
         fm_text = dump_frontmatter(fm)
         body = _body_for(inputs, title)
         content = fm_text + body

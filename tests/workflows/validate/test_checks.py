@@ -87,6 +87,12 @@ def test_filename_uniqueness_focus_filters_report(vault: Path):
     assert report.issues == []
 
 
+def test_inbox_project_without_supports_is_clean(vault: Path):
+    write(vault / "inbox" / "Draft.md", "---\ntype: project\nquest: none\n---\nbody\n")
+    report = validate_vault(vault)
+    assert report.issues == []
+
+
 # ---------- frontmatter_yaml ----------
 
 

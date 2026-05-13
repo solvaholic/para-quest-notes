@@ -11,6 +11,7 @@ from typing import Any, Literal
 
 ParaType = Literal["project", "area", "resource"]
 QuestKind = Literal["main", "side", "none"]
+DestinationMode = Literal["canonical", "inbox"]
 
 
 @dataclass
@@ -20,7 +21,7 @@ class CreateInputs:
     title: str
     type: ParaType
     quest: QuestKind = "none"
-    supports: list[str] = field(default_factory=list)
+    supports: list[str] | None = None
     sub_path: str | None = None
     source_url: str | None = None
 
@@ -31,7 +32,9 @@ class CreatePlan:
 
     filename: str | None = None
     destination: str | None = None  # vault-relative posix path
+    destination_mode: DestinationMode | None = None
     frontmatter: dict[str, Any] = field(default_factory=dict)
+    notes: list[str] = field(default_factory=list)
 
 
 @dataclass

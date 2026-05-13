@@ -29,6 +29,23 @@ class ClassifyPara:
 
     def run(self, ctx: StepContext) -> StepResult:
         scan: ScanResult = ctx.scratchpad["scan"]
+        preset_type = scan.parsed.frontmatter.get("type")
+        if isinstance(preset_type, str):
+            normalized = preset_type.strip().lower()
+            if normalized in VALID_TYPES:
+                ctx.scratchpad["para_type"] = normalized
+                ctx.scratchpad["para_reason"] = "used pre-set type from frontmatter"
+                return StepResult(
+                    name=self.name,
+                    output={
+                        "type": normalized,
+                        "confidence": 1.0,
+                        "reason": "used pre-set type from frontmatter",
+                        "skipped": True,
+                    },
+                    meta={"type": normalized, "source": "frontmatter"},
+                )
+
         body_preview = scan.parsed.body.strip()[:BODY_PREVIEW_CHARS]
         parsed = call_llm_json(
             ctx_llm=ctx.llm,

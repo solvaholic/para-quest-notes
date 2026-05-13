@@ -62,9 +62,12 @@ def _to_create_result(wf: WorkflowResult, *, vault: Path, apply: bool) -> Create
     written = False
 
     for step in wf.steps:
-        if step.name == "compute_destination" and isinstance(step.output, dict):
+        if step.name == "validate_inputs" and isinstance(step.output, dict):
+            plan.notes.extend(str(note) for note in step.output.get("notes") or [])
+        elif step.name == "compute_destination" and isinstance(step.output, dict):
             plan.filename = step.output.get("filename")
             plan.destination = step.output.get("destination")
+            plan.destination_mode = step.output.get("destination_mode")
         elif step.name == "compose_note" and isinstance(step.output, dict):
             plan.frontmatter = dict(step.output.get("frontmatter") or {})
         elif step.name == "write_note" and isinstance(step.output, dict):

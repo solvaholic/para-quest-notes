@@ -42,8 +42,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--supports",
         action="append",
-        default=[],
-        help="Wikilink to a Quest this note supports, e.g. '[[Health]]'. Repeatable.",
+        default=None,
+        help=(
+            "Wikilink to a Quest this note supports, e.g. '[[Health]]'. Repeatable. "
+            "Optional for project and area notes: omit it to file into inbox/."
+        ),
     )
     p.add_argument(
         "--sub-path",
@@ -79,7 +82,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         title=args.title,
         type=args.type,
         quest=args.quest,
-        supports=list(args.supports),
+        supports=list(args.supports) if args.supports else None,
         sub_path=args.sub_path,
         source_url=args.source_url,
     )
@@ -120,6 +123,8 @@ def _print_text(result: CreateResult, trace_path: Path) -> None:
     if result.plan.frontmatter:
         keys = ", ".join(result.plan.frontmatter.keys())
         print(f"      frontmatter keys: {keys}")
+    for note in result.plan.notes:
+        print(f"      note: {note}")
 
 
 if __name__ == "__main__":  # pragma: no cover

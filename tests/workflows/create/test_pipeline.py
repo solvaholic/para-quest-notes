@@ -84,7 +84,7 @@ def test_resource_with_subpath_and_url(tmp_path: Path):
 
 def test_validate_inputs_escalation_short_circuits(tmp_path: Path):
     vault = _seed_vault(tmp_path)
-    inputs = CreateInputs(title="x", type="project")  # missing supports
+    inputs = CreateInputs(title="x/y", type="project")
     result = create_note(inputs, vault=vault, apply=True)
     assert not result.ok
     assert result.escalation is not None
