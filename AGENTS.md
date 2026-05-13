@@ -84,10 +84,11 @@ See `docs/PLAN.md` for the full breakdown.
     `--draft-outcome` deferred — see [`docs/PLAN.md`](docs/PLAN.md))
   - [x] Slice 4: `pqn-daily` (filing-only; no LLM; bulk migration
     out of scope; authoring deferred to post-v1).
-- [ ] **Phase 5.5** - LLM polish (folds in the deferrals from
-  slices 2/3 before the release polish phase: shared prompts
-  location, `pqn-create --resolve-quest`, `pqn-archive
-  --draft-outcome`, per-workflow eval scoping). See
+- [ ] **Phase 5.5** - LLM polish + contributor onboarding. Reshaped
+  during the slice-4 → 5.5 handoff: 5.5a (shared prompts) deferred,
+  5.5b reshaped as a no-LLM `pqn-create` inbox fallback, 5.5c
+  (`pqn-archive --draft-outcome`) kept, 5.5d (per-workflow eval
+  scoping) kept, 5.5e (`CONTRIBUTING.md`) added. See
   [`docs/PLAN.md`](docs/PLAN.md).
 - [ ] **Phase 6** - polish + v0.1
 - [ ] **Phase 7** (deferred) - agent SKILL.md wrappers
