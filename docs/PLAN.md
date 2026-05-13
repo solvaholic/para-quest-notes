@@ -352,26 +352,43 @@ integration. Branch naming: one `phase5-<workflow>` branch per
 slice, merged to `main` as it lands; never more than two active
 branches.
 
-### Phase 5.5 - LLM polish (post-slice-4, pre-v0.1)
+### Phase 5.5 - LLM polish + contributor onboarding (post-slice-4, pre-v0.1)
 
-Slices 2 and 3 shipped no-LLM to keep scope tight; slice 4 will too
-unless its tiebreak proves unavoidable. This phase folds the deferred
-LLM capabilities back in **before** Phase 6's release polish, so v0.1
-matches the project's stated philosophy ("LLM is used for judgment
-calls and natural-language summarization"). One sub-slice per item;
-each can land on its own branch and ship independently.
+Slices 2, 3, and 4 all shipped no-LLM to keep scope tight. This phase
+was originally scoped as "fold the deferred LLM capabilities back in
+before Phase 6's release polish." A planning conversation during the
+slice-4 → 5.5 handoff reshaped it: the original 5.5b ("LLM
+`resolve_quest` inside `pqn-create`") doesn't pay off, because
+`pqn-create` only has `title` + `type` to work with — far too thin a
+signal for an LLM Quest classifier to beat fuzzy string matching.
+The richer signal (note body) already exists in `pqn-ingest`'s
+`pick_quest`. So 5.5b is reshaped as a no-LLM inbox fallback, 5.5a
+loses its second consumer and is deferred, and a contributor
+onboarding doc (5.5e) is folded in.
 
-- **5.5a — Shared prompts location.** Move `pick_quest.txt` (and any
-  other workflow prompts that exist by then) into a single
-  `src/para_quest_notes/prompts/` tree. Update `pqn-ingest` to load
-  from the new location. Document the layout in
-  `docs/configuration.md`. Prereq for 5.5b and 5.5d so both
-  workflows load `pick_quest` from one source of truth.
-- **5.5b — `pqn-create --resolve-quest` (LLM).** Add an opt-in step
-  that calls the shared `pick_quest` prompt when the user runs
-  `pqn-create` without `--supports`. Same low-confidence escalation
-  shape as `pqn-ingest`'s version. Default behavior (no flag) stays
-  the current strict Rule 1 enforcement.
+One sub-slice per item; each can land on its own
+`phase5.5-<thing>` branch and ship independently. Never more than
+two open at once (mirrors phase 5).
+
+- **5.5a — Shared prompts location *(deferred)*.** Original
+  justification was "both `pqn-create` and `pqn-ingest` load
+  `pick_quest`." With 5.5b reshaped (below), that second consumer
+  disappears. Slice 2's deferral rationale still applies: shared
+  infra without a second consumer is speculation. Defer until a
+  real second consumer appears.
+- **5.5b — `pqn-create` inbox fallback (no LLM).** Make
+  `--supports` optional. When omitted **and** type is `project` or
+  `area`, file the note at `inbox/<basename>.md` instead of the
+  canonical `projects/<quest>/...` / `areas/...` destination,
+  preserving user-supplied frontmatter (`type:`, title) so intent
+  isn't lost. `pqn-ingest` picks the Quest later from the note's
+  body when the user fleshes it out. Resources unaffected
+  (`pqn-ingest` already skips `pick_quest` for resources).
+  Compatibility to verify during implementation:
+  `pqn-ingest:classify_para` must honor pre-set `type:` rather than
+  re-classifying from scratch; `pqn-validate` must not flag a
+  `type: project` inbox note without `supports` as broken (inbox is
+  transient). Update `docs/workflows/create.md`.
 - **5.5c — `pqn-archive --draft-outcome` (LLM, prose).** First
   prose-output prompt in the codebase. Adapter work: confirm
   `OllamaClient` has a clean raw-text path (no JSON parsing); add a
@@ -382,10 +399,20 @@ each can land on its own branch and ship independently.
   rather than writing it. The user re-runs with `--outcome "..."`
   to commit. (No interactive iterate in the CLI form.)
 - **5.5d — Per-workflow eval scoping.** Flip the eval harness's
-  `EVALUABLE_STEPS` from a global constant to per-workflow scoping.
-  Add the first non-ingest fixtures: at least one for
-  `pqn-create:resolve_quest` and one for `pqn-archive:draft_outcome`.
-  Grow the overall fixture count toward the ~30 target from Phase 4.
+  `EVALUABLE_STEPS` from a global constant to per-workflow
+  registry. With 5.5b no-LLM, the only new LLM step to evaluate is
+  `pqn-archive:draft_outcome` (added by 5.5c). Pick the simplest
+  judge for prose that gives signal (responds-at-all baseline plus
+  e.g. Jaccard word overlap, or LLM-as-judge) and document the
+  tradeoff in `docs/eval.md`. Continue growing the `pqn-ingest`
+  fixture set toward the ~30 target from Phase 4.
+- **5.5e — `CONTRIBUTING.md`.** Focused contributor onboarding (not
+  encyclopedic): dev setup (`uv sync`), lint/format/types/test
+  commands, the `phase5.5-<thing>` branch flow, how to add an eval
+  fixture, `pqn-eval --fake` vs real-model usage, how to read a
+  `report.md`. Pointer to `AGENTS.md` and this PLAN.md. Location
+  (`CONTRIBUTING.md` at root vs `docs/CONTRIBUTING.md`) confirmed
+  at landing.
 
 ### Phase 6 - Polish and release
 - README quickstart that runs end-to-end against the bundled sample
