@@ -10,6 +10,7 @@ Verdicts roll up into the report. Keep judges deterministic and cheap.
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass, field
 from typing import Any
@@ -19,6 +20,7 @@ from para_quest_notes.eval.fixtures import (
     ExpectedClassify,
     ExpectedDestination,
     ExpectedFilename,
+    ExpectedGenerateOutcome,
     ExpectedPickQuest,
 )
 
@@ -34,16 +36,12 @@ class Verdict:
 
 
 # --------------------------------------------------------------------------- #
-# `responds`: did the LLM produce parseable JSON at all?
+# `responds`: did the LLM produce anything parseable / non-empty at all?
 # --------------------------------------------------------------------------- #
 
 
 def judge_responds(raw_text: str | None) -> Verdict:
-    """Cheap gate: parseable JSON object response, or not.
-
-    Phase-0 baseline per PLAN.md risk note about empty `format=json`
-    replies. Independent of semantic correctness.
-    """
+    """Cheap gate for JSON steps: parseable JSON object response, or not."""
     if raw_text is None:
         return Verdict(step="responds", ok=False, reason="no LLM call recorded")
     text = raw_text.strip()
@@ -64,6 +62,15 @@ def judge_responds(raw_text: str | None) -> Verdict:
             ok=False,
             reason=f"top-level JSON was {type(parsed).__name__}, not object",
         )
+    return Verdict(step="responds", ok=True)
+
+
+def judge_text_responds(raw_text: str | None) -> Verdict:
+    """Cheap gate for prose steps: any non-empty text counts as a response."""
+    if raw_text is None:
+        return Verdict(step="responds", ok=False, reason="no LLM call recorded")
+    if not raw_text.strip():
+        return Verdict(step="responds", ok=False, reason="empty response")
     return Verdict(step="responds", ok=True)
 
 
@@ -138,9 +145,10 @@ def judge_pick_quest(actual: dict[str, Any] | None, expected: ExpectedPickQuest)
 
 # canonical form: lowercase, drop `.md`, strip non-alphanumerics to spaces,
 # collapse whitespace. Catches Title Case vs casing differences and minor
-# punctuation drift. Won't catch semantic word-choice differences — those
+# punctuation drift. Won't catch semantic word-choice differences - those
 # are real failures and should fail the judge.
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
+_WORD = re.compile(r"[a-z0-9]+")
 
 
 def canonical_filename(name: str) -> str:
@@ -202,6 +210,69 @@ def judge_plan_destination(actual: dict[str, Any] | None, expected: ExpectedDest
 
 
 # --------------------------------------------------------------------------- #
+# generate_outcome
+# --------------------------------------------------------------------------- #
+
+
+def judge_generate_outcome(
+    actual: dict[str, Any] | None, expected: ExpectedGenerateOutcome
+) -> Verdict:
+    if actual is None:
+        return Verdict(step="generate_outcome", ok=False, reason="step did not produce output")
+    text = actual.get("outcome_text")
+    if actual.get("action") != "generated" or not isinstance(text, str) or not text.strip():
+        return Verdict(
+            step="generate_outcome",
+            ok=False,
+            reason="step did not produce generated outcome text",
+            detail={"actual": actual},
+        )
+
+    detail: dict[str, Any] = {"text_preview": text[:200]}
+    if expected.keywords:
+        lowered = text.lower()
+        matched = [keyword for keyword in expected.keywords if keyword.lower() in lowered]
+        needed = max(1, math.ceil(len(expected.keywords) * 0.6))
+        detail.update(
+            {
+                "matched_keywords": matched,
+                "missing_keywords": [k for k in expected.keywords if k not in matched],
+                "needed": needed,
+            }
+        )
+        if len(matched) < needed:
+            return Verdict(
+                step="generate_outcome",
+                ok=False,
+                reason="keyword coverage below threshold",
+                detail=detail,
+            )
+
+    if expected.text is not None:
+        overlap = _jaccard(_tokens(text), _tokens(expected.text))
+        detail["text_jaccard"] = overlap
+        if overlap < 0.25:
+            return Verdict(
+                step="generate_outcome",
+                ok=False,
+                reason="reference-text overlap below threshold",
+                detail=detail,
+            )
+
+    return Verdict(step="generate_outcome", ok=True, detail=detail)
+
+
+def _tokens(text: str) -> set[str]:
+    return {match.group(0) for match in _WORD.finditer(text.lower())}
+
+
+def _jaccard(left: set[str], right: set[str]) -> float:
+    if not left or not right:
+        return 0.0
+    return len(left & right) / len(left | right)
+
+
+# --------------------------------------------------------------------------- #
 # Dispatch
 # --------------------------------------------------------------------------- #
 
@@ -210,6 +281,7 @@ JUDGES: dict[str, Any] = {
     "pick_quest": judge_pick_quest,
     "propose_filename": judge_propose_filename,
     "plan_destination": judge_plan_destination,
+    "generate_outcome": judge_generate_outcome,
 }
 
 
@@ -234,9 +306,11 @@ __all__ = [
     "Verdict",
     "canonical_filename",
     "judge_classify_para",
+    "judge_generate_outcome",
     "judge_pick_quest",
     "judge_plan_destination",
     "judge_propose_filename",
     "judge_responds",
     "judge_step",
+    "judge_text_responds",
 ]

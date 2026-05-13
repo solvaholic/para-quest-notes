@@ -90,3 +90,28 @@ def test_cli_escalation_returns_1(tmp_path: Path, capsys, monkeypatch):
     payload = json.loads(capsys.readouterr().out)
     assert rc == 1
     assert payload["escalation"]["step"] == "prepare_outcome"
+    assert payload["plan"]["outcome_action"] == "required"
+
+
+def test_cli_rejects_generate_outcome_with_outcome(tmp_path: Path, capsys, monkeypatch):
+    vault = _seed_vault(tmp_path)
+    (vault / "projects" / "X.md").write_text(
+        "---\ntype: project\nquest: none\nsupports: ['[[Q]]']\n---\n# X\n"
+    )
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "X",
+            "--generate-outcome",
+            "--outcome",
+            "done",
+        ]
+    )
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "mutually exclusive" in captured.err

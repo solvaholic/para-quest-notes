@@ -1,0 +1,32 @@
+workflow: archive
+id: archive-garden-bed
+title: Build Raised Beds
+body: |
+  # Build Raised Beds
+
+  Reused cedar from the old fence and kept a running list of what fit the yard.
+
+  ## Done
+  - [x] Finalized a two-bed layout that still leaves room for the compost bin
+  - [x] Cut and assembled the cedar frames
+  - [x] Filled both beds and planted the first tomatoes and herbs
+
+  ## Lessons
+  The second bed went faster once the corner brackets were pre-drilled.
+completed_tasks:
+  - "- [x] Finalized a two-bed layout that still leaves room for the compost bin"
+  - "- [x] Cut and assembled the cedar frames"
+  - "- [x] Filled both beds and planted the first tomatoes and herbs"
+inbound_links:
+  - basename: Garden
+    snippet: "The harvest plan now lives in [[Build Raised Beds]] notes and the seasonal checklist."
+  - basename: Patio Sketches
+    snippet: "Reuse measurements from [[Build Raised Beds]] before expanding the drip line."
+fake_response: |
+  Built the two raised beds from salvaged cedar and got the first tomatoes and herbs planted. The project clarified a layout that fits the yard and left a reusable set of measurements for later garden work. Pre-drilling the corner brackets also turned into the key lesson that made the second bed go faster.
+expected:
+  generate_outcome:
+    keywords:
+      - raised beds
+      - salvaged cedar
+      - tomatoes

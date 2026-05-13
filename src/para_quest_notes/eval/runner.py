@@ -34,10 +34,6 @@ from para_quest_notes.eval.registry import (
     register_defaults,
 )
 
-# --------------------------------------------------------------------------- #
-# Result records
-# --------------------------------------------------------------------------- #
-
 
 @dataclass
 class StepRunResult:
@@ -91,11 +87,6 @@ class RunSummary:
     cells: list[CellResult] = field(default_factory=list)
 
 
-# --------------------------------------------------------------------------- #
-# LLM wrapper that records raw text per call
-# --------------------------------------------------------------------------- #
-
-
 class _RecordingLLM:
     """Wraps any LLM client so the runner can observe raw text + prompt_id."""
 
@@ -106,18 +97,19 @@ class _RecordingLLM:
         self.last_latency_ms: int = 0
 
     def generate(self, prompt: str, **kwargs: Any) -> Any:
+        return self._record("generate", prompt, **kwargs)
+
+    def generate_text(self, prompt: str, **kwargs: Any) -> Any:
+        return self._record("generate_text", prompt, **kwargs)
+
+    def _record(self, method_name: str, prompt: str, **kwargs: Any) -> Any:
         self.last_raw_text = None
         self.last_prompt_id = kwargs.get("prompt_id")
         start = time.perf_counter()
-        resp = self.inner.generate(prompt, **kwargs)
+        resp = getattr(self.inner, method_name)(prompt, **kwargs)
         self.last_latency_ms = int((time.perf_counter() - start) * 1000)
         self.last_raw_text = getattr(resp, "text", None)
         return resp
-
-
-# --------------------------------------------------------------------------- #
-# Per-step runner
-# --------------------------------------------------------------------------- #
 
 
 def _run_one_step(
@@ -196,11 +188,6 @@ def _release_model(llm: Any, model_name: str, trace: TraceWriter | None) -> None
         return
     if trace is not None:
         trace.write({"event": "eval.unload", "model": model_name, "ok": bool(ok)})
-
-
-# --------------------------------------------------------------------------- #
-# Matrix
-# --------------------------------------------------------------------------- #
 
 
 @dataclass

@@ -1,10 +1,9 @@
 # Eval fixtures
 
 Hand-curated fixtures for the registered eval harness (see
-[`docs/PLAN.md`](../../docs/PLAN.md) Phase 4). Today every committed
-fixture is for `pqn-ingest`, but Phase 5.5d makes the loader
-workflow-aware so new workflows can join without changing the existing
-YAML files.
+[`docs/PLAN.md`](../../docs/PLAN.md) Phase 4). The loader is
+workflow-aware: committed fixtures now cover both `pqn-ingest` and
+`pqn-archive`.
 
 Run the harness with:
 
@@ -23,6 +22,8 @@ uv run python -m para_quest_notes.eval --models granite4.1:30b,qwen3:30b
 Reports land under `eval/runs/<timestamp>/` (gitignored).
 
 ## Schema
+
+### Ingest fixtures
 
 ```yaml
 workflow: ingest            # optional today; defaults to ingest
@@ -49,6 +50,30 @@ expected:
                              # single-spaced; matches judges.canonical_filename
   plan_destination:
     destination: "projects/Train Plan.md"  # vault-relative posix
+```
+
+### Archive fixtures
+
+```yaml
+workflow: archive
+id: archive-5k-completed
+title: "Train for 5K"
+body: |
+  # Train for 5K
+  ...
+completed_tasks:
+  - "- [x] Finished week 8 without skipping a session"
+inbound_links:
+  - basename: Health
+    snippet: "[[Train for 5K]] turned into a steady habit."
+fake_response: |
+  Finished the training block and made running feel routine again....
+expected:
+  generate_outcome:
+    keywords:
+      - running habit
+      - 30-minute runs
+      - sustainable baseline
 ```
 
 You don't have to declare every step's expectation. The runner only

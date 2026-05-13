@@ -1,0 +1,32 @@
+workflow: archive
+id: archive-5k-completed
+title: Train for 5K
+body: |
+  # Train for 5K
+
+  Switched from occasional jogs to a simple three-day schedule and kept notes after each run.
+
+  ## Wins
+  - [x] Finished week 8 without skipping a session
+  - [x] Ran for 30 minutes without walking
+  - [x] Logged routes and recovery notes after long runs
+
+  ## Notes
+  Legs felt more stable once the midweek easy run stayed short.
+completed_tasks:
+  - "- [x] Finished week 8 without skipping a session"
+  - "- [x] Ran for 30 minutes without walking"
+  - "- [x] Logged routes and recovery notes after long runs"
+inbound_links:
+  - basename: Health
+    snippet: "- [[Train for 5K]] moved from a vague goal to a repeatable running rhythm."
+  - basename: Summer Goals
+    snippet: "Circle back to [[Train for 5K]] before signing up for a fall race."
+fake_response: |
+  Finished the couch-to-5K push and turned it into a steady running habit. By the end of the project, 30-minute runs were consistent and the notes made the routine easier to repeat. What started as a one-off training sprint became a sustainable baseline instead of an active project.
+expected:
+  generate_outcome:
+    keywords:
+      - running habit
+      - 30-minute runs
+      - sustainable baseline

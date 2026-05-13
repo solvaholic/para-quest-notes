@@ -1,0 +1,32 @@
+workflow: archive
+id: archive-workbench-refresh
+title: Refresh Garage Workbench
+body: |
+  # Refresh Garage Workbench
+
+  Goal was to make the bench usable again before the winter repair backlog starts.
+
+  ## Completed
+  - [x] Cleared broken hardware and duplicate paint cans from the lower shelf
+  - [x] Replaced the top with sealed plywood and added a brighter task light
+  - [x] Grouped soldering and bike tools into labeled bins
+
+  ## Follow-up
+  A small charging station might become its own project later.
+completed_tasks:
+  - "- [x] Cleared broken hardware and duplicate paint cans from the lower shelf"
+  - "- [x] Replaced the top with sealed plywood and added a brighter task light"
+  - "- [x] Grouped soldering and bike tools into labeled bins"
+inbound_links:
+  - basename: Workshop
+    snippet: "[[Refresh Garage Workbench]] finally made the repair bench usable again."
+  - basename: Bike Maintenance
+    snippet: "Tool bins from [[Refresh Garage Workbench]] now keep common bike jobs faster."
+fake_response: |
+  Made the garage workbench usable again by clearing clutter, replacing the top, and improving the light. The new bins gave soldering and bike tools stable homes, which should cut down setup time for routine repairs. With the bench reset, only the optional charging station remains for a future project.
+expected:
+  generate_outcome:
+    keywords:
+      - workbench
+      - replacing the top
+      - bins

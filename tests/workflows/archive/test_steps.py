@@ -177,13 +177,31 @@ def test_prepare_outcome_keeps_existing():
     assert ctx.scratchpad["outcome_action"] == "kept"
 
 
-def test_prepare_outcome_inserts_when_supplied():
+def test_prepare_outcome_marks_provided_when_supplied():
     ctx = _ctx()
     ctx.scratchpad["split"] = split_note("body only\n")
     ctx.scratchpad["source_rel"] = "projects/X.md"
     PrepareOutcome(outcome="Shipped").run(ctx)
-    assert ctx.scratchpad["outcome_action"] == "inserted"
+    assert ctx.scratchpad["outcome_action"] == "provided"
     assert ctx.scratchpad["outcome_text"] == "Shipped"
+
+
+def test_prepare_outcome_marks_will_generate_on_dry_run():
+    ctx = _ctx()
+    ctx.scratchpad["split"] = split_note("body only\n")
+    ctx.scratchpad["source_rel"] = "projects/X.md"
+    PrepareOutcome(outcome=None, generate_outcome=True, apply=False).run(ctx)
+    assert ctx.scratchpad["outcome_action"] == "will_generate"
+    assert ctx.scratchpad["needs_generate_outcome"] is False
+
+
+def test_prepare_outcome_requests_generation_on_apply():
+    ctx = _ctx()
+    ctx.scratchpad["split"] = split_note("body only\n")
+    ctx.scratchpad["source_rel"] = "projects/X.md"
+    res = PrepareOutcome(outcome=None, generate_outcome=True, apply=True).run(ctx)
+    assert res.output["action"] == "generate_requested"
+    assert ctx.scratchpad["needs_generate_outcome"] is True
 
 
 def test_prepare_outcome_escalates_when_missing():
@@ -192,6 +210,7 @@ def test_prepare_outcome_escalates_when_missing():
     ctx.scratchpad["source_rel"] = "projects/X.md"
     with pytest.raises(EscalateToUser):
         PrepareOutcome(outcome=None).run(ctx)
+    assert ctx.scratchpad["outcome_action"] == "required"
 
 
 # ---- compose_archive ---------------------------------------------------
@@ -235,7 +254,7 @@ def test_compose_archive_cancels_tasks(tmp_path: Path):
         tmp_path,
         "---\ntype: project\nquest: none\n---\nintro\n- [ ] one\n- [/] two\n",
         will_cancel_tasks=True,
-        outcome_action="inserted",
+        outcome_action="provided",
         outcome_text="Shipped it",
     )
     ctx.scratchpad["open_tasks"] = find_open_tasks(ctx.scratchpad["split"].body)
@@ -276,7 +295,7 @@ def test_compose_archive_migrates_backmatter(tmp_path: Path):
     ctx, _ = _compose_ctx(
         tmp_path,
         "# X\n\nbody\n\n---\ntype: project\nquest: none\n---\n",
-        outcome_action="inserted",
+        outcome_action="provided",
         outcome_text="done",
     )
     ComposeArchive(today="2026-05-12").run(ctx)

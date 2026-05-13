@@ -84,7 +84,7 @@ Each run writes under `eval/runs/<timestamp>/`, including `report.md`, `rows.csv
 
 `report.md` is the fast read:
 
-- **Responds-at-all baseline** - did the model emit parseable JSON for LLM steps?
+- **Responds-at-all baseline** - did the model emit parseable JSON for JSON steps, or any non-empty text for prose steps?
 - **Performance** - LLM-cell count plus total, mean, p50, p95, and max latency
 - **Accuracy by step** - pass/total per model and step, plus overall
 - **Per-step detail** - one row per fixture/model cell with verdict and reason

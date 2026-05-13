@@ -65,3 +65,11 @@ def test_prompt_id_propagates_when_queued_response_lacks_one() -> None:
     llm.queue("x")
     r = llm.generate("p", prompt_id="ingest@deadbeef")
     assert r.prompt_id == "ingest@deadbeef"
+
+
+def test_add_text_response_is_used_by_generate_text() -> None:
+    llm = FakeLLM()
+    llm.add_text_response("generate_outcome@abc", "plain prose")
+    r = llm.generate_text("p", prompt_id="generate_outcome@abc")
+    assert r.text == "plain prose"
+    assert llm.calls[-1].format is None

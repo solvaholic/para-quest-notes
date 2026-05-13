@@ -15,6 +15,7 @@ class ArchiveInputs:
 
     target: str  # vault-relative path or bare basename (with or without .md)
     outcome: str | None = None
+    generate_outcome: bool = False
     cancel_open_tasks: bool = False
 
 
@@ -26,7 +27,10 @@ class ArchivePlan:
     destination: str | None = None  # vault-relative posix
     open_tasks: list[dict[str, Any]] = field(default_factory=list)
     tasks_cancelled: int = 0
-    outcome_action: str = "none"  # "kept" | "inserted" | "none"
+    outcome_action: str = (
+        "none"  # "kept" | "provided" | "required" | "will_generate" | "generated" | "none"
+    )
+    outcome_text: str | None = None
     frontmatter_migrated: bool = False
 
 

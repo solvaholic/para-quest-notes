@@ -8,7 +8,7 @@ Dry-run by default. With ``apply=True``:
   destination directory, then ``os.replace`` it into place.
 * Remove the source file.
 
-The order — write archive first, then remove source — means a crash
+The order - write archive first, then remove source - means a crash
 between the two leaves *both* copies on disk rather than dropping
 the note. The user can resolve the duplicate manually.
 """
@@ -33,7 +33,6 @@ class WriteAndMove:
         dest_abs: Path = ctx.scratchpad["destination_abs"]
         dest_rel: str = ctx.scratchpad["destination_rel"]
         content: str = ctx.scratchpad["content"]
-
         if not self.apply:
             return StepResult(
                 name=self.name,
