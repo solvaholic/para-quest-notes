@@ -17,9 +17,11 @@ from typing import Any
 
 import yaml
 
+from para_quest_notes.eval.registry import DEFAULT_WORKFLOW, get_workflow_eval, register_defaults
+
 VALID_PARA_TYPES = ("project", "area", "resource")
 VALID_QUEST_KINDS = ("main", "side")
-VALID_STEPS = ("classify_para", "pick_quest", "propose_filename", "plan_destination")
+_INGEST_STEPS = ("classify_para", "pick_quest", "propose_filename", "plan_destination")
 
 
 class FixtureError(ValueError):
@@ -41,7 +43,7 @@ class ExpectedClassify:
 class ExpectedPickQuest:
     """Expected Quest pick.
 
-    ``acceptable`` is a list of acceptable quest-name sets — the pick
+    ``acceptable`` is a list of acceptable quest-name sets - the pick
     passes if it equals any one of them. ``skipped`` covers resources
     where the workflow short-circuits.
     """
@@ -80,6 +82,7 @@ class Fixture:
     expected: Expected
     frontmatter: dict[str, Any] = field(default_factory=dict)
     source: Path | None = None  # YAML file this came from
+    workflow: str = DEFAULT_WORKFLOW
 
 
 # --------------------------------------------------------------------------- #
@@ -87,13 +90,14 @@ class Fixture:
 # --------------------------------------------------------------------------- #
 
 
-def load_fixtures(path: Path) -> list[Fixture]:
+def load_fixtures(path: Path) -> list[Any]:
     """Load fixtures from a file or directory of ``*.yaml`` / ``*.yml``."""
+    register_defaults()
     p = Path(path)
     files = sorted(_iter_yaml_files(p)) if p.is_dir() else [p]
 
     seen_ids: set[str] = set()
-    out: list[Fixture] = []
+    out: list[Any] = []
     for f in files:
         for fx in _load_one_file(f):
             if fx.id in seen_ids:
@@ -109,7 +113,7 @@ def _iter_yaml_files(directory: Path) -> Iterator[Path]:
             yield p
 
 
-def _load_one_file(path: Path) -> list[Fixture]:
+def _load_one_file(path: Path) -> list[Any]:
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as exc:
@@ -125,7 +129,27 @@ def _load_one_file(path: Path) -> list[Fixture]:
     )
 
 
-def _parse_fixture(raw: Any, *, source: Path) -> Fixture:
+def _parse_fixture(raw: Any, *, source: Path) -> Any:
+    if not isinstance(raw, dict):
+        raise FixtureError(f"{source}: each fixture must be a mapping")
+    workflow = raw.get("workflow", DEFAULT_WORKFLOW)
+    if not isinstance(workflow, str) or not workflow.strip():
+        raise FixtureError(f"{source}: 'workflow' must be a non-empty string when present")
+    workflow = workflow.strip()
+    try:
+        loader = get_workflow_eval(workflow).fixture_loader
+    except KeyError as exc:
+        raise FixtureError(f"{source}: unknown workflow {workflow!r}") from exc
+    fixture = loader(raw, source)
+    if getattr(fixture, "workflow", workflow) != workflow:
+        raise FixtureError(
+            f"{source}: workflow loader for {workflow!r} returned fixture for "
+            f"{getattr(fixture, 'workflow', None)!r}"
+        )
+    return fixture
+
+
+def parse_ingest_fixture(raw: Any, source: Path) -> Fixture:
     if not isinstance(raw, dict):
         raise FixtureError(f"{source}: each fixture must be a mapping")
     fid = _require_str(raw, "id", source=source)
@@ -149,6 +173,7 @@ def _parse_fixture(raw: Any, *, source: Path) -> Fixture:
         expected=expected,
         frontmatter=fm,
         source=source,
+        workflow=DEFAULT_WORKFLOW,
     )
 
 
@@ -173,7 +198,7 @@ def _parse_expected(raw: Any, *, source: Path, fid: str) -> Expected:
     if not isinstance(raw, dict):
         raise FixtureError(f"{source} ({fid}): 'expected' must be a mapping")
 
-    unknown = set(raw) - set(VALID_STEPS)
+    unknown = set(raw) - set(_INGEST_STEPS)
     if unknown:
         raise FixtureError(f"{source} ({fid}): expected has unknown step(s): {sorted(unknown)}")
 
@@ -257,7 +282,6 @@ def _require_str(raw: dict[str, Any], key: str, *, source: Path, ctx: str = "") 
 __all__ = [
     "VALID_PARA_TYPES",
     "VALID_QUEST_KINDS",
-    "VALID_STEPS",
     "CatalogQuest",
     "Expected",
     "ExpectedClassify",
@@ -267,4 +291,5 @@ __all__ = [
     "Fixture",
     "FixtureError",
     "load_fixtures",
+    "parse_ingest_fixture",
 ]
