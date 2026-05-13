@@ -376,19 +376,16 @@ two open at once (mirrors phase 5).
   disappears. Slice 2's deferral rationale still applies: shared
   infra without a second consumer is speculation. Defer until a
   real second consumer appears.
-- **5.5b — `pqn-create` inbox fallback (no LLM).** Make
-  `--supports` optional. When omitted **and** type is `project` or
-  `area`, file the note at `inbox/<basename>.md` instead of the
-  canonical `projects/<quest>/...` / `areas/...` destination,
-  preserving user-supplied frontmatter (`type:`, title) so intent
-  isn't lost. `pqn-ingest` picks the Quest later from the note's
-  body when the user fleshes it out. Resources unaffected
-  (`pqn-ingest` already skips `pick_quest` for resources).
-  Compatibility to verify during implementation:
-  `pqn-ingest:classify_para` must honor pre-set `type:` rather than
-  re-classifying from scratch; `pqn-validate` must not flag a
-  `type: project` inbox note without `supports` as broken (inbox is
-  transient). Update `docs/workflows/create.md`.
+- [x] **5.5b — `pqn-create` inbox fallback (no LLM).** Shipped.
+  `--supports` is optional. When omitted for a `project` or `area`,
+  `pqn-create` files the note at `inbox/<basename>.md`, preserves the
+  user-chosen `type:` frontmatter, and records the fallback in the
+  plan. Canonical destinations remain unchanged when `--supports` is
+  present; resources stay canonical. Compatibility landed with the
+  slice: `pqn-ingest:classify_para` now honors pre-set `type:`
+  frontmatter and skips the LLM call, while `pqn-validate` already
+  tolerated inbox project notes without `supports:` because it only
+  checks YAML syntax and basename collisions.
 - **5.5c — `pqn-archive --draft-outcome` (LLM, prose).** First
   prose-output prompt in the codebase. Adapter work: confirm
   `OllamaClient` has a clean raw-text path (no JSON parsing); add a

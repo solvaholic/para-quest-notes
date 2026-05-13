@@ -1,8 +1,6 @@
 """Step 1: validate_inputs (pure).
 
-Confirms the user-supplied inputs satisfy the PARA + Quest schema and
-Rule 1 (notes that will carry tasks must declare at least one Quest in
-``supports``).
+Confirms the user-supplied inputs satisfy the PARA + Quest schema.
 
 Without an LLM in the loop, escalation here is "the CLI invocation is
 missing or malformed" rather than "I can't decide." The user fixes the
@@ -77,28 +75,17 @@ class ValidateInputs:
                 context={"title": title},
             )
 
-        for s in i.supports:
+        supports = list(i.supports or [])
+        for s in supports:
             if not _WIKILINK.match(s):
                 raise EscalateToUser(
                     step=self.name,
                     reason="--supports entries must be wikilinks like "
                     "'[[Quest Name]]' (no aliases, no headings)",
                     options=[],
-                    context={"supports": list(i.supports), "offender": s},
+                    context={"supports": supports, "offender": s},
                 )
 
-        # Rule 1: Projects always carry tasks → must declare supports.
-        # Areas may or may not; we don't have an LLM to decide, so we
-        # require supports for areas too. A future --no-tasks flag can
-        # relax this for taskless Areas.
-        if i.type in ("project", "area") and not i.supports:
-            raise EscalateToUser(
-                step=self.name,
-                reason=f"--supports is required for type={i.type!r} "
-                "(Rule 1: notes with tasks must support 1+ Quests)",
-                options=[],
-                context={"type": i.type, "title": title},
-            )
         if i.type == "resource" and i.quest != "none":
             raise EscalateToUser(
                 step=self.name,
@@ -121,6 +108,22 @@ class ValidateInputs:
         else:
             ctx.scratchpad["sub_path"] = ""
 
+        notes: list[str] = []
+        if i.type in ("project", "area") and not supports:
+            notes.append(f"filed to inbox because no --supports was provided for type={i.type}")
+
+        normalized_inputs = CreateInputs(
+            title=title,
+            type=i.type,
+            quest=i.quest,
+            supports=supports or None,
+            sub_path=i.sub_path,
+            source_url=i.source_url,
+        )
         ctx.scratchpad["title"] = title
-        ctx.scratchpad["inputs"] = i
-        return StepResult(name=self.name, output={"title": title, "type": i.type})
+        ctx.scratchpad["inputs"] = normalized_inputs
+        ctx.scratchpad["plan_notes"] = notes
+        return StepResult(
+            name=self.name,
+            output={"title": title, "type": i.type, "notes": notes},
+        )

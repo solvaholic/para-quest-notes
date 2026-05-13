@@ -49,17 +49,23 @@ def test_validate_inputs_rejects_bad_chars():
         ValidateInputs(inputs).run(_ctx())
 
 
-def test_validate_inputs_requires_supports_for_project():
+def test_validate_inputs_allows_missing_supports_for_project():
     inputs = CreateInputs(title="My Plan", type="project")
-    with pytest.raises(EscalateToUser) as exc:
-        ValidateInputs(inputs).run(_ctx())
-    assert "supports" in exc.value.reason
+    ctx = _ctx()
+    result = ValidateInputs(inputs).run(ctx)
+    assert result.output["notes"] == [
+        "filed to inbox because no --supports was provided for type=project"
+    ]
+    assert ctx.scratchpad["inputs"].supports is None
 
 
-def test_validate_inputs_requires_supports_for_area():
+def test_validate_inputs_allows_missing_supports_for_area():
     inputs = CreateInputs(title="Home", type="area")
-    with pytest.raises(EscalateToUser):
-        ValidateInputs(inputs).run(_ctx())
+    ctx = _ctx()
+    result = ValidateInputs(inputs).run(ctx)
+    assert result.output["notes"] == [
+        "filed to inbox because no --supports was provided for type=area"
+    ]
 
 
 def test_validate_inputs_resource_must_be_quest_none():
@@ -95,6 +101,7 @@ def test_compute_destination_basic(tmp_path: Path):
     )
     ComputeDestination().run(ctx)
     assert ctx.scratchpad["destination"] == "projects/My Plan.md"
+    assert ctx.scratchpad["destination_mode"] == "canonical"
     assert ctx.scratchpad["destination_abs"] == vault / "projects" / "My Plan.md"
 
 
@@ -110,6 +117,19 @@ def test_compute_destination_with_subpath(tmp_path: Path):
     )
     ComputeDestination().run(ctx)
     assert ctx.scratchpad["destination"] == "areas/Home/Outside/Garden.md"
+
+
+def test_compute_destination_inbox_without_supports(tmp_path: Path):
+    vault = _seed_vault(tmp_path)
+    ctx = _ctx(vault)
+    ctx.scratchpad.update(
+        inputs=CreateInputs(title="Garden", type="area"),
+        title="Garden",
+        sub_path="Home/Outside",
+    )
+    ComputeDestination().run(ctx)
+    assert ctx.scratchpad["destination"] == "inbox/Garden.md"
+    assert ctx.scratchpad["destination_mode"] == "inbox"
 
 
 def test_check_collision_clean(tmp_path: Path):

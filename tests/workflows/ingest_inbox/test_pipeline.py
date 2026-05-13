@@ -116,6 +116,27 @@ def test_ingest_inbox_processes_all_files(tmp_path: Path):
     del file_seen
 
 
+def test_ingest_one_uses_preset_frontmatter_type(tmp_path: Path):
+    vault = _seed_vault(tmp_path)
+    src = vault / "inbox/Train Plan.md"
+    src.write_text("---\ntype: project\n---\n# Train Plan\nrun a 5k\n")
+
+    llm = FakeLLM(
+        responder=_build_responder(
+            {
+                "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
+                "propose_filename": {"filename": "Run a 5K.md", "reason": "concise"},
+            }
+        )
+    )
+    fr = ingest_one(src, vault=vault, llm=llm, apply=False)
+
+    assert fr.ok
+    assert fr.decisions.para_type == "project"
+    assert fr.decisions.destination == "projects/Run a 5K.md"
+    assert not any((call.prompt_id or "").startswith("classify_para@") for call in llm.calls)
+
+
 def test_apply_mode_moves_files(tmp_path: Path):
     """Integration: --apply against a copy of the bundled sample vault.
 
