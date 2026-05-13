@@ -13,6 +13,7 @@ from typing import Any
 
 from para_quest_notes.adapter.fake_llm import FakeLLM
 from para_quest_notes.adapter.llm import LLMResponse
+from para_quest_notes.eval.__main__ import DEFAULT_FIXTURES_DIR, _fake_llm_factory
 from para_quest_notes.eval.fixtures import Fixture, load_fixtures
 from para_quest_notes.eval.runner import ModelSpec, run_matrix
 
@@ -78,11 +79,10 @@ def test_all_steps_pass_with_correct_answers(tmp_path: Path) -> None:
         [ModelSpec(name="fake", llm_factory=_factory(answers))],
         out_dir=out,
     )
-    assert len(summary.cells) == 4  # 3 LLM steps + plan_destination
+    assert len(summary.cells) == 4
     assert all(c.verdict.ok for c in summary.cells), [
         (c.step, c.verdict.reason) for c in summary.cells if not c.verdict.ok
     ]
-    # Trace + summary on disk.
     assert (out / "trace.jsonl").exists()
     assert (out / "summary.json").exists()
 
@@ -108,11 +108,8 @@ def test_empty_response_records_responds_failure(tmp_path: Path) -> None:
     fx = _fixture(tmp_path)
     summary = run_matrix(
         [fx],
-        [ModelSpec(name="fake", llm_factory=_factory({}))],  # all answers ""="{}"
+        [ModelSpec(name="fake", llm_factory=_factory({}))],
     )
-    # All LLM steps should have responds=ok (it's empty {}, which parses) but
-    # the per-step judge should fail because required keys are missing →
-    # step escalates and verdict.ok is False.
     llm_cells = [c for c in summary.cells if c.responds is not None]
     assert all(c.responds and c.responds.ok for c in llm_cells)
     assert all(not c.verdict.ok for c in llm_cells)
@@ -169,6 +166,17 @@ expected:
     by_step = {c.step: c for c in summary.cells}
     assert by_step["classify_para"].verdict.ok
     assert by_step["pick_quest"].verdict.ok
-    # pick_quest short-circuits before calling the LLM, so responds is None
-    # for that cell — it never hit the model.
     assert by_step["pick_quest"].responds is None
+
+
+def test_fake_regression_on_real_ingest_fixtures(tmp_path: Path) -> None:
+    fixtures = load_fixtures(DEFAULT_FIXTURES_DIR)
+    summary = run_matrix(
+        fixtures,
+        [ModelSpec(name="fake-model", llm_factory=_fake_llm_factory(fixtures))],
+        out_dir=tmp_path,
+    )
+    rows = sorted((c.workflow, c.fixture_id, c.step, c.verdict.ok) for c in summary.cells)
+    assert len(rows) == 28
+    assert all(ok for _, _, _, ok in rows)
+    assert rows[0][0] == "ingest"

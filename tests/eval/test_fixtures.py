@@ -36,6 +36,7 @@ expected:
     fixtures = load_fixtures(tmp_path)
     assert len(fixtures) == 1
     fx = fixtures[0]
+    assert fx.workflow == "ingest"
     assert fx.id == "one"
     assert fx.expected.classify_para is not None
     assert fx.expected.classify_para.type == "project"
@@ -66,6 +67,38 @@ def test_loads_list_of_fixtures(tmp_path: Path) -> None:
     )
     fixtures = load_fixtures(tmp_path)
     assert {f.id for f in fixtures} == {"a", "b"}
+
+
+def test_explicit_ingest_workflow_is_accepted(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "one.yaml",
+        """
+workflow: ingest
+id: one
+title: Hello
+expected:
+  classify_para: { type: resource }
+  pick_quest: { skipped: true }
+""",
+    )
+    fixtures = load_fixtures(tmp_path)
+    assert fixtures[0].workflow == "ingest"
+
+
+def test_unknown_workflow_raises(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "bad.yaml",
+        """
+workflow: nope
+id: x
+title: x
+expected: {}
+""",
+    )
+    with pytest.raises(FixtureError, match="unknown workflow"):
+        load_fixtures(tmp_path)
 
 
 def test_duplicate_id_raises(tmp_path: Path) -> None:

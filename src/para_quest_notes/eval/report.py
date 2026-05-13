@@ -9,19 +9,12 @@ from __future__ import annotations
 
 import csv
 from collections import defaultdict
-from collections.abc import Iterable
 from datetime import UTC, datetime
 from io import StringIO
 from pathlib import Path
 
-from para_quest_notes.eval.runner import EVALUABLE_STEPS, CellResult, RunSummary
-
-
-def _bucket(cells: Iterable[CellResult]) -> dict[tuple[str, str], list[CellResult]]:
-    out: dict[tuple[str, str], list[CellResult]] = defaultdict(list)
-    for c in cells:
-        out[(c.model, c.step)].append(c)
-    return out
+from para_quest_notes.eval.registry import DEFAULT_WORKFLOW
+from para_quest_notes.eval.runner import CellResult, RunSummary
 
 
 def _accuracy(cells: list[CellResult]) -> tuple[int, int]:
@@ -33,6 +26,24 @@ def _responds_rate(cells: list[CellResult]) -> tuple[int, int]:
     rel = [c for c in cells if c.responds is not None]
     passes = sum(1 for c in rel if c.responds and c.responds.ok)
     return passes, len(rel)
+
+
+def _step_labels(cells: list[CellResult]) -> tuple[dict[tuple[str, str], str], list[str]]:
+    workflows_by_name: dict[str, set[str]] = defaultdict(set)
+    for cell in cells:
+        workflows_by_name[cell.step].add(cell.workflow)
+
+    by_ref: dict[tuple[str, str], str] = {}
+    ordered: list[str] = []
+    for cell in cells:
+        ref = (cell.workflow, cell.step)
+        label = cell.step
+        if cell.workflow != DEFAULT_WORKFLOW or len(workflows_by_name[cell.step]) > 1:
+            label = f"{cell.workflow}:{cell.step}"
+        by_ref[ref] = label
+        if label not in ordered:
+            ordered.append(label)
+    return by_ref, ordered
 
 
 def render_markdown(summary: RunSummary) -> str:
@@ -48,10 +59,11 @@ def render_markdown(summary: RunSummary) -> str:
     buf.append(f"- Models: {', '.join(f'`{m}`' for m in summary.models) or '_none_'}")
     buf.append("")
 
-    bucket = _bucket(summary.cells)
-    steps_present = [s for s in EVALUABLE_STEPS if any(s == k[1] for k in bucket)]
+    labels_by_ref, steps_present = _step_labels(summary.cells)
+    bucket: dict[tuple[str, str], list[CellResult]] = defaultdict(list)
+    for cell in summary.cells:
+        bucket[(cell.model, labels_by_ref[(cell.workflow, cell.step)])].append(cell)
 
-    # `responds` baseline (LLM steps only).
     buf.append("## Responds-at-all baseline")
     buf.append("")
     buf.append("Cheap gate: did the model emit parseable JSON for an LLM step?")
@@ -64,14 +76,10 @@ def render_markdown(summary: RunSummary) -> str:
         for model in summary.models:
             mc = [c for c in summary.cells if c.model == model]
             p, n = _responds_rate(mc)
-            cell = f"{p}/{n} ({_pct(p, n)})" if n else "_n/a_"
-            buf.append(f"| `{model}` | {cell} |")
+            rate = f"{p}/{n} ({_pct(p, n)})" if n else "_n/a_"
+            buf.append(f"| `{model}` | {rate} |")
     buf.append("")
 
-    # Performance per model: total wall time, per-cell latency stats.
-    # Wall = sum of per-cell latencies (LLM steps only). For local
-    # Ollama runs this approximates the time the model held the GPU/CPU
-    # for this run; pure-code steps (latency_ms == 0) are excluded.
     buf.append("## Performance")
     buf.append("")
     buf.append("Per-model wall time and latency, computed from per-cell `latency_ms`")
@@ -99,7 +107,6 @@ def render_markdown(summary: RunSummary) -> str:
             )
     buf.append("")
 
-    # Summary matrix.
     buf.append("## Accuracy by step")
     buf.append("")
     if not steps_present or not summary.models:
@@ -121,7 +128,6 @@ def render_markdown(summary: RunSummary) -> str:
             buf.append("| " + " | ".join(row) + " |")
     buf.append("")
 
-    # Per-step detail.
     buf.append("## Per-step detail")
     buf.append("")
     for step in steps_present:
@@ -130,7 +136,7 @@ def render_markdown(summary: RunSummary) -> str:
         buf.append("| Fixture | Model | Verdict | Reason |")
         buf.append("|---|---|---|---|")
         rows = sorted(
-            (c for c in summary.cells if c.step == step),
+            (c for c in summary.cells if labels_by_ref[(c.workflow, c.step)] == step),
             key=lambda c: (c.fixture_id, c.model),
         )
         for c in rows:
@@ -206,7 +212,6 @@ def _percentile(values: list[int], pct: float) -> float:
     s = sorted(values)
     if len(s) == 1:
         return float(s[0])
-    # Linear interpolation between closest ranks.
     k = (len(s) - 1) * (pct / 100.0)
     lo = int(k)
     hi = min(lo + 1, len(s) - 1)
@@ -226,7 +231,6 @@ def _fmt_duration_ms(ms: float) -> str:
 
 
 def _escape(s: str) -> str:
-    # Minimal pipe-escape so the markdown table cell stays valid.
     return s.replace("|", "\\|").replace("\n", " ")
 
 
