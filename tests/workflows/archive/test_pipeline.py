@@ -53,7 +53,7 @@ def test_apply_moves_and_cancels_tasks(tmp_path: Path):
     assert result.ok, result.escalation or result.error
     assert result.moved
     assert result.plan.tasks_cancelled == 2
-    assert result.plan.outcome_action == "inserted"
+    assert result.plan.outcome_action == "provided"
 
     dest = vault / "archive" / "projects" / "Brew Setup.md"
     assert dest.exists()
@@ -87,6 +87,7 @@ def test_missing_outcome_escalates(tmp_path: Path):
     result = archive_note(inputs, vault=vault, apply=True, today="2026-05-12")
     assert not result.ok
     assert result.escalation["step"] == "prepare_outcome"
+    assert result.plan.outcome_action == "required"
     assert src.exists()
 
 

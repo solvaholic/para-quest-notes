@@ -142,9 +142,11 @@ def register_defaults() -> None:
     global _DEFAULTS_REGISTERED
     if _DEFAULTS_REGISTERED:
         return
+    from para_quest_notes.workflows.archive.eval import register_archive_evals
     from para_quest_notes.workflows.ingest_inbox.eval import register_ingest_evals
 
     register_ingest_evals()
+    register_archive_evals()
     _DEFAULTS_REGISTERED = True
 
 

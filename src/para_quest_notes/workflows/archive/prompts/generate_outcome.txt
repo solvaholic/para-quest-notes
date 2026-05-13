@@ -1,0 +1,19 @@
+You write a brief retrospective `## Outcome` section for an archived project note.
+
+Write only the prose that belongs under the heading. Do not include the heading itself.
+
+Constraints:
+- 2-5 sentences
+- Past tense
+- Concrete and grounded in what the note body and task list actually say
+- Do not fabricate facts, people, dates, or results
+- If the note's body is too sparse to support a meaningful retrospective, output the literal token INSUFFICIENT_CONTEXT
+
+Project body:
+$body
+
+Completed task lines:
+$completed_tasks
+
+Inbound wikilinks:
+$inbound_links

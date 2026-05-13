@@ -18,7 +18,8 @@ Rules:
   Obsidian Tasks emoji metadata (📅 ⏳ 🛫 🔁) — surface those rather
   than blindly appending.
 * **``## Outcome``** is appended at the end of the body when
-  ``outcome_action == "inserted"``. When ``kept``, body is unchanged.
+  ``outcome_action`` is ``"provided"`` or ``"generated"``. When
+  ``kept`` or ``will_generate``, body is unchanged.
 * **Destination** mirrors the source's sub-path under ``archive/``:
   ``projects/foo/X.md`` -> ``archive/projects/foo/X.md``.
 """
@@ -88,8 +89,8 @@ class ComposeArchive:
                     context={"source": source_rel},
                 )
 
-        # 3. Append ## Outcome if inserted.
-        if outcome_action == "inserted" and outcome_text:
+        # 3. Append ## Outcome when the text is ready to write.
+        if outcome_action in {"provided", "generated"} and outcome_text:
             body = _append_outcome(body, outcome_text)
 
         # 4. Render the new note: canonical frontmatter + body. We drop

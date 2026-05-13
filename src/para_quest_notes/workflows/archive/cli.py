@@ -8,9 +8,10 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from para_quest_notes.adapter.cli import build_base_parser
+from para_quest_notes.adapter.cli import add_llm_args, build_base_parser
 from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import VaultError
+from para_quest_notes.adapter.llm import OllamaClient
 from para_quest_notes.adapter.trace import TraceWriter, new_run_path
 from para_quest_notes.adapter.vault import find_vault
 from para_quest_notes.workflows.archive.contract import ArchiveInputs, ArchiveResult
@@ -23,6 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Archive a completed Project note: move it to archive/, "
         "cancel open tasks (opt-in), and record an Outcome.",
     )
+    add_llm_args(p)
     p.add_argument(
         "target",
         help="Vault-relative path to the Project, or just its basename (with or without .md).",
@@ -31,6 +33,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--outcome",
         default=None,
         help="Text for the '## Outcome' section. Required when the note doesn't already have one.",
+    )
+    p.add_argument(
+        "--generate-outcome",
+        action="store_true",
+        help="Generate Outcome prose with the local LLM when used with --apply.",
     )
     p.add_argument(
         "--cancel-open-tasks",
@@ -50,6 +57,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.generate_outcome and args.outcome:
+        print("error: --generate-outcome and --outcome are mutually exclusive", file=sys.stderr)
+        return 2
 
     config = load_config(args.config)
     try:
@@ -61,8 +71,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     inputs = ArchiveInputs(
         target=args.target,
         outcome=args.outcome,
+        generate_outcome=args.generate_outcome,
         cancel_open_tasks=args.cancel_open_tasks,
     )
+    llm = None
+    if args.generate_outcome and args.apply:
+        llm = OllamaClient(
+            base_url=config.ollama.base_url,
+            default_model=args.model or config.ollama.default_model,
+            timeout_seconds=config.ollama.request_timeout_seconds,
+        )
 
     trace_path = new_run_path(config.run_log_dir)
     with TraceWriter(trace_path) as trace:
@@ -70,6 +88,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             inputs,
             vault=vault,
             apply=args.apply,
+            llm=llm,
+            model=args.model,
             config=config,
             trace=trace,
         )
@@ -100,8 +120,14 @@ def _print_text(result: ArchiveResult, trace_path: Path) -> None:
     print(f"  OK  {verb} {src} -> {dest}")
     if result.plan.tasks_cancelled:
         print(f"      cancelled {result.plan.tasks_cancelled} open task(s)")
-    if result.plan.outcome_action != "none":
+    if result.plan.outcome_action == "will_generate":
+        print("      outcome: will generate with the LLM on --apply")
+    elif result.plan.outcome_action != "none":
         print(f"      outcome: {result.plan.outcome_action}")
+    if result.plan.outcome_action == "generated" and result.plan.outcome_text:
+        print("      generated outcome:")
+        for line in result.plan.outcome_text.splitlines():
+            print(f"        {line}")
     if result.plan.frontmatter_migrated:
         print("      migrated tail backmatter -> frontmatter")
 

@@ -22,6 +22,7 @@ from para_quest_notes.eval.registry import DEFAULT_WORKFLOW, get_workflow_eval, 
 VALID_PARA_TYPES = ("project", "area", "resource")
 VALID_QUEST_KINDS = ("main", "side")
 _INGEST_STEPS = ("classify_para", "pick_quest", "propose_filename", "plan_destination")
+_ARCHIVE_STEPS = ("generate_outcome",)
 
 
 class FixtureError(ValueError):
@@ -83,6 +84,39 @@ class Fixture:
     frontmatter: dict[str, Any] = field(default_factory=dict)
     source: Path | None = None  # YAML file this came from
     workflow: str = DEFAULT_WORKFLOW
+
+
+@dataclass(frozen=True)
+class ArchiveInboundLink:
+    basename: str
+    snippet: str | None = None
+
+
+@dataclass(frozen=True)
+class ExpectedGenerateOutcome:
+    keywords: tuple[str, ...] = ()
+    text: str | None = None
+
+
+@dataclass(frozen=True)
+class ArchiveExpected:
+    generate_outcome: ExpectedGenerateOutcome | None = None
+
+    def has(self, step: str) -> bool:
+        return getattr(self, step, None) is not None
+
+
+@dataclass(frozen=True)
+class ArchiveFixture:
+    id: str
+    title: str
+    body: str
+    completed_tasks: tuple[str, ...]
+    inbound_links: tuple[ArchiveInboundLink, ...]
+    expected: ArchiveExpected
+    fake_response: str
+    source: Path | None = None
+    workflow: str = "archive"
 
 
 # --------------------------------------------------------------------------- #
@@ -177,6 +211,34 @@ def parse_ingest_fixture(raw: Any, source: Path) -> Fixture:
     )
 
 
+def parse_archive_fixture(raw: Any, source: Path) -> ArchiveFixture:
+    if not isinstance(raw, dict):
+        raise FixtureError(f"{source}: each fixture must be a mapping")
+    fid = _require_str(raw, "id", source=source)
+    title = _require_str(raw, "title", source=source)
+    body = str(raw.get("body", ""))
+    completed_tasks = _parse_string_list(raw.get("completed_tasks") or [], source=source, fid=fid)
+    inbound_links = _parse_inbound_links(raw.get("inbound_links") or [], source=source, fid=fid)
+    expected = _parse_archive_expected(raw.get("expected") or {}, source=source, fid=fid)
+    fake_response = str(raw.get("fake_response", "")).strip()
+
+    if expected.generate_outcome is not None and not fake_response:
+        raise FixtureError(
+            f"{source} ({fid}): archive fixtures with expected output need fake_response"
+        )
+
+    return ArchiveFixture(
+        id=fid,
+        title=title,
+        body=body,
+        completed_tasks=tuple(completed_tasks),
+        inbound_links=tuple(inbound_links),
+        expected=expected,
+        fake_response=fake_response,
+        source=source,
+    )
+
+
 def _parse_catalog(items: Iterable[Any], *, source: Path, fid: str) -> list[CatalogQuest]:
     out: list[CatalogQuest] = []
     seen: set[str] = set()
@@ -211,6 +273,21 @@ def _parse_expected(raw: Any, *, source: Path, fid: str) -> Expected:
         pick_quest=pq,
         propose_filename=pf,
         plan_destination=pd,
+    )
+
+
+def _parse_archive_expected(raw: Any, *, source: Path, fid: str) -> ArchiveExpected:
+    if not isinstance(raw, dict):
+        raise FixtureError(f"{source} ({fid}): 'expected' must be a mapping")
+
+    unknown = set(raw) - set(_ARCHIVE_STEPS)
+    if unknown:
+        raise FixtureError(f"{source} ({fid}): expected has unknown step(s): {sorted(unknown)}")
+
+    return ArchiveExpected(
+        generate_outcome=_parse_generate_outcome(
+            raw.get("generate_outcome"), source=source, fid=fid
+        ),
     )
 
 
@@ -268,6 +345,62 @@ def _parse_destination(raw: Any, *, source: Path, fid: str) -> ExpectedDestinati
     return ExpectedDestination(destination=dest)
 
 
+def _parse_generate_outcome(raw: Any, *, source: Path, fid: str) -> ExpectedGenerateOutcome | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise FixtureError(f"{source} ({fid}): expected.generate_outcome must be a mapping")
+    keywords = _parse_string_list(
+        raw.get("keywords") or [],
+        source=source,
+        fid=f"{fid}.generate_outcome",
+    )
+    text = raw.get("text")
+    if text is not None and (not isinstance(text, str) or not text.strip()):
+        raise FixtureError(f"{source} ({fid}): expected.generate_outcome.text must be a string")
+    if not keywords and text is None:
+        raise FixtureError(
+            f"{source} ({fid}): expected.generate_outcome needs 'keywords' and/or 'text'"
+        )
+    clean_text = text.strip() if isinstance(text, str) else None
+    return ExpectedGenerateOutcome(keywords=tuple(keywords), text=clean_text)
+
+
+def _parse_string_list(items: Iterable[Any], *, source: Path, fid: str) -> list[str]:
+    out: list[str] = []
+    for item in items:
+        if not isinstance(item, str) or not item.strip():
+            raise FixtureError(f"{source} ({fid}): entries must be non-empty strings")
+        out.append(item.strip())
+    return out
+
+
+def _parse_inbound_links(
+    items: Iterable[Any],
+    *,
+    source: Path,
+    fid: str,
+) -> list[ArchiveInboundLink]:
+    out: list[ArchiveInboundLink] = []
+    for item in items:
+        if isinstance(item, str):
+            out.append(ArchiveInboundLink(basename=item.strip()))
+            continue
+        if not isinstance(item, dict):
+            raise FixtureError(
+                f"{source} ({fid}): inbound_links entries must be strings or mappings"
+            )
+        basename = _require_str(item, "basename", source=source, ctx=f"{fid}.inbound_links")
+        snippet = item.get("snippet")
+        if snippet is not None and (not isinstance(snippet, str) or not snippet.strip()):
+            raise FixtureError(
+                f"{source} ({fid}): inbound_links.snippet must be a non-empty string when present"
+            )
+        clean_snippet = snippet.strip() if snippet else None
+        out.append(ArchiveInboundLink(basename=basename, snippet=clean_snippet))
+    return out
+
+
 def _require_str(raw: dict[str, Any], key: str, *, source: Path, ctx: str = "") -> str:
     if key not in raw:
         loc = f"{source} ({ctx})" if ctx else str(source)
@@ -282,14 +415,19 @@ def _require_str(raw: dict[str, Any], key: str, *, source: Path, ctx: str = "") 
 __all__ = [
     "VALID_PARA_TYPES",
     "VALID_QUEST_KINDS",
+    "ArchiveExpected",
+    "ArchiveFixture",
+    "ArchiveInboundLink",
     "CatalogQuest",
     "Expected",
     "ExpectedClassify",
     "ExpectedDestination",
     "ExpectedFilename",
+    "ExpectedGenerateOutcome",
     "ExpectedPickQuest",
     "Fixture",
     "FixtureError",
     "load_fixtures",
+    "parse_archive_fixture",
     "parse_ingest_fixture",
 ]

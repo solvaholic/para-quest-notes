@@ -54,9 +54,18 @@ workflow-agnostic:
   (lowercase, alphanumeric-only, single-spaced).
 - `plan_destination` (pure) - exact path string.
 
-Plus a `responds`-at-all baseline per LLM cell: did the model emit
-parseable JSON at all? Cheap gate per the PLAN.md risk note about empty
-`format=json` replies.
+Plus a `responds`-at-all baseline per LLM cell: for JSON steps, did the
+model emit parseable JSON at all; for prose steps, did it emit any
+non-empty text? Cheap gate per the PLAN.md risk note about empty model
+replies.
+
+### `archive`
+
+- `generate_outcome` (LLM prose) - keyword-coverage judge, with optional
+  reference-text Jaccard when a fixture wants extra anchoring. This is
+  intentionally lighter than an LLM-as-judge pass: it is cheap,
+  deterministic, and CI-safe, but it will miss good paraphrases when the
+  expected keywords are too narrow.
 
 ## Local-only constraint
 
@@ -109,7 +118,8 @@ were found.
 
 `report.md` contains:
 
-- **Responds-at-all baseline** - % of LLM cells that emitted parseable JSON.
+- **Responds-at-all baseline** - % of LLM cells that emitted parseable JSON
+  (JSON steps) or any non-empty text (prose steps).
 - **Performance** - per model: LLM-cell count, total wall, mean / p50 /
   p95 / max latency. Computed from per-cell `latency_ms` (LLM steps only;
   pure-code steps excluded). Use this to spot the
@@ -139,8 +149,9 @@ Phase 4 lands with ~7 starter fixtures. Plan target is ~30 before Phase
 
 ## Future work
 
-- Phase 5.5c will add `pqn-archive:draft_outcome` on top of this
-  registry.
+- Tune the `generate_outcome` prose judge if keyword coverage proves too
+  brittle on real-model runs. LLM-as-judge is the heavier fallback if we
+  need semantic scoring later.
 - LLM-as-judge fallback for ambiguous Quest picks (PLAN.md mentions this
   as a "soft-match" option). Set-equality with acceptable-sets is enough
   for a starter signal.

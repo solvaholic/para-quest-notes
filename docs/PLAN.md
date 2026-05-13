@@ -304,8 +304,9 @@ migration. Areas/Resources escalate as planned.
   reading legacy notes with deprecated tail backmatter. Frontmatter
   is canonical on write; tail backmatter is migrated and dropped.
 - **Deferred to a later slice (no consumer yet):**
-  - LLM `--draft-outcome` step. This was the first prose-output
-    prompt in the codebase — punted until the user actively wants it.
+  - LLM Outcome generation for archive notes. This was the first
+    prose-output prompt in the codebase, so Slice 3 punted it until
+    there was active user demand.
 - **Known limitation flagged in docs:** v0.1 escalates when an open
   task carries Obsidian Tasks scheduling emoji (📅 ⏳ 🛫 🔁 ✅ ❌)
   rather than silently rewriting around them.
@@ -386,19 +387,21 @@ two open at once (mirrors phase 5).
   frontmatter and skips the LLM call, while `pqn-validate` already
   tolerated inbox project notes without `supports:` because it only
   checks YAML syntax and basename collisions.
-- **5.5c — `pqn-archive --draft-outcome` (LLM, prose).** First
-  prose-output prompt in the codebase. Adapter work: confirm
-  `OllamaClient` has a clean raw-text path (no JSON parsing); add a
-  fake-LLM fixture pattern for prose responses. Step drafts an
-  `## Outcome` section from the note's body + completed-task lines
-  + inbound wikilink context; presents the draft via the JSON
-  contract (`plan.outcome_action = "drafted"` + `plan.outcome_text`)
-  rather than writing it. The user re-runs with `--outcome "..."`
-  to commit. (No interactive iterate in the CLI form.)
+- [x] **5.5c — `pqn-archive --generate-outcome` (LLM, prose).** Shipped
+  after review reshaped the UX from preview-then-commit to
+  generate-on-apply. Adapter work landed: `OllamaClient` now has a
+  clean raw-text path (no JSON parsing), FakeLLM can queue prose by
+  prompt id, and the archive workflow/eval fixture set use the same
+  prompt. Dry-run with `--generate-outcome` is cheap and model-free:
+  the plan records `outcome_action = "will_generate"` and does not call
+  the LLM. `--generate-outcome --apply` calls the model, appends
+  `## Outcome` on success, echoes the prose, and returns
+  `plan.outcome_action = "generated"` + `plan.outcome_text`. Empty or
+  `INSUFFICIENT_CONTEXT` responses still escalate and abort the write.
 - **5.5d — Per-workflow eval scoping.** Flip the eval harness's
   `EVALUABLE_STEPS` from a global constant to per-workflow
   registry. With 5.5b no-LLM, the only new LLM step to evaluate is
-  `pqn-archive:draft_outcome` (added by 5.5c). Pick the simplest
+  `pqn-archive:generate_outcome` (added by 5.5c). Pick the simplest
   judge for prose that gives signal (responds-at-all baseline plus
   e.g. Jaccard word overlap, or LLM-as-judge) and document the
   tradeoff in `docs/eval.md`. Continue growing the `pqn-ingest`

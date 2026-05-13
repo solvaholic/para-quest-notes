@@ -7,8 +7,8 @@ trace under ``--out``.
 Two LLM modes:
 
 * ``--fake`` (default for CI / dogfooding): a FakeLLM that returns the
-  fixture's expected JSON. Verifies the harness end-to-end without
-  touching Ollama.
+  fixture's expected step response. Verifies the harness end-to-end
+  without touching Ollama.
 * Without ``--fake``: spins up :class:`OllamaClient` for each model.
 
 The CLI never imports Ollama unless a real model is asked for; nothing
@@ -46,8 +46,8 @@ DEFAULT_OUT_BASE = Path(__file__).resolve().parents[3] / "eval" / "runs"
 # --------------------------------------------------------------------------- #
 
 
-def _expected_json_for(fixture: Any, prompt_id: str | None) -> str:
-    """Return JSON the LLM step's parser will accept for this fixture/step."""
+def _expected_response_for(fixture: Any, prompt_id: str | None) -> str:
+    """Return text the step's parser will accept for this fixture/step."""
     name = (prompt_id or "").split("@", 1)[0]
     workflow = getattr(fixture, "workflow", "ingest")
     try:
@@ -59,21 +59,34 @@ def _expected_json_for(fixture: Any, prompt_id: str | None) -> str:
     return step.fake_response(fixture)
 
 
+def _fixture_markers(fixture: Any) -> tuple[str, ...]:
+    markers: list[str] = []
+    title = getattr(fixture, "title", "")
+    body = getattr(fixture, "body", "")
+    if isinstance(title, str) and title.strip():
+        markers.append(title.strip())
+    if isinstance(body, str):
+        preview = body.strip().splitlines()
+        if preview:
+            markers.append(preview[0][:120])
+    return tuple(marker for marker in markers if marker)
+
+
 def _fake_llm_factory(fixtures: list[Any]) -> Any:
-    """Build a FakeLLM whose responder finds the matching fixture by title."""
-    by_title_sorted = sorted(
-        ((f.title, f) for f in fixtures),
+    """Build a FakeLLM whose responder finds the matching fixture by prompt text."""
+    by_marker_sorted = sorted(
+        ((marker, fixture) for fixture in fixtures for marker in _fixture_markers(fixture)),
         key=lambda pair: -len(pair[0]),
     )
 
     def factory() -> FakeLLM:
         def responder(call: Any) -> LLMResponse:
             fixture: Any | None = None
-            for title, fx in by_title_sorted:
-                if title and title in call.prompt:
+            for marker, fx in by_marker_sorted:
+                if marker and marker in call.prompt:
                     fixture = fx
                     break
-            text = _expected_json_for(fixture, call.prompt_id) if fixture else "{}"
+            text = _expected_response_for(fixture, call.prompt_id) if fixture else "{}"
             return LLMResponse(
                 text=text,
                 model=call.model,

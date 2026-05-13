@@ -177,6 +177,20 @@ def test_fake_regression_on_real_ingest_fixtures(tmp_path: Path) -> None:
         out_dir=tmp_path,
     )
     rows = sorted((c.workflow, c.fixture_id, c.step, c.verdict.ok) for c in summary.cells)
-    assert len(rows) == 28
+    assert len(rows) == 31
     assert all(ok for _, _, _, ok in rows)
-    assert rows[0][0] == "ingest"
+    assert {workflow for workflow, _, _, _ in rows} == {"archive", "ingest"}
+
+
+def test_archive_step_runs_with_fake_fixture(tmp_path: Path) -> None:
+    fixtures = load_fixtures(DEFAULT_FIXTURES_DIR)
+    summary = run_matrix(
+        fixtures,
+        [ModelSpec(name="fake-model", llm_factory=_fake_llm_factory(fixtures))],
+        steps=["archive:generate_outcome"],
+        out_dir=tmp_path,
+    )
+    assert len(summary.cells) == 3
+    assert all(cell.workflow == "archive" for cell in summary.cells)
+    assert all(cell.responds and cell.responds.ok for cell in summary.cells)
+    assert all(cell.verdict.ok for cell in summary.cells)

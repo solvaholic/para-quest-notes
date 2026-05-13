@@ -3,10 +3,11 @@
 stdlib ``urllib`` over the Ollama HTTP API
 (https://github.com/ollama/ollama/blob/main/docs/api.md).
 
-We use the non-streaming ``/api/generate`` endpoint and pass
-``format="json"`` so the model is instructed to emit JSON. The caller is
-responsible for ``json.loads`` and schema validation - this layer just
-returns the raw and parsed strings plus metadata for the trace logger.
+We use the non-streaming ``/api/generate`` endpoint. JSON-producing steps
+call :meth:`generate` with ``format=\"json\"``; prose-producing steps call
+:meth:`generate_text`, which omits ``format`` and returns plain text.
+The caller is responsible for any parsing or schema validation - this
+layer just returns the raw response text plus metadata.
 """
 
 from __future__ import annotations
@@ -63,6 +64,43 @@ class OllamaClient:
         options: dict[str, Any] | None = None,
         prompt_id: str | None = None,
     ) -> LLMResponse:
+        return self._request(
+            prompt,
+            model=model,
+            format=format,
+            temperature=temperature,
+            options=options,
+            prompt_id=prompt_id,
+        )
+
+    def generate_text(
+        self,
+        prompt: str,
+        *,
+        model: str | None = None,
+        temperature: float = 0.0,
+        options: dict[str, Any] | None = None,
+        prompt_id: str | None = None,
+    ) -> LLMResponse:
+        return self._request(
+            prompt,
+            model=model,
+            format=None,
+            temperature=temperature,
+            options=options,
+            prompt_id=prompt_id,
+        )
+
+    def _request(
+        self,
+        prompt: str,
+        *,
+        model: str | None,
+        format: str | None,
+        temperature: float,
+        options: dict[str, Any] | None,
+        prompt_id: str | None,
+    ) -> LLMResponse:
         chosen_model = model or self.default_model
         opts: dict[str, Any] = {"temperature": temperature}
         if options:
@@ -74,7 +112,7 @@ class OllamaClient:
             "stream": False,
             "options": opts,
         }
-        if format:
+        if format is not None:
             body["format"] = format
 
         url = f"{self.base_url}/api/generate"
@@ -110,7 +148,7 @@ class OllamaClient:
     def unload(self, model: str | None = None) -> bool:
         """Tell Ollama to unload ``model`` immediately.
 
-        Posts an empty generate with ``keep_alive: 0`` — the documented
+        Posts an empty generate with ``keep_alive: 0`` - the documented
         way to drop a model from memory without restarting the server.
         See https://github.com/ollama/ollama/blob/main/docs/api.md.
 
@@ -133,7 +171,7 @@ class OllamaClient:
                 url, data=data, headers={"Content-Type": "application/json"}
             )
             with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
-                resp.read()  # drain
+                resp.read()
             return True
         except (urllib.error.URLError, TimeoutError):
             return False
