@@ -30,6 +30,7 @@ pqn-ingest = "para_quest_notes.workflows.ingest_inbox.cli:main"
 pqn-validate = "para_quest_notes.workflows.validate.cli:main"
 pqn-create = "para_quest_notes.workflows.create.cli:main"
 pqn-archive = "para_quest_notes.workflows.archive.cli:main"
+pqn-daily = "para_quest_notes.workflows.daily.cli:main"
 pqn-eval = "para_quest_notes.eval.__main__:main"
 
 [project.urls]
