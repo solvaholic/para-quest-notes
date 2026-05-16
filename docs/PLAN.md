@@ -412,19 +412,22 @@ two open at once (mirrors phase 5).
   `report.md`. Pointer to `AGENTS.md` and this PLAN.md. Lives at
   `docs/CONTRIBUTING.md` (moved from repo root during phase 6).
 
-### Phase 6 - Polish and release
-- Repo cleanup: strip outdated references, move `CONTRIBUTING.md`
-  → `docs/CONTRIBUTING.md`, verify naming consistency, sync
-  roadmap docs (this slice).
-- README quickstart that runs end-to-end against the bundled sample
-  vault, walking all five workflows in order.
-- Model recommendations section in `docs/eval.md` driven by a real
-  `pqn-eval` run.
-- Document running workflows headlessly (cron examples, exit codes,
-  JSONL trace, `PARA_QUEST_VAULT`).
-- Install instructions via `uv tool install git+...@v0.1` (PyPI
-  deferred).
-- Full README audit, then tag a `v0.1` release.
+### Phase 6 - Polish and release ✅ done at v0.1.0
+- [x] 6a — Repo cleanup: stripped `at-home` references, moved
+  `CONTRIBUTING.md` → `docs/CONTRIBUTING.md`, renumbered phases,
+  synced roadmap (PR #11).
+- [x] 6c — README quickstart end-to-end against `samples/vault`,
+  walking all five workflows in order (PR #12).
+- [x] 6b — Model recommendations section in `docs/eval.md`
+  driven by a real `pqn-eval` run (PR #13).
+- [x] 6d — `docs/headless.md` covering cron examples, exit codes,
+  JSONL trace, vault discovery, "what not to cron" (PR #14).
+- [x] 6e — Install instructions via
+  `uv tool install git+...@v0.1` (PyPI deferred); full README
+  audit alongside (PR #15).
+- [x] 6f — Version bump to `0.1.0`, classifier flipped to
+  `3 - Alpha`, [`docs/RELEASING.md`](RELEASING.md) authored; tag
+  `v0.1.0` cut from the merge commit.
 
 ### Phase 7 - Grow eval fixtures
 - Grow the `pqn-ingest` fixture set toward the ~30 target originally
