@@ -4,8 +4,8 @@ Local, scripted workflows for managing markdown notes organized by
 **PARA + Quest**, powered by small LLMs running locally via
 [Ollama](https://ollama.com/).
 
-> **Status:** pre-alpha. The architecture, CLI surface, and notes-system
-> spec are still settling. Project name is provisional.
+> **Status:** pre-1.0. The CLIs and JSON contracts are settling
+> toward a `v0.1` tag. Names won't change.
 
 ## Why
 
@@ -128,7 +128,7 @@ uv run pqn-create --vault /tmp/demo-vault \
 Files a new Project at `projects/Tidy The Garage.md` with
 frontmatter pre-populated. Drop `--apply` for dry-run. Omit
 `--supports` on a Project or Area to file it into `inbox/`
-instead (Phase 5.5b inbox fallback). Full options:
+instead. Full options:
 [`docs/workflows/create.md`](docs/workflows/create.md).
 
 ### 4. `pqn-daily` — file a daily note into `resources/daily_notes/` (no LLM)
@@ -204,16 +204,22 @@ uv run python -m para_quest_notes.corpus \
 
 See [`docs/corpus.md`](docs/corpus.md) for the full shape taxonomy.
 
-## Install (eventually)
+## Install
+
+Install the released CLIs straight from this repo's git tag:
 
 ```bash
-# Once v0.1 is out:
-uv tool install para-quest-notes
+uv tool install git+https://github.com/solvaholic/para-quest-notes@v0.1
 # or
-pipx install para-quest-notes
+pipx install git+https://github.com/solvaholic/para-quest-notes@v0.1
 ```
 
-For now, clone and use `uv`:
+Either command installs all five `pqn-*` CLIs onto your `PATH`.
+PyPI publishing is deferred to a later release; track the
+[releases page](https://github.com/solvaholic/para-quest-notes/releases)
+for new tags.
+
+### From a clone (for development)
 
 ```bash
 git clone https://github.com/solvaholic/para-quest-notes.git
@@ -221,6 +227,9 @@ cd para-quest-notes
 uv sync --dev
 uv run pytest
 ```
+
+See [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) for the dev
+loop, branch flow, and how to add an eval fixture.
 
 ## License
 
