@@ -71,8 +71,9 @@ You'll need [Ollama](https://ollama.com) running locally for the
 LLM-using steps (`pqn-ingest`, the final `pqn-archive` step). The
 documented default model is `granite4.1:30b` (~18 GB); override
 with `--model` if you have something smaller. For a "what to use
-when" answer, see [`docs/eval.md`](docs/eval.md) — the
-"Model recommendations" section there is driven by a real eval run.
+when" answer, see
+[`docs/eval.md` → Model recommendations](docs/eval.md#model-recommendations),
+driven by a real eval run.
 
 ```bash
 # 0. Set up the repo and make a throwaway vault
