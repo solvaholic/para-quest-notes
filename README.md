@@ -55,7 +55,8 @@ The workflows preserve that reasoning, locally.
 - [x] Phase 5.5: LLM polish + contributor onboarding
       (`pqn-create` inbox fallback, `pqn-archive --generate-outcome`,
       [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md))
-- [ ] Phase 6: polish + v0.1 release (in progress)
+- [x] Phase 6: polish + v0.1 release (see
+      [`docs/RELEASING.md`](docs/RELEASING.md))
 - [ ] Phase 7: grow eval fixtures toward ~30; revisit
       `generate_outcome` judge
 - [ ] Phase 8 (deferred): agent SKILL.md wrappers
