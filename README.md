@@ -43,18 +43,22 @@ The workflows preserve that reasoning, locally.
       [`samples/vault/`](samples/vault/))
 - [x] Phase 3: pilot workflow - `pqn-ingest` (inbox → PARA + Quest)
       — see [`docs/workflows/ingest.md`](docs/workflows/ingest.md)
-- [ ] Phase 4: per-step eval harness (matrix over models / prompts) —
-      landed with a starter fixture set; growing toward ~30 fixtures
-      before declaring done. See [`docs/eval.md`](docs/eval.md).
-- [ ] Phase 5: translate remaining workflows
+- [x] Phase 4: per-step eval harness landed (matrix over models /
+      prompts). See [`docs/eval.md`](docs/eval.md). Fixture growth
+      toward ~30 promoted to Phase 7.
+- [x] Phase 5: remaining workflows
   - [x] Slice 1: shared `vault/` + `adapter/cli.py` + `pqn-validate`
         (see [`docs/workflows/validate.md`](docs/workflows/validate.md))
   - [x] Slice 2: `pqn-create` (no-LLM)
   - [x] Slice 3: `pqn-archive` (Projects only, no-LLM)
-  - [ ] Slice 4: `pqn-daily`
-- [ ] Phase 5.5: LLM polish (folds in deferrals from slices 2/3)
-- [ ] Phase 6: polish + v0.1 release
-- [ ] Phase 7 (deferred): agent SKILL.md wrappers
+  - [x] Slice 4: `pqn-daily` (filing-only, no LLM)
+- [x] Phase 5.5: LLM polish + contributor onboarding
+      (`pqn-create` inbox fallback, `pqn-archive --generate-outcome`,
+      [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md))
+- [ ] Phase 6: polish + v0.1 release (in progress)
+- [ ] Phase 7: grow eval fixtures toward ~30; revisit
+      `generate_outcome` judge
+- [ ] Phase 8 (deferred): agent SKILL.md wrappers
 
 ## Try the sample vault
 

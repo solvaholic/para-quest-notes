@@ -2,9 +2,9 @@
 
 Start here, then branch out:
 
-- [`AGENTS.md`](AGENTS.md) for repo orientation, layout, and conventions
-- [`docs/PLAN.md`](docs/PLAN.md) for the current roadmap and slice status
-- [`docs/eval.md`](docs/eval.md) for the full eval-harness design
+- [`AGENTS.md`](../AGENTS.md) for repo orientation, layout, and conventions
+- [`docs/PLAN.md`](PLAN.md) for the current roadmap and slice status
+- [`docs/eval.md`](eval.md) for the full eval-harness design
 
 ## Dev setup
 
@@ -29,9 +29,9 @@ uv run pytest
 
 ## Branch flow
 
-Phase 5.5 work lands one sub-slice at a time:
+Phase work lands one sub-slice at a time:
 
-- branch names: `phase5.5-<thing>`
+- branch names: `phase<N>-<thing>` (e.g., `phase6-cleanup`)
 - base from `main`
 - merge back to `main` as each slice lands
 - keep no more than two open slice branches at once
@@ -44,10 +44,10 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
 
 ## Adding an eval fixture
 
-Put fixtures under [`eval/fixtures/`](eval/fixtures/). Start with [`eval/fixtures/README.md`](eval/fixtures/README.md), then copy a nearby example like:
+Put fixtures under [`eval/fixtures/`](../eval/fixtures/). Start with [`eval/fixtures/README.md`](../eval/fixtures/README.md), then copy a nearby example like:
 
-- [`eval/fixtures/clean_project_5k.yaml`](eval/fixtures/clean_project_5k.yaml)
-- [`eval/fixtures/ambiguous_quest_family_hike.yaml`](eval/fixtures/ambiguous_quest_family_hike.yaml)
+- [`eval/fixtures/clean_project_5k.yaml`](../eval/fixtures/clean_project_5k.yaml)
+- [`eval/fixtures/ambiguous_quest_family_hike.yaml`](../eval/fixtures/ambiguous_quest_family_hike.yaml)
 
 At a glance, each fixture YAML gives the runner:
 
@@ -60,7 +60,7 @@ At a glance, each fixture YAML gives the runner:
 
 For `expected.pick_quest.acceptable`, treat each listed quest list as an exact acceptable set. A run passes if the picked quest set matches one of those sets exactly. Use `skipped: true` when the workflow should not call that step.
 
-Do not duplicate the full schema here. See [`docs/eval.md`](docs/eval.md) and [`eval/fixtures/README.md`](eval/fixtures/README.md).
+Do not duplicate the full schema here. See [`docs/eval.md`](eval.md) and [`eval/fixtures/README.md`](../eval/fixtures/README.md).
 
 ## Running `pqn-eval`
 
@@ -76,7 +76,7 @@ Real local-model run:
 uv run pqn-eval --models granite4.1:30b,qwen3:30b
 ```
 
-Important local constraint: models run sequentially, not in parallel. The harness unloads each model with `keep_alive=0` before loading the next because local Ollama runs are memory-bound. See [`docs/eval.md`](docs/eval.md) for the full runner behavior and CLI options.
+Important local constraint: models run sequentially, not in parallel. The harness unloads each model with `keep_alive=0` before loading the next because local Ollama runs are memory-bound. See [`docs/eval.md`](eval.md) for the full runner behavior and CLI options.
 
 ## Reading a report
 
@@ -91,9 +91,9 @@ Each run writes under `eval/runs/<timestamp>/`, including `report.md`, `rows.csv
 
 In the detail tables, `Verdict` is pass or fail for that judged step, and `Reason` is the judge explanation or an escalation/error note.
 
-For the full meaning of each artifact and judge, see [`docs/eval.md`](docs/eval.md).
+For the full meaning of each artifact and judge, see [`docs/eval.md`](eval.md).
 
 ## Where to look next
 
-- [`AGENTS.md`](AGENTS.md) - orientation, package layout, commands, current phase summary
-- [`docs/PLAN.md`](docs/PLAN.md) - authoritative roadmap, including Phase 5.5 slice definitions
+- [`AGENTS.md`](../AGENTS.md) - orientation, package layout, commands, current phase summary
+- [`docs/PLAN.md`](PLAN.md) - authoritative roadmap and current slice definitions
