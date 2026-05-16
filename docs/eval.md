@@ -128,14 +128,75 @@ were found.
   column.
 - **Per-step detail** - every cell with verdict and reason.
 
-## Fixtures
+## Model recommendations
+
+These come from a real `pqn-eval` matrix captured 2026-05-16 against
+six locally-runnable models over 10 fixtures (7 `pqn-ingest` +
+3 `pqn-archive`). Eval-run artifacts are local-only (see the
+`.gitignore`); re-run with:
+
+```bash
+uv run pqn-eval --models \
+    granite4.1:30b,granite4.1:3b,gemma4:26b,gemma4:e4b,nemotron-3-nano:30b,nemotron-3-nano:4b
+```
+
+### TL;DR
+
+- **Default: `granite4.1:30b`.** Best overall (27/31, 87%), 100%
+  responds-at-all, ~5.6s mean LLM-cell latency. Matches the
+  documented CLI default. Needs ~18 GB RAM.
+- **Smallest that still works: `granite4.1:3b`.** 23/31 (74%),
+  100% responds-at-all, ~1.0s mean LLM-cell latency (~5× faster
+  than the 30b). Strong on `classify_para`, `propose_filename`,
+  and `plan_destination`; weaker on `pick_quest` and
+  `archive:generate_outcome`. Reasonable for dry-runs, fast
+  iteration on classification flows, or laptops that can't hold
+  18 GB.
+- **Not recommended right now:** `gemma4:26b` (latency variance —
+  one 31s call, one timeout in the captured run), `gemma4:e4b`
+  (weak on `propose_filename` and `archive:generate_outcome`),
+  and both `nemotron-3-nano:*` (14% responds-at-all — most LLM
+  cells return empty under `format="json"`).
+
+### What to use when
+
+| You want… | Pick |
+|---|---|
+| Best accuracy, you have the RAM | `granite4.1:30b` (default) |
+| Fast iteration / small footprint | `granite4.1:3b` |
+| LLM-prose `archive:generate_outcome` quality | `granite4.1:30b` (currently the 5.5d judge stopgap) |
+
+### Per-step shape from the captured run
+
+| Step | Best model in this run | Notes |
+|---|---|---|
+| `classify_para` | `gemma4:e4b` (7/7), `granite4.1:30b` (6/7) | Small models do fine here once they respond |
+| `pick_quest` | `granite4.1:30b` (6/7) | Other models struggle with "Quest name (type)" format and over-pick `Health (main)` |
+| `propose_filename` | `granite4.1:3b` (7/7), `granite4.1:30b` (6/7) | Smallest model is actually best |
+| `plan_destination` | All models 7/7 | Pure-code step in practice; LLM judgment rarely needed |
+| `archive:generate_outcome` | `granite4.1:30b`, `gemma4:26b` (2/3) | Prose judge is keyword-coverage; brittle, see Phase 7 carryover |
+
+### Caveats
+
+- Tiny fixture set (10 fixtures). These rankings will shift as the
+  fixture set grows toward ~30 (Phase 7 carryover).
+- Latency numbers were captured on one machine, sequentially
+  (per the local-only constraint above). Your `mean` will differ.
+- The `archive:generate_outcome` judge is keyword-coverage and
+  known-brittle. `granite4.1:30b` looks best here partly because
+  it's the model the prose evaluator was tuned against; treat the
+  prose numbers as a smoke signal, not a ranking. See "Future
+  work" below.
+
+
 
 Hand-curated YAML under `eval/fixtures/`. See
 [`eval/fixtures/README.md`](../eval/fixtures/README.md) for the schema
 and conventions.
 
-Phase 4 lands with ~7 starter fixtures. Plan target is ~30 before Phase
-4 is "done" - grow as eval signal demands.
+Phase 4 landed with ~10 fixtures (7 `pqn-ingest` + 3 `pqn-archive`).
+The plan target is ~30 before the fixture set is considered "done";
+growing it is **Phase 7**.
 
 ## Adding a new workflow to eval
 
