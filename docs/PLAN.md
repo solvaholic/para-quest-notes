@@ -7,16 +7,16 @@
 
 ## Problem
 
-The predecessor (`solvaholic/at-home`) relied on cloud-hosted Copilot
-agents loading skills (`SKILL.md`) and reasoning over the user's notes.
-Two issues:
+Most "AI for notes" tooling sends notes to a cloud-hosted model.
+That has two costs:
 
-1. Privacy: notes get sent to whoever hosts the model.
-2. Cloud dependency: management of personal markdown shouldn't require
-   network access to a third party.
+1. **Privacy:** notes get sent to whoever hosts the model.
+2. **Cloud dependency:** management of personal markdown shouldn't
+   require network access to a third party.
 
-The agent's reasoning (Quest alignment, escalation when rules don't fit)
-is the keeper. The "send everything to a cloud LLM" part is not.
+The PARA + Quest reasoning that aligns day-to-day notes with
+long-term goals (and escalates when the rules don't fit) is the
+keeper. The "send everything to a cloud LLM" part is not.
 
 ## Approach
 
@@ -37,9 +37,8 @@ Re-architect into **scripted workflows** that run locally:
   adapter wraps Ollama, prompt templating, retries, and a small
   `Step`/`Workflow` abstraction. No framework lock-in.
 
-Built in a **new public, parallel repo** (clean slate, generic - no
-assumptions about anyone's note history). Existing `at-home` keeps
-working unchanged during the experiment.
+Built in a **public repo** (clean slate, generic - no assumptions
+about anyone's note history).
 
 The deliverable is a **distributable CLI tool** users install once and
 run from inside any markdown vault. PARA+Quest is the *value
@@ -406,23 +405,35 @@ two open at once (mirrors phase 5).
   e.g. Jaccard word overlap, or LLM-as-judge) and document the
   tradeoff in `docs/eval.md`. Continue growing the `pqn-ingest`
   fixture set toward the ~30 target from Phase 4.
-- **5.5e — `CONTRIBUTING.md`.** Focused contributor onboarding (not
+- **5.5e — `docs/CONTRIBUTING.md`.** Focused contributor onboarding (not
   encyclopedic): dev setup (`uv sync`), lint/format/types/test
-  commands, the `phase5.5-<thing>` branch flow, how to add an eval
+  commands, the `phase<N>-<thing>` branch flow, how to add an eval
   fixture, `pqn-eval --fake` vs real-model usage, how to read a
-  `report.md`. Pointer to `AGENTS.md` and this PLAN.md. Location
-  (`CONTRIBUTING.md` at root vs `docs/CONTRIBUTING.md`) confirmed
-  at landing.
+  `report.md`. Pointer to `AGENTS.md` and this PLAN.md. Lives at
+  `docs/CONTRIBUTING.md` (moved from repo root during phase 6).
 
 ### Phase 6 - Polish and release
+- Repo cleanup: strip outdated references, move `CONTRIBUTING.md`
+  → `docs/CONTRIBUTING.md`, verify naming consistency, sync
+  roadmap docs (this slice).
 - README quickstart that runs end-to-end against the bundled sample
-  vault (no LLM-free fallback path required, but document model
-  recommendations from eval results).
-- `solvaholic/at-home`: deprecation/migration notes pointing here.
-- Document running workflows headlessly (cron examples).
-- Tag a `v0.1` release; `pipx`/`uv tool install` instructions.
+  vault, walking all five workflows in order.
+- Model recommendations section in `docs/eval.md` driven by a real
+  `pqn-eval` run.
+- Document running workflows headlessly (cron examples, exit codes,
+  JSONL trace, `PARA_QUEST_VAULT`).
+- Install instructions via `uv tool install git+...@v0.1` (PyPI
+  deferred).
+- Full README audit, then tag a `v0.1` release.
 
-### Phase 7 (deferred / future) - Agent integration
+### Phase 7 - Grow eval fixtures
+- Grow the `pqn-ingest` fixture set toward the ~30 target originally
+  scoped under Phase 4.
+- Revisit the `pqn-archive:generate_outcome` judge (5.5d carryover);
+  currently using `granite4.1:30b` as a stopgap.
+- Add fixtures for any workflow that gains LLM steps post-v0.1.
+
+### Phase 8 (deferred / future) - Agent integration
 - Author SKILL.md wrappers that tell an agent to call the CLIs with
   `--format json` and surface the structured result. Agent never
   sees note bodies.
@@ -491,8 +502,6 @@ let them creep into the v1 release.
 - Multi-agent orchestration / planner agents.
 - Vector indexing of the vault.
 - Web UI.
-- Migrating the `at-home` scripts (`quick-capture`, `backup-notes`,
-  `setup-notes`) - they keep working in the old repo.
 - Routine/recurring task generator (separate concern in
   `docs/notes-system.md`).
 

@@ -89,15 +89,15 @@ See `docs/PLAN.md` for the full breakdown.
   5.5b reshaped as a no-LLM `pqn-create` inbox fallback, 5.5c
   (`pqn-archive --generate-outcome`) shipped with generate-on-apply
   semantics, 5.5d (per-workflow eval scoping) kept, 5.5e
-  (`CONTRIBUTING.md`) added. See [`docs/PLAN.md`](docs/PLAN.md).
-- [ ] **Phase 6** - polish + v0.1
-- [ ] **Phase 7** (deferred) - agent SKILL.md wrappers
+  (`docs/CONTRIBUTING.md`) added. See [`docs/PLAN.md`](docs/PLAN.md).
+- [ ] **Phase 6** - polish + v0.1 release
+- [ ] **Phase 7** - grow eval fixtures toward ~30; revisit
+  `pqn-archive:generate_outcome` judge (5.5d carryover)
+- [ ] **Phase 8** (deferred) - agent SKILL.md wrappers
 
 ## Heritage
 
-The reasoning patterns (PARA + Quest alignment, escalation when
-rules don't fit) come from `solvaholic/at-home`, which used
-cloud-hosted Copilot agents loading SKILL.md files. This repo
-re-implements those patterns as local scripted workflows so notes
+Reasoning patterns (PARA + Quest alignment, escalation when rules
+don't fit) are implemented as local scripted workflows so notes
 never leave the user's machine. See `docs/PLAN.md` "Problem" for
 the full motivation.
