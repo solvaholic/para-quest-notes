@@ -60,80 +60,141 @@ The workflows preserve that reasoning, locally.
       `generate_outcome` judge
 - [ ] Phase 8 (deferred): agent SKILL.md wrappers
 
-## Try the sample vault
+## Quickstart: end-to-end against the sample vault
 
 A small (~30-note) sample vault lives at
-[`samples/vault/`](samples/vault/) for poking at the workflows
-without involving any real notes:
+[`samples/vault/`](samples/vault/). The walkthrough below exercises
+all five `pqn-*` CLIs against a throwaway copy of it, so you can see
+the whole toolchain on first read without risking real notes.
+
+You'll need [Ollama](https://ollama.com) running locally for the
+LLM-using steps (`pqn-ingest`, the final `pqn-archive` step). The
+documented default model is `granite4.1:30b` (~18 GB); override
+with `--model` if you have something smaller. For a "what to use
+when" answer, see [`docs/eval.md`](docs/eval.md) — the
+"Model recommendations" section there is driven by a real eval run.
 
 ```bash
+# 0. Set up the repo and make a throwaway vault
+git clone https://github.com/solvaholic/para-quest-notes.git
+cd para-quest-notes
 uv sync --dev
+cp -R samples/vault /tmp/demo-vault
+```
 
-# Inspect the committed sample vault
-ls samples/vault/
+### 1. `pqn-validate` — confirm the vault is well-shaped (no LLM)
 
-# Or generate a fresh one with different seed/options
+Read-only audit: duplicate basenames, malformed front/backmatter.
+
+```bash
+uv run pqn-validate --vault /tmp/demo-vault
+```
+
+A clean sample vault reports `no issues found.` Full options:
+[`docs/workflows/validate.md`](docs/workflows/validate.md).
+
+### 2. `pqn-ingest` — triage notes from `inbox/` into PARA + Quest (LLM)
+
+```bash
+# Dry-run: see proposed moves, touch nothing
+uv run pqn-ingest --vault /tmp/demo-vault
+
+# Inspect one file, JSON output for piping to jq
+uv run pqn-ingest --vault /tmp/demo-vault \
+    --file inbox/Possible\ trial\ smile.md --format json | jq
+
+# When you trust the model, --apply does the moves
+uv run pqn-ingest --vault /tmp/demo-vault --apply
+```
+
+`pqn-ingest` **rewrites incoming wikilinks** across the vault when
+it renames a note (skipping `archive/`), so keep `--apply` off
+until you trust a given model on a given vault. Sample-vault inbox
+notes are Faker-generated nonsense; the LLM will often escalate,
+which is fine for adapter testing, less great for "look how clever
+this is." Hand-write a few plausible inbox notes for a real demo.
+Full JSON contract and escalation shape:
+[`docs/workflows/ingest.md`](docs/workflows/ingest.md).
+
+### 3. `pqn-create` — create a single new note in its PARA + Quest home (no LLM)
+
+```bash
+uv run pqn-create --vault /tmp/demo-vault \
+    --type project --title "Tidy The Garage" \
+    --quest side --supports '[[Maintain Home]]' --apply
+```
+
+Files a new Project at `projects/Tidy The Garage.md` with
+frontmatter pre-populated. Drop `--apply` for dry-run. Omit
+`--supports` on a Project or Area to file it into `inbox/`
+instead (Phase 5.5b inbox fallback). Full options:
+[`docs/workflows/create.md`](docs/workflows/create.md).
+
+### 4. `pqn-daily` — file a daily note into `resources/daily_notes/` (no LLM)
+
+`pqn-daily` is filing-only; you (or another tool) author the note,
+`pqn-daily` puts it in the right place.
+
+```bash
+# Author a daily note at the vault root
+echo "# 2026-05-16" > /tmp/demo-vault/2026-05-16.md
+
+# File it (dry-run, then --apply)
+uv run pqn-daily --vault /tmp/demo-vault 2026-05-16
+uv run pqn-daily --vault /tmp/demo-vault 2026-05-16 --apply
+```
+
+Basename search covers vault root, `inbox/`, and
+`resources/daily_notes/`. Full options:
+[`docs/workflows/daily.md`](docs/workflows/daily.md).
+
+### 5. `pqn-archive --generate-outcome` — archive a Project, LLM writes the Outcome (LLM)
+
+Closes out the Project created in step 3. `--cancel-open-tasks`
+rewrites the template's open task to cancelled; `--generate-outcome`
+hands the LLM the note body and asks for an `## Outcome` paragraph.
+
+```bash
+# Dry-run is cheap and model-free: it tells you what would happen
+# but does not call the LLM
+uv run pqn-archive --vault /tmp/demo-vault "Tidy The Garage" \
+    --cancel-open-tasks --generate-outcome
+
+# --apply calls the model, appends ## Outcome on success, then
+# moves the file to archive/
+uv run pqn-archive --vault /tmp/demo-vault "Tidy The Garage" \
+    --cancel-open-tasks --generate-outcome --apply
+```
+
+Empty or `INSUFFICIENT_CONTEXT` responses escalate and abort the
+write (no `## Outcome` is appended, no move happens). Full options:
+[`docs/workflows/archive.md`](docs/workflows/archive.md).
+
+### What just happened
+
+Each run wrote a JSONL trace under
+`~/.local/state/para-quest-notes/runs/`; the path is printed in
+text output. Read it to see exactly which prompt produced which
+decision.
+
+### Trying it on your own notes
+
+The workflows key off vault structure: any directory with both
+`areas/` and `projects/` at its root counts as a vault. Vault
+discovery resolves in this order: `--vault PATH` →
+`PARA_QUEST_VAULT` env var → walking up from `cwd` → `vault:` in
+`~/.config/para-quest-notes/config.yaml`. See
+[`docs/configuration.md`](docs/configuration.md) for the full
+discovery rules and config-file shape.
+
+### Generating a fresh sample vault
+
+```bash
 uv run python -m para_quest_notes.corpus \
     --out ./demo-vault --seed 42 --projects 8 --inbox 6 --daily 14
 ```
 
 See [`docs/corpus.md`](docs/corpus.md) for the full shape taxonomy.
-
-## Try the pilot (`pqn-ingest`)
-
-Phase 3 ships a working pilot: `pqn-ingest` triages notes from
-`<vault>/inbox/` into PARA + Quest locations. Defaults to dry-run;
-`--apply` does the actual moves.
-
-You'll need [Ollama](https://ollama.com) running locally with at
-least one model pulled. The default is `granite4.1:30b` (~18 GB);
-override with `--model` if you have something smaller. Examples
-below use `llama3.2:3b` because it's tiny; pick whatever you've got.
-
-```bash
-# 1. Set up the repo
-git clone https://github.com/solvaholic/para-quest-notes.git
-cd para-quest-notes
-uv sync --dev
-
-# 2. Make a vault to play with (don't risk your real notes yet)
-cp -R samples/vault /tmp/demo-vault
-
-# 3. Dry-run: see what pqn-ingest would do, touch nothing
-uv run pqn-ingest --vault /tmp/demo-vault --model llama3.2:3b
-
-# 4. Inspect one file at a time, JSON output for piping to jq
-uv run pqn-ingest --vault /tmp/demo-vault --model llama3.2:3b \
-    --file inbox/Possible\ trial\ smile.md --format json | jq
-
-# 5. When you're convinced, --apply does the moves
-uv run pqn-ingest --vault /tmp/demo-vault --model llama3.2:3b --apply
-```
-
-Each run writes a JSONL trace under
-`~/.local/state/para-quest-notes/runs/`; the path is printed in text
-output. Read it to see exactly which prompt produced which decision.
-
-### Trying it on your own notes
-
-`pqn-ingest` keys off vault structure: any directory with both
-`areas/` and `projects/` at its root counts as a vault. Notes to
-triage go in `<vault>/inbox/` as `.md` files. Vault discovery resolves
-in this order: `--vault PATH` → `PARA_QUEST_VAULT` env var → walking
-up from `cwd` → `vault:` in `~/.config/para-quest-notes/config.yaml`.
-
-Two reasons to keep `--apply` off until you trust a given model:
-
-- The pilot **rewrites incoming wikilinks** across the vault when it
-  renames a note (skipping `archive/`). Reverting that by hand is
-  tedious.
-- Sample-vault inbox notes are Faker-generated nonsense; the LLM
-  will often escalate. That's fine for adapter testing, less great
-  for "look how clever this is." Hand-write a few plausible inbox
-  notes for a real demo.
-
-See [`docs/workflows/ingest.md`](docs/workflows/ingest.md) for the
-full JSON contract, escalation shape, and known limitations.
 
 ## Install (eventually)
 
