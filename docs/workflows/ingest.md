@@ -12,8 +12,10 @@ steps in order:
 2. **classify_para** (LLM) — pick one of `project | area | resource`.
 3. **pick_quest** (LLM) — pick one or more Quests from the vault's
    declared Main + Side Quests. Skipped for resources.
-4. **propose_filename** (LLM) — propose a Title Case `.md` filename;
-   validated locally for collisions outside `archive/`.
+4. **propose_filename** (LLM, may skip) — if the source basename
+   already passes a strict structural check, keep it and skip the
+   LLM; otherwise ask the LLM to pick from {keep, repair, generate}.
+   Validated locally for collisions outside `archive/`.
 5. **plan_destination** (pure) — flat layout under the PARA top-dir
    (`projects/`, `areas/`, `resources/`).
 6. **apply_move** (pure, atomic) — dry-run by default. With `--apply`,
@@ -69,18 +71,18 @@ Each `FileResult`:
 
 ```json
 {
-  "source": "inbox/Train Plan.md",
+  "source": "inbox/train plan.md",
   "ok": true,
   "decisions": {
     "para_type": "project",
     "quests": ["Health"],
-    "filename": "Run a 5K.md",
-    "destination": "projects/Run a 5K.md"
+    "filename": "Run A 5K.md",
+    "destination": "projects/Run A 5K.md"
   },
   "applied": false,
   "change": {
-    "moved_from": "inbox/Train Plan.md",
-    "moved_to": "projects/Run a 5K.md",
+    "moved_from": "inbox/train plan.md",
+    "moved_to": "projects/Run A 5K.md",
     "attachments_moved": [],
     "wikilinks_rewritten": [
       {"file": "areas/Health.md", "occurrences": 1}
@@ -126,10 +128,21 @@ caller; `context` carries free-form state useful for triage.
 - **Pre-set `type:` frontmatter is authoritative.** If an inbox note
   already has `type: project`, `type: area`, or `type: resource`,
   `classify_para` is skipped and the existing value is used.
+- **Filename auto-skip.** If the inbox source basename already passes
+  the structural check (Title Case with spaces, each word starting
+  uppercase/digit), `propose_filename` keeps the source name and does
+  not call the LLM. This preserves user-curated specifics (dates,
+  brand names like `DeepWiki`, etc.) that an LLM rewrite often loses.
+  The collision check still runs.
 - **Filename validation** rejects path separators and disallowed
-  characters; appends `.md` if missing. Also rejects camelCase /
-  PascalCase / snake_case stems — Title Case requires words separated
-  by spaces (e.g., `Run a 5K.md`, not `RunA5K.md`).
+  characters; appends `.md` if missing. Enforces a structural rule:
+  every whitespace-separated word starts with an uppercase letter or
+  digit (no lowercase joiners like `a`, `of`, `to`). Brand names with
+  interior caps like `DeepWiki`, `GitHub`, `iPhone` are fine.
+- **Bounded-choice rename.** When the structural check fails, the LLM
+  is asked to pick one of `keep` (use source as-is), `repair` (use a
+  mechanically capitalized variant), or `generate` (compose a new
+  name). The chosen filename must still pass the structural check.
 - **Collisions** outside `archive/` escalate from `propose_filename`
   with the colliding path in `options`.
 - **Atomic move.** Uses `Path.replace`; safe within a single

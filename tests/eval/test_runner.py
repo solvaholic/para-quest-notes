@@ -71,7 +71,9 @@ def test_all_steps_pass_with_correct_answers(tmp_path: Path) -> None:
     answers = {
         "classify_para": json.dumps({"type": "project", "confidence": 0.9, "reason": "ok"}),
         "pick_quest": json.dumps({"quests": ["Health"], "confidence": 0.9, "reason": "ok"}),
-        "propose_filename": json.dumps({"filename": "Train for 5K.md", "reason": "ok"}),
+        "propose_filename": json.dumps(
+            {"choice": "generate", "filename": "Train For 5K.md", "reason": "ok"}
+        ),
     }
     out = tmp_path / "run"
     summary = run_matrix(
@@ -177,7 +179,7 @@ def test_fake_regression_on_real_ingest_fixtures(tmp_path: Path) -> None:
         out_dir=tmp_path,
     )
     rows = sorted((c.workflow, c.fixture_id, c.step, c.verdict.ok) for c in summary.cells)
-    assert len(rows) == 31
+    assert len(rows) == 35
     assert all(ok for _, _, _, ok in rows)
     assert {workflow for workflow, _, _, _ in rows} == {"archive", "ingest"}
 

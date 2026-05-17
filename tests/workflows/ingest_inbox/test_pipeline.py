@@ -45,10 +45,10 @@ def _seed_vault(tmp_path: Path) -> Path:
 
 def test_ingest_one_dry_run(tmp_path: Path):
     vault = _seed_vault(tmp_path)
-    src = vault / "inbox/Train Plan.md"
+    src = vault / "inbox/train plan.md"
     src.write_text("# Train Plan\nrun a 5k\n")
     (vault / "areas/Health.md").write_text(
-        (vault / "areas/Health.md").read_text() + "\nsee [[Train Plan]]\n"
+        (vault / "areas/Health.md").read_text() + "\nsee [[train plan]]\n"
     )
 
     llm = FakeLLM(
@@ -56,7 +56,11 @@ def test_ingest_one_dry_run(tmp_path: Path):
             {
                 "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
                 "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
-                "propose_filename": {"filename": "Run a 5K.md", "reason": "concise"},
+                "propose_filename": {
+                    "choice": "generate",
+                    "filename": "Run A 5K.md",
+                    "reason": "concise",
+                },
             }
         )
     )
@@ -64,7 +68,7 @@ def test_ingest_one_dry_run(tmp_path: Path):
     assert fr.ok
     assert fr.decisions.para_type == "project"
     assert fr.decisions.quests == ["Health"]
-    assert fr.decisions.destination == "projects/Run a 5K.md"
+    assert fr.decisions.destination == "projects/Run A 5K.md"
     assert fr.applied is False
     assert src.exists()
     assert any(h["file"] == "areas/Health.md" for h in fr.change.wikilinks_rewritten)
@@ -72,20 +76,20 @@ def test_ingest_one_dry_run(tmp_path: Path):
 
 def test_ingest_inbox_processes_all_files(tmp_path: Path):
     vault = _seed_vault(tmp_path)
-    (vault / "inbox/Note A.md").write_text("# A\n")
-    (vault / "inbox/Note B.md").write_text("# B\n")
+    (vault / "inbox/note a.md").write_text("# A\n")
+    (vault / "inbox/note b.md").write_text("# B\n")
 
     plans = iter(
         [
             {
                 "classify_para": {"type": "project", "confidence": 0.9},
                 "pick_quest": {"quests": ["Health"], "confidence": 0.9},
-                "propose_filename": {"filename": "Alpha.md"},
+                "propose_filename": {"choice": "generate", "filename": "Alpha.md"},
             },
             {
                 "classify_para": {"type": "resource", "confidence": 0.9},
                 "pick_quest": {},  # skipped for resource
-                "propose_filename": {"filename": "Bravo.md"},
+                "propose_filename": {"choice": "generate", "filename": "Bravo.md"},
             },
         ]
     )
@@ -118,14 +122,18 @@ def test_ingest_inbox_processes_all_files(tmp_path: Path):
 
 def test_ingest_one_uses_preset_frontmatter_type(tmp_path: Path):
     vault = _seed_vault(tmp_path)
-    src = vault / "inbox/Train Plan.md"
+    src = vault / "inbox/train plan.md"
     src.write_text("---\ntype: project\n---\n# Train Plan\nrun a 5k\n")
 
     llm = FakeLLM(
         responder=_build_responder(
             {
                 "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
-                "propose_filename": {"filename": "Run a 5K.md", "reason": "concise"},
+                "propose_filename": {
+                    "choice": "generate",
+                    "filename": "Run A 5K.md",
+                    "reason": "concise",
+                },
             }
         )
     )
@@ -133,8 +141,32 @@ def test_ingest_one_uses_preset_frontmatter_type(tmp_path: Path):
 
     assert fr.ok
     assert fr.decisions.para_type == "project"
-    assert fr.decisions.destination == "projects/Run a 5K.md"
+    assert fr.decisions.destination == "projects/Run A 5K.md"
     assert not any((call.prompt_id or "").startswith("classify_para@") for call in llm.calls)
+
+
+def test_ingest_one_keeps_good_source_filename(tmp_path: Path):
+    """When the inbox source basename already passes the structural check,
+    propose_filename skips the LLM and reuses the source name.
+    """
+    vault = _seed_vault(tmp_path)
+    src = vault / "inbox/Chat With DeepWiki About Goose 2026-05-15.md"
+    src.write_text("# Chat\nDiscussed recipe execution.\n")
+
+    llm = FakeLLM(
+        responder=_build_responder(
+            {
+                "classify_para": {"type": "resource", "confidence": 0.9, "reason": "ok"},
+                # propose_filename intentionally absent — must not be invoked.
+            }
+        )
+    )
+    fr = ingest_one(src, vault=vault, llm=llm, apply=False)
+
+    assert fr.ok, fr.escalation or fr.error
+    assert fr.decisions.filename == "Chat With DeepWiki About Goose 2026-05-15.md"
+    assert fr.decisions.destination == ("resources/Chat With DeepWiki About Goose 2026-05-15.md")
+    assert not any((call.prompt_id or "").startswith("propose_filename@") for call in llm.calls)
 
 
 def test_apply_mode_moves_files(tmp_path: Path):
@@ -157,6 +189,7 @@ def test_apply_mode_moves_files(tmp_path: Path):
                 "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
                 "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
                 "propose_filename": {
+                    "choice": "generate",
                     "filename": "Phase 3 Smoke.md",
                     "reason": "test name",
                 },

@@ -1,9 +1,19 @@
-"""Step 4: propose_filename (LLM).
+"""Step 4: propose_filename (LLM, with auto-skip for good source names).
 
-LLM proposes a Title Case filename. We validate it locally (no slashes,
-.md suffix, non-empty), then ask :mod:`para_quest_notes.workflows.validate`
-whether the basename would collide with an existing note. On collision
-the step escalates with candidate alternatives.
+Two-tier behavior:
+
+1. If the inbox source basename already passes a strict structural check
+   (Title Case with spaces between words), keep it as-is and skip the
+   LLM entirely. This preserves user-curated filenames (dates,
+   specificity, brand names like ``DeepWiki``) that the LLM would
+   otherwise rewrite-and-lose.
+2. Otherwise, call the LLM with a bounded-choice prompt: pick ``keep``,
+   ``repair`` (mechanical first-letter capitalization), or ``generate``
+   (judgment from title + body). The returned filename is validated
+   against the same structural check; failure escalates.
+
+The collision check (via :mod:`para_quest_notes.workflows.validate`)
+runs in both branches.
 """
 
 from __future__ import annotations
@@ -21,20 +31,42 @@ from para_quest_notes.workflows.validate.api import check_basename_available
 # Allowed characters: letters, digits, spaces, and a small punctuation set.
 # Notably no underscore (rejects snake_case stems).
 _FILENAME_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 \-()'.,&]*\.md$")
-# A lowercase letter immediately followed by an uppercase letter is the
-# tell of camelCase / PascalCase. Title Case puts a space between words.
-_INTERIOR_CAPS = re.compile(r"[a-z][A-Z]")
 BODY_PREVIEW_CHARS = 2000
 
 
-def _looks_like_title_case(stem: str) -> bool:
-    """Reject obvious camelCase / PascalCase stems.
+def _passes_structural_check(stem: str) -> bool:
+    """Strict structural check for filename stems.
 
-    We don't try to enforce *every* Title Case rule (articles, prepositions,
-    etc.) — just the structural one that catches the common LLM failure
-    mode: jamming the title into one CapWord.
+    A stem passes when:
+    - the full ``<stem>.md`` matches :data:`_FILENAME_OK` (allowed chars,
+      no path separators or underscores), and
+    - every whitespace-separated word starts with an uppercase letter or
+      a digit (strict — no lowercase joiners like ``a``, ``of``, ``to``;
+      brand names with interior caps like ``DeepWiki`` are fine).
     """
-    return _INTERIOR_CAPS.search(stem) is None
+    if not _FILENAME_OK.match(f"{stem}.md"):
+        return False
+    words = stem.split()
+    if not words:
+        return False
+    return all(w[0].isupper() or w[0].isdigit() for w in words)
+
+
+def _mechanical_repair(stem: str) -> str:
+    """Deterministic first-letter capitalization of each whitespace word.
+
+    Collapses runs of whitespace. Does *not* split snake_case / camelCase
+    / kebab-case tokens — those are judgment calls and belong in the
+    LLM's ``generate`` branch.
+    """
+    words = stem.split()
+    fixed: list[str] = []
+    for w in words:
+        if w and w[0].isalpha():
+            fixed.append(w[0].upper() + w[1:])
+        else:
+            fixed.append(w)
+    return " ".join(fixed)
 
 
 class ProposeFilename:
@@ -49,6 +81,26 @@ class ProposeFilename:
         vault: Path = ctx.vault if ctx.vault is not None else scan.source.parent.parent
         para_type = ctx.scratchpad.get("para_type") or "unknown"
 
+        source_stem = scan.source.stem
+        source_basename = scan.source.name
+
+        if _passes_structural_check(source_stem):
+            filename = source_basename
+            reason = "source filename already passes the structural check"
+            choice = "keep"
+            return self._finalize(
+                ctx,
+                vault,
+                scan.source,
+                filename,
+                reason=reason,
+                choice=choice,
+                used_llm=False,
+            )
+
+        repaired_stem = _mechanical_repair(source_stem)
+        repaired = f"{repaired_stem}.md"
+
         parsed = call_llm_json(
             ctx_llm=ctx.llm,
             prompt=self.prompt,
@@ -56,11 +108,14 @@ class ProposeFilename:
                 "title": scan.title,
                 "body": scan.parsed.body.strip()[:BODY_PREVIEW_CHARS] or "(empty)",
                 "para_type": para_type,
+                "source_basename": source_basename,
+                "repaired_basename": repaired,
             },
             step_name=self.name,
             model=self.model,
         )
         filename = str(require(parsed, "filename", step=self.name, expected="string")).strip()
+        choice = str(parsed.get("choice", "")).strip().lower() or "generate"
         reason = str(parsed.get("reason", ""))
 
         if "/" in filename or "\\" in filename:
@@ -77,18 +132,39 @@ class ProposeFilename:
                 step=self.name,
                 reason="filename has disallowed characters",
                 options=[],
-                context={"filename": filename},
+                context={"filename": filename, "choice": choice},
             )
-        if not _looks_like_title_case(filename[:-3]):
+        if not _passes_structural_check(filename[:-3]):
             raise EscalateToUser(
                 step=self.name,
-                reason="filename looks like camelCase or PascalCase; use Title Case "
-                "(words separated by spaces)",
+                reason="filename is not Title Case; each word must start with an "
+                "uppercase letter or digit",
                 options=[],
-                context={"filename": filename},
+                context={"filename": filename, "choice": choice},
             )
 
-        collision_issues = check_basename_available(vault, filename, ignore_path=scan.source)
+        return self._finalize(
+            ctx,
+            vault,
+            scan.source,
+            filename,
+            reason=reason,
+            choice=choice,
+            used_llm=True,
+        )
+
+    def _finalize(
+        self,
+        ctx: StepContext,
+        vault: Path,
+        source: Path,
+        filename: str,
+        *,
+        reason: str,
+        choice: str,
+        used_llm: bool,
+    ) -> StepResult:
+        collision_issues = check_basename_available(vault, filename, ignore_path=source)
         if collision_issues:
             issue = collision_issues[0]
             existing = [{"filename": filename, "existing": rel} for rel in issue.related]
@@ -103,5 +179,5 @@ class ProposeFilename:
         return StepResult(
             name=self.name,
             output={"filename": filename, "reason": reason},
-            meta={"filename": filename},
+            meta={"filename": filename, "choice": choice, "used_llm": used_llm},
         )

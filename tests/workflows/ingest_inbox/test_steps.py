@@ -216,12 +216,45 @@ def test_propose_filename_happy_path(tmp_path: Path):
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"filename": "Build Raised Beds.md", "reason": "ok"}))
+    llm.queue(
+        json.dumps({"choice": "generate", "filename": "Build Raised Beds.md", "reason": "ok"})
+    )
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
     out = ProposeFilename(prompt=_fn_prompt()).run(ctx)
     assert out.output["filename"] == "Build Raised Beds.md"
+    assert out.meta["used_llm"] is True
+    assert out.meta["choice"] == "generate"
+
+
+def test_propose_filename_skips_llm_when_source_passes(tmp_path: Path):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Chat With DeepWiki About Goose 2026-05-15.md"
+    src.write_text("# Chat\n")
+    llm = FakeLLM()
+    # No response queued: if the step calls the LLM, FakeLLM raises.
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "resource"
+    out = ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert out.output["filename"] == "Chat With DeepWiki About Goose 2026-05-15.md"
+    assert out.meta["used_llm"] is False
+    assert out.meta["choice"] == "keep"
+
+
+def test_propose_filename_skip_still_checks_collision(tmp_path: Path):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Existing.md"
+    src.write_text("# X\n")
+    (vault / "projects/Existing.md").write_text("---\ntype: project\n---\n")
+    llm = FakeLLM()
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    with pytest.raises(EscalateToUser) as exc:
+        ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert "collide" in exc.value.reason
 
 
 def test_propose_filename_collision_escalates(tmp_path: Path):
@@ -230,7 +263,7 @@ def test_propose_filename_collision_escalates(tmp_path: Path):
     src.write_text("# Raw\n")
     (vault / "projects/Existing.md").write_text("---\ntype: project\n---\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"filename": "Existing.md"}))
+    llm.queue(json.dumps({"choice": "generate", "filename": "Existing.md"}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
@@ -245,7 +278,7 @@ def test_propose_filename_ignores_archive_collision(tmp_path: Path):
     src.write_text("# Raw\n")
     (vault / "archive/projects/Old.md").write_text("---\ntype: project\n---\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"filename": "Old.md"}))
+    llm.queue(json.dumps({"choice": "generate", "filename": "Old.md"}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
@@ -258,7 +291,7 @@ def test_propose_filename_path_separator_rejected(tmp_path: Path):
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"filename": "sub/Foo.md"}))
+    llm.queue(json.dumps({"choice": "generate", "filename": "sub/Foo.md"}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
@@ -271,7 +304,7 @@ def test_propose_filename_appends_md_suffix(tmp_path: Path):
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"filename": "Already Title"}))
+    llm.queue(json.dumps({"choice": "generate", "filename": "Already Title"}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
@@ -282,23 +315,37 @@ def test_propose_filename_appends_md_suffix(tmp_path: Path):
 @pytest.mark.parametrize(
     "bad",
     [
-        "BeginMovementEffortWill.md",  # PascalCase
-        "buildRaisedBeds.md",  # camelCase
-        "iPhoneNotes.md",  # PascalCase with embedded acronym
+        "buildRaisedBeds.md",  # starts lowercase
+        "iPhoneNotes.md",  # starts lowercase
     ],
 )
-def test_propose_filename_rejects_pascal_or_camel_case(tmp_path: Path, bad: str):
+def test_propose_filename_rejects_lowercase_start(tmp_path: Path, bad: str):
     vault = _make_vault(tmp_path)
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"filename": bad}))
+    llm.queue(json.dumps({"choice": "generate", "filename": bad}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
     with pytest.raises(EscalateToUser) as exc:
         ProposeFilename(prompt=_fn_prompt()).run(ctx)
-    assert "case" in exc.value.reason.lower()
+    assert "title case" in exc.value.reason.lower()
+
+
+def test_propose_filename_rejects_lowercase_joiner(tmp_path: Path):
+    # Strict rule 3: every word must start uppercase or digit.
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# Raw\n")
+    llm = FakeLLM()
+    llm.queue(json.dumps({"choice": "generate", "filename": "Notes on Sourdough.md"}))
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "resource"
+    with pytest.raises(EscalateToUser) as exc:
+        ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert "title case" in exc.value.reason.lower()
 
 
 def test_propose_filename_rejects_snake_case(tmp_path: Path):
@@ -306,32 +353,33 @@ def test_propose_filename_rejects_snake_case(tmp_path: Path):
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"filename": "build_raised_beds.md"}))
+    llm.queue(json.dumps({"choice": "generate", "filename": "build_raised_beds.md"}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
     with pytest.raises(EscalateToUser) as exc:
         ProposeFilename(prompt=_fn_prompt()).run(ctx)
-    # Snake case fails the character regex, not the title-case check.
+    # Snake case fails the character regex, not the structural rule.
     assert "disallowed" in exc.value.reason
 
 
 @pytest.mark.parametrize(
     "good",
     [
-        "Run a 5K.md",  # digits + lowercase article
-        "Health.md",  # single word
-        "Notes on Sourdough.md",  # multi-word with prepositions
+        "Run A 5K.md",  # strict: lowercase "a" not allowed
+        "Health.md",  # single word, no interior caps
+        "Notes On Sourdough.md",  # strict: "On" capitalized
         "Build Raised Beds.md",
         "Plan Family Reunion.md",
+        "Chat With DeepWiki About Goose.md",  # brand name with interior caps in multi-word stem
     ],
 )
-def test_propose_filename_accepts_real_title_case(tmp_path: Path, good: str):
+def test_propose_filename_accepts_strict_title_case(tmp_path: Path, good: str):
     vault = _make_vault(tmp_path)
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"filename": good}))
+    llm.queue(json.dumps({"choice": "generate", "filename": good}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
