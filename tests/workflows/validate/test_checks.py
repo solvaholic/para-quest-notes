@@ -172,3 +172,33 @@ def test_backmatter_absent_is_ok(vault: Path):
     write(vault / "projects" / "P.md", "---\nkind: project\n---\nbody only\n")
     report = validate_vault(vault, checks=["backmatter_yaml"])
     assert report.issues == []
+
+
+# ---------- metadata_in_backmatter ----------
+
+
+def test_metadata_in_backmatter_warns(vault: Path):
+    text = (
+        "# Sustain\n\nBody copy.\n\n---\ntype: area\nquest: main\nsupports:\n- '[[Sustain]]'\n---\n"
+    )
+    write(vault / "areas" / "Sustain.md", text)
+    report = validate_vault(vault, checks=["metadata_in_backmatter"])
+    assert len(report.issues) == 1
+    issue = report.issues[0]
+    assert issue.check == "metadata_in_backmatter"
+    assert issue.severity == "warning"
+    assert issue.detail["keys"] == ["quest", "supports", "type"]
+
+
+def test_metadata_in_backmatter_non_canonical_ignored(vault: Path):
+    """Non-canonical keys (e.g. archive's `outcome`) are fine in backmatter."""
+    text = "---\ntype: project\n---\nbody\n---\noutcome: shipped\n---\n"
+    write(vault / "projects" / "P.md", text)
+    report = validate_vault(vault, checks=["metadata_in_backmatter"])
+    assert report.issues == []
+
+
+def test_metadata_in_backmatter_absent_is_ok(vault: Path):
+    write(vault / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\nbody\n")
+    report = validate_vault(vault, checks=["metadata_in_backmatter"])
+    assert report.issues == []

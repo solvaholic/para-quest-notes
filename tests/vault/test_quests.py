@@ -32,3 +32,35 @@ def test_discovers_main_and_side(tmp_path: Path):
 
 def test_no_areas_dir(tmp_path: Path):
     assert discover_quests(tmp_path) == []
+
+
+def test_discovers_backmatter_quest(tmp_path: Path):
+    """Legacy notes with quest:/supports: in tail backmatter are still found.
+
+    Backmatter is tolerated on read (see docs/PLAN.md, "Open questions —
+    decided 2026-05-12"). Without this, fresh vaults whose Quest notes
+    pre-date the frontmatter-canonical decision can't be ingested - their
+    Quests are invisible to pick_quest.
+    """
+    _write(
+        tmp_path / "areas/Sustain.md",
+        (
+            "# Sustain\n\nBody copy.\n\n"
+            "---\ntype: area\nquest: main\nsupports:\n- '[[Sustain]]'\n---\n"
+        ),
+    )
+    quests = discover_quests(tmp_path)
+    assert [(q.name, q.quest_kind) for q in quests] == [("Sustain", "main")]
+    assert quests[0].supports == ("Sustain",)
+
+
+def test_frontmatter_wins_over_backmatter(tmp_path: Path):
+    _write(
+        tmp_path / "areas/Health.md",
+        (
+            "---\ntype: area\nquest: main\n---\n# Health\n\n"
+            "Body.\n\n---\ntype: area\nquest: side\n---\n"
+        ),
+    )
+    quests = discover_quests(tmp_path)
+    assert [(q.name, q.quest_kind) for q in quests] == [("Health", "main")]
