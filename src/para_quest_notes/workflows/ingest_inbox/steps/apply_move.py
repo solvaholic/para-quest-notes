@@ -76,7 +76,9 @@ class ApplyMove:
                 )
                 for att in scan.attachments
             ]
-            change.wikilinks_rewritten = _scan_wikilinks(vault, old_stem, scan.source)
+            change.wikilinks_rewritten = (
+                [] if old_stem == new_stem else _scan_wikilinks(vault, old_stem, scan.source)
+            )
             return StepResult(
                 name=self.name,
                 output=change,
@@ -113,7 +115,11 @@ class ApplyMove:
                 )
             )
 
-        change.wikilinks_rewritten = _rewrite_wikilinks(vault, old_stem, new_stem, exclude=dest)
+        change.wikilinks_rewritten = (
+            []
+            if old_stem == new_stem
+            else _rewrite_wikilinks(vault, old_stem, new_stem, exclude=dest)
+        )
 
         return StepResult(
             name=self.name,
