@@ -429,6 +429,22 @@ def test_apply_move_dry_run_does_not_touch_disk(tmp_path: Path):
     assert out.output.wikilinks_rewritten == [{"file": "areas/Health.md", "occurrences": 1}]
 
 
+def test_apply_move_dry_run_same_stem_reports_no_wikilink_rewrites(tmp_path: Path):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Foo.md"
+    src.write_text("# Foo\nbody\n")
+    (vault / "areas/Health.md").write_text("---\ntype: area\nquest: main\n---\n[[Foo]] link\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    ctx.scratchpad["quests"] = ["Health"]
+    ctx.scratchpad["filename"] = "Foo.md"  # same stem as source
+    PlanDestination().run(ctx)
+    out = ApplyMove(apply=False).run(ctx)
+
+    assert out.output.wikilinks_rewritten == []
+
+
 # ---- apply_move (apply) -------------------------------------------------
 
 
@@ -477,6 +493,26 @@ def test_apply_move_writes_files_and_rewrites_links(tmp_path: Path):
 
     # Reported.
     assert any(h["file"] == "areas/Health.md" for h in out.output.wikilinks_rewritten)
+
+
+def test_apply_move_same_stem_reports_no_wikilink_rewrites(tmp_path: Path):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Foo.md"
+    src.write_text("# Foo\nbody\n")
+    link_note = vault / "areas/Health.md"
+    original = "---\ntype: area\nquest: main\n---\nSee [[Foo]] for details.\n"
+    link_note.write_text(original)
+
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    ctx.scratchpad["quests"] = ["Health"]
+    ctx.scratchpad["filename"] = "Foo.md"  # same stem as source
+    PlanDestination().run(ctx)
+    out = ApplyMove(apply=True).run(ctx)
+
+    assert out.output.wikilinks_rewritten == []
+    assert link_note.read_text(encoding="utf-8") == original
 
 
 def test_apply_move_refuses_overwrite(tmp_path: Path):
