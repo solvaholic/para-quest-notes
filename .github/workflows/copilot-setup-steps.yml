@@ -1,0 +1,39 @@
+name: "Copilot Setup Steps"
+
+# Pre-provision the Copilot cloud agent's ephemeral environment so it
+# can run the same verification commands listed in AGENTS.md without
+# burning turns on tool discovery.
+#
+# Mirrors the relevant prefix of .github/workflows/ci.yml. Auto-runs
+# on changes so a PR that edits this file gets validated like any
+# other workflow.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install project + dev deps
+        run: uv sync --all-extras --dev
