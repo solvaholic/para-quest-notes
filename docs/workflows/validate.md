@@ -5,7 +5,7 @@ Read-only. No LLM.
 
 ## What it does
 
-Three checks:
+Four checks:
 
 1. **`filename_uniqueness`** — flags any basename that appears in more
    than one directory. Wikilinks resolve by basename, so duplicates
@@ -16,6 +16,12 @@ Three checks:
 3. **`backmatter_yaml`** — same, for the optional `---...---` fence at
    the *end* of a note (used by the archive workflow for Outcome
    statements). Absence is not an issue.
+4. **`metadata_in_backmatter`** *(warning)* — flags canonical PARA +
+   Quest keys (`type`, `quest`, `supports`, `source_url`, `created`)
+   that appear in tail backmatter. Frontmatter is canonical; write-path
+   workflows migrate backmatter on touch, but tools that only read
+   frontmatter (Obsidian Properties, Dataview, SSGs — and historically
+   `pqn-ingest`'s Quest discovery) miss it until then.
 
 By design this workflow does **not** validate wikilink targets, orphan
 detection, PARA placement, or semantic frontmatter content. Those are
@@ -63,7 +69,7 @@ Exit codes:
 {
   "vault": "/path/to/vault",
   "files_scanned": 142,
-  "checks_run": ["filename_uniqueness", "frontmatter_yaml", "backmatter_yaml"],
+  "checks_run": ["filename_uniqueness", "frontmatter_yaml", "backmatter_yaml", "metadata_in_backmatter"],
   "summary": {
     "total_issues": 2,
     "errors": 2,

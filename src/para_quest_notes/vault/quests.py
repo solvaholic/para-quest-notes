@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from para_quest_notes.vault.frontmatter import parse
+from para_quest_notes.vault.frontmatter import split_note
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,11 @@ def discover_quests(vault: Path) -> list[Quest]:
     """Return Quests declared under ``<vault>/areas/*.md``.
 
     Returns Main Quests first, then Side Quests, each group sorted by
-    name. Notes without recognizable frontmatter are skipped.
+    name. Frontmatter is the canonical location; legacy notes that
+    declare ``quest:`` in trailing backmatter are still discovered
+    (backmatter is tolerated on read, migrated on touch — see
+    ``docs/PLAN.md`` "Open questions — decided 2026-05-12"). Frontmatter
+    wins when both are present.
     """
     areas_dir = vault / "areas"
     if not areas_dir.is_dir():
@@ -48,11 +52,12 @@ def discover_quests(vault: Path) -> list[Quest]:
             text = md.read_text(encoding="utf-8")
         except OSError:
             continue
-        parsed = parse(text)
-        kind = parsed.frontmatter.get("quest")
+        split = split_note(text)
+        meta: dict[str, object] = {**split.backmatter, **split.frontmatter}
+        kind = meta.get("quest")
         if kind not in ("main", "side"):
             continue
-        supports_raw = parsed.frontmatter.get("supports") or []
+        supports_raw = meta.get("supports") or []
         if not isinstance(supports_raw, list):
             supports_raw = [supports_raw]
         supports = tuple(_strip_wikilink(str(s)) for s in supports_raw if s)

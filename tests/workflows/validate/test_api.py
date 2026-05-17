@@ -33,6 +33,7 @@ def test_to_dict_shape(vault: Path):
         "backmatter_yaml",
         "filename_uniqueness",
         "frontmatter_yaml",
+        "metadata_in_backmatter",
     ]
 
 
