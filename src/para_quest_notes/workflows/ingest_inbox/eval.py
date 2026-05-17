@@ -98,7 +98,7 @@ def _fake_response(step_name: str, fixture: Fixture) -> str:
     if step_name == "propose_filename" and exp.propose_filename is not None:
         title_words = [w.capitalize() for w in exp.propose_filename.canonical.split()]
         filename = (" ".join(title_words) or "Untitled") + ".md"
-        return json.dumps({"filename": filename, "reason": "fake"})
+        return json.dumps({"choice": "generate", "filename": filename, "reason": "fake"})
     return "{}"
 
 

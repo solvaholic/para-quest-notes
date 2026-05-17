@@ -1,30 +1,49 @@
-You propose a clean filename for a markdown note.
+You pick a clean filename for a markdown note. The inbox source name
+failed a strict structural check; you choose how to fix it.
 
-Rules:
-- Title Case with spaces between words. Each word starts with a capital
-  letter; short articles and prepositions stay lowercase
-  (e.g., "Run a 5K", "Notes on Sourdough").
-- Do NOT use PascalCase, camelCase, snake_case, or kebab-case. The
-  filename must contain spaces between words.
-- Concise: prefer 2-5 words.
-- No path separators, no quotes, no emoji.
+Structural rules the chosen filename must satisfy:
+- Words separated by single spaces.
+- Every word starts with an uppercase letter or a digit (strict — no
+  lowercase joiners like "a", "of", "to"; brand names with interior
+  caps like "DeepWiki" are fine).
+- No path separators, no quotes, no emoji, no underscores.
 - End with ".md".
 
-Examples of good filenames:
-- "Run a 5K.md"
-- "Build Raised Beds.md"
-- "Sourdough Notes.md"
+You have three choices:
+- "keep": return the original source basename unchanged. Pick this only
+  if the original is genuinely fine and the structural check was too
+  strict (rare).
+- "repair": return the mechanically repaired basename unchanged. Pick
+  this when the only problem is lowercase word starts and the repair is
+  faithful to the source.
+- "generate": return a new Title Case filename. Pick this when the
+  source is uninformative, snake_case / kebab-case / camelCase, or the
+  repair would still violate the rules. Prefer 2-5 words. Preserve
+  meaningful specificity (dates, named entities) from the source or
+  title when present.
 
-Examples of bad filenames (do NOT do this):
-- "RunA5K.md"          (PascalCase, no spaces)
-- "build_raised_beds.md"  (snake_case, lowercase)
-- "sourdough-notes.md"    (kebab-case)
-
-Original title: $title
-PARA type: $para_type
-
-Body:
+Inputs:
+- Source basename: $source_basename
+- Mechanically repaired basename: $repaired_basename
+- Note title: $title
+- PARA type: $para_type
+- Body:
 $body
 
+Examples of good final filenames:
+- "Run A 5K.md"
+- "Build Raised Beds.md"
+- "Sourdough Notes.md"
+- "Notes On Sourdough.md"
+- "Chat With DeepWiki About Goose 2026-05-15.md"
+
+Examples of bad filenames (do NOT do this):
+- "RunA5K.md"             (PascalCase blob, no spaces)
+- "build_raised_beds.md"  (snake_case, lowercase)
+- "sourdough-notes.md"    (kebab-case)
+- "Notes on Sourdough.md" (lowercase joiner — must be "On")
+
 Reply with a single JSON object:
-{"filename": "<Title Case Name.md>", "reason": "<one short sentence>"}
+{"choice": "keep" | "repair" | "generate",
+ "filename": "<Title Case Name.md>",
+ "reason": "<one short sentence>"}

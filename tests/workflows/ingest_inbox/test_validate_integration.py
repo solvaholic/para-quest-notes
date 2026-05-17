@@ -41,10 +41,10 @@ def test_collision_detected_via_validate_library_call(tmp_path: Path):
     """Pre-existing note with the same basename → ingest must escalate
     at ``propose_filename``, surfacing validate's diagnosis."""
     vault = _seed(tmp_path)
-    (vault / "resources" / "Run a 5K.md").write_text(
+    (vault / "resources" / "Run A 5K.md").write_text(
         "---\ntype: resource\nquest: none\n---\n# Existing\n"
     )
-    src = vault / "inbox" / "Train Plan.md"
+    src = vault / "inbox" / "train plan.md"
     src.write_text("# Train Plan\nrun a 5k\n")
 
     llm = FakeLLM(
@@ -52,7 +52,11 @@ def test_collision_detected_via_validate_library_call(tmp_path: Path):
             {
                 "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
                 "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
-                "propose_filename": {"filename": "Run a 5K.md", "reason": "test"},
+                "propose_filename": {
+                    "choice": "generate",
+                    "filename": "Run A 5K.md",
+                    "reason": "test",
+                },
             }
         )
     )
@@ -65,7 +69,7 @@ def test_collision_detected_via_validate_library_call(tmp_path: Path):
     assert "ambiguous" in fr.escalation["context"]["validate_message"]
     # And the existing collider is surfaced as an option.
     existing = {opt["existing"] for opt in fr.escalation["options"]}
-    assert existing == {"resources/Run a 5K.md"}
+    assert existing == {"resources/Run A 5K.md"}
     # Source must remain in inbox.
     assert src.exists()
 
@@ -73,7 +77,7 @@ def test_collision_detected_via_validate_library_call(tmp_path: Path):
 def test_collision_blocks_apply(tmp_path: Path):
     vault = _seed(tmp_path)
     (vault / "resources" / "Dup.md").write_text("---\ntype: resource\nquest: none\n---\n")
-    src = vault / "inbox" / "Source.md"
+    src = vault / "inbox" / "source.md"
     src.write_text("# Source\nbody\n")
 
     llm = FakeLLM(
@@ -81,7 +85,7 @@ def test_collision_blocks_apply(tmp_path: Path):
             {
                 "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
                 "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
-                "propose_filename": {"filename": "Dup.md", "reason": "test"},
+                "propose_filename": {"choice": "generate", "filename": "Dup.md", "reason": "test"},
             }
         )
     )
@@ -102,7 +106,7 @@ def test_archive_collisions_are_ignored(tmp_path: Path):
     (vault / "archive" / "projects" / "Old Name.md").write_text(
         "---\ntype: project\nquest: none\n---\n"
     )
-    src = vault / "inbox" / "Source.md"
+    src = vault / "inbox" / "source.md"
     src.write_text("# Source\nbody\n")
 
     llm = FakeLLM(
@@ -110,7 +114,11 @@ def test_archive_collisions_are_ignored(tmp_path: Path):
             {
                 "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
                 "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
-                "propose_filename": {"filename": "Old Name.md", "reason": "test"},
+                "propose_filename": {
+                    "choice": "generate",
+                    "filename": "Old Name.md",
+                    "reason": "test",
+                },
             }
         )
     )
@@ -121,7 +129,7 @@ def test_archive_collisions_are_ignored(tmp_path: Path):
 
 def test_no_collision_proceeds(tmp_path: Path):
     vault = _seed(tmp_path)
-    src = vault / "inbox" / "Fresh.md"
+    src = vault / "inbox" / "fresh note.md"
     src.write_text("# Fresh\n")
 
     llm = FakeLLM(
@@ -129,7 +137,11 @@ def test_no_collision_proceeds(tmp_path: Path):
             {
                 "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
                 "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
-                "propose_filename": {"filename": "Brand New.md", "reason": "ok"},
+                "propose_filename": {
+                    "choice": "generate",
+                    "filename": "Brand New.md",
+                    "reason": "ok",
+                },
             }
         )
     )
