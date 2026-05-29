@@ -27,6 +27,8 @@ fake_response: |
 expected:
   generate_outcome:
     keywords:
-      - raised beds
-      - salvaged cedar
-      - tomatoes
+      - bed
+      - bracket
+      - cedar
+      - raise
+      - tomato

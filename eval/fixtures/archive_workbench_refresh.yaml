@@ -27,6 +27,8 @@ fake_response: |
 expected:
   generate_outcome:
     keywords:
-      - workbench
-      - replacing the top
       - bins
+      - clear
+      - light
+      - replac
+      - workbench
