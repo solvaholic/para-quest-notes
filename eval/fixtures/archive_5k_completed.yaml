@@ -23,10 +23,13 @@ inbound_links:
   - basename: Summer Goals
     snippet: "Circle back to [[Train for 5K]] before signing up for a fall race."
 fake_response: |
-  Finished the couch-to-5K push and turned it into a steady running habit. By the end of the project, 30-minute runs were consistent and the notes made the routine easier to repeat. What started as a one-off training sprint became a sustainable baseline instead of an active project.
+  Completed week 8 on a three-day schedule without skipping a session. Ran 30 minutes without walking, logged routes and recovery notes after long runs, and noticed leg stability improve when the midweek easy run stayed short.
 expected:
   generate_outcome:
     keywords:
-      - running habit
-      - 30-minute runs
-      - sustainable baseline
+      - "30"
+      - week
+      - stab
+      - note
+      - route
+      - recover
