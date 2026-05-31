@@ -19,6 +19,7 @@ expected:
   pick_quest:
     acceptable:
       - [Health]
+      - [Health, Connect]
   propose_filename:
     canonical: "train for 5k"
   plan_destination:
