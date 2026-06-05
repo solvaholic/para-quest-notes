@@ -52,7 +52,7 @@ class PickQuest:
                 context={"hint": "add quest: main or quest: side to areas/*.md"},
             )
 
-        catalog = "\n".join(f"- {q.name} ({q.quest_kind})" for q in quests)
+        catalog = "\n".join(f"- {q.name}" for q in quests)
         valid_names = {q.name for q in quests}
 
         parsed = call_llm_json(
