@@ -467,6 +467,11 @@ let them creep into the v1 release.
   `.md` files it contains), a glob pattern (process all matching
   files), or `-` (read the file list from stdin, one path per line).
   Repeatable as today - mix and match sources in one invocation.
+  - **Open design choices:** does a directory walk recurse into
+    subdirectories or only collect top-level `.md` files? And how do
+    we dedupe and order when sources overlap (e.g. a path passed
+    directly and also matched by a glob, or nested under a directory
+    arg)? Pick once the feature gets scheduled, not before.
 
 - **Task roundup in daily note.** A step on top of `pqn-daily` that
   scans the active vault (`areas/`, `projects/`) for tasks with
