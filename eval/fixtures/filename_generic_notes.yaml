@@ -4,9 +4,9 @@
 id: filename-generic-notes
 title: "notes"
 body: |
-  Random thoughts to organize later. Probably about the workshop
-  reorg — bins for fasteners, pegboard for hand tools, label maker
-  for everything.
+  People tend to remember stories more easily than isolated facts.
+  Visual cues can make information feel more concrete, and
+  repetition spaced over time appears to improve recall.
 quest_catalog:
   - { name: Maintain Home, kind: side }
   - { name: Create,        kind: main }
