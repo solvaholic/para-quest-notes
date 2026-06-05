@@ -462,6 +462,12 @@ let them creep into the v1 release.
   authored note should have. Better as an additive flag on a
   stable filing CLI than a rushed inclusion.
 
+- **`--file` richer input.** Extend `--file` on `pqn-ingest` (and any
+  other workflow that gains it) to accept: a directory (process all
+  `.md` files it contains), a glob pattern (process all matching
+  files), or `-` (read the file list from stdin, one path per line).
+  Repeatable as today - mix and match sources in one invocation.
+
 - **Task roundup in daily note.** A step on top of `pqn-daily` that
   scans the active vault (`areas/`, `projects/`) for tasks with
   scheduled/due metadata and writes a roundup section into today's
