@@ -243,6 +243,23 @@ def test_propose_filename_skips_llm_when_source_passes(tmp_path: Path):
     assert out.meta["choice"] == "keep"
 
 
+def test_propose_filename_keeps_source_with_hyphen_separator(tmp_path: Path):
+    # Regression for #34: a " - " separator (pure-punctuation word) must
+    # not trip the structural check, so the source filename is kept as-is.
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Scikit-Learn Cheat Sheet - Python Machine Learning.md"
+    src.write_text("# Sheet\n")
+    llm = FakeLLM()
+    # No response queued: if the step calls the LLM, FakeLLM raises.
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "resource"
+    out = ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert out.output["filename"] == "Scikit-Learn Cheat Sheet - Python Machine Learning.md"
+    assert out.meta["used_llm"] is False
+    assert out.meta["choice"] == "keep"
+
+
 def test_propose_filename_skip_still_checks_collision(tmp_path: Path):
     vault = _make_vault(tmp_path)
     src = vault / "inbox/Existing.md"
@@ -372,6 +389,8 @@ def test_propose_filename_rejects_snake_case(tmp_path: Path):
         "Build Raised Beds.md",
         "Plan Family Reunion.md",
         "Chat With DeepWiki About Goose.md",  # brand name with interior caps in multi-word stem
+        "A - B.md",  # "-" between words is pure punctuation, not a joiner (#34)
+        "Scikit-Learn Cheat Sheet - Python Machine Learning.md",  # #34
     ],
 )
 def test_propose_filename_accepts_strict_title_case(tmp_path: Path, good: str):

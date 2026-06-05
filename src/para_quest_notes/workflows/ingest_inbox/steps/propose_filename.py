@@ -40,16 +40,25 @@ def _passes_structural_check(stem: str) -> bool:
     A stem passes when:
     - the full ``<stem>.md`` matches :data:`_FILENAME_OK` (allowed chars,
       no path separators or underscores), and
-    - every whitespace-separated word starts with an uppercase letter or
-      a digit (strict — no lowercase joiners like ``a``, ``of``, ``to``;
-      brand names with interior caps like ``DeepWiki`` are fine).
+    - every whitespace-separated word's first *alphanumeric* character is
+      an uppercase letter or a digit (strict — no lowercase joiners like
+      ``a``, ``of``, ``to``; brand names with interior caps like
+      ``DeepWiki`` are fine). Leading punctuation is skipped, so words
+      like ``(Python`` pass and pure-punctuation words like the ``-`` in
+      ``Sheet - Python`` are allowed.
     """
     if not _FILENAME_OK.match(f"{stem}.md"):
         return False
     words = stem.split()
     if not words:
         return False
-    return all(w[0].isupper() or w[0].isdigit() for w in words)
+    for w in words:
+        first_alnum = next((c for c in w if c.isalnum()), None)
+        if first_alnum is None:
+            continue  # pure-punctuation word, e.g. the "-" in "A - B"
+        if not (first_alnum.isupper() or first_alnum.isdigit()):
+            return False
+    return True
 
 
 def _mechanical_repair(stem: str) -> str:
