@@ -49,7 +49,7 @@ pqn-validate --vault ~/notes --path projects/Run a 5K.md
 # Run a single check.
 pqn-validate --vault ~/notes --check filename_uniqueness
 
-# Promote warnings to exit-code-1 (no built-in warnings today; safe to use).
+# Promote warnings to exit-code-1 (e.g. the metadata_in_backmatter check).
 pqn-validate --vault ~/notes --strict
 ```
 

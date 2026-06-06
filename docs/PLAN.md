@@ -2,8 +2,8 @@
 
 > Working plan for the `para-quest-notes` re-architecture. Lives in the
 > repo so any agent session (or human) starting in the repo dir has the
-> full design context. Update at large milestones; keep
-> `docs/ROADMAP.md` as the human-facing snapshot if/when it diverges.
+> full design context. Update at large milestones; the README's
+> roadmap section is the human-facing snapshot if/when it diverges.
 
 ## Problem
 
@@ -155,8 +155,9 @@ Phases are dependency-ordered. No time estimates.
   `~/.config/para-quest-notes/config.yaml`), with sensible
   defaults so an empty config still works.
 - **Vault discovery:** `--vault` arg → `PARA_QUEST_VAULT` env →
-  walk-up-from-cwd looking for a marker (e.g. `notes-system.md` or
-  configured marker) → error with a helpful message.
+  walk-up-from-cwd looking for a marker (a directory containing both
+  `areas/` and `projects/`) → `config.vault` → error with a helpful
+  message.
 - Run trace logger (JSONL) under
   `~/.local/state/para-quest-notes/runs/`.
 - Fake LLM for unit tests (records calls, returns canned responses).
@@ -215,7 +216,7 @@ Phases are dependency-ordered. No time estimates.
 - See [`docs/eval.md`](eval.md). Landed with ~7 starter fixtures;
   grow toward ~30 before declaring Phase 4 done.
 
-### Phase 5 - Translate remaining skills
+### Phase 5 - Translate remaining skills ✅
 
 **First slice landed** (shared-infra lift + `pqn-validate`):
 
@@ -352,7 +353,7 @@ integration. Branch naming: one `phase5-<workflow>` branch per
 slice, merged to `main` as it lands; never more than two active
 branches.
 
-### Phase 5.5 - LLM polish + contributor onboarding (post-slice-4, pre-v0.1)
+### Phase 5.5 - LLM polish + contributor onboarding (post-slice-4, pre-v0.1) ✅
 
 Slices 2, 3, and 4 all shipped no-LLM to keep scope tight. This phase
 was originally scoped as "fold the deferred LLM capabilities back in
@@ -397,7 +398,7 @@ two open at once (mirrors phase 5).
   `## Outcome` on success, echoes the prose, and returns
   `plan.outcome_action = "generated"` + `plan.outcome_text`. Empty or
   `INSUFFICIENT_CONTEXT` responses still escalate and abort the write.
-- **5.5d — Per-workflow eval scoping.** Flip the eval harness's
+- [x] **5.5d — Per-workflow eval scoping.** Flip the eval harness's
   `EVALUABLE_STEPS` from a global constant to per-workflow
   registry. With 5.5b no-LLM, the only new LLM step to evaluate is
   `pqn-archive:generate_outcome` (added by 5.5c). Pick the simplest
@@ -405,7 +406,7 @@ two open at once (mirrors phase 5).
   e.g. Jaccard word overlap, or LLM-as-judge) and document the
   tradeoff in `docs/eval.md`. Continue growing the `pqn-ingest`
   fixture set toward the ~30 target from Phase 4.
-- **5.5e — `docs/CONTRIBUTING.md`.** Focused contributor onboarding (not
+- [x] **5.5e — `docs/CONTRIBUTING.md`.** Focused contributor onboarding (not
   encyclopedic): dev setup (`uv sync`), lint/format/types/test
   commands, the `phase<N>-<thing>` branch flow, how to add an eval
   fixture, `pqn-eval --fake` vs real-model usage, how to read a

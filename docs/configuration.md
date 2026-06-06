@@ -1,8 +1,5 @@
 # Configuration
 
-> **Status:** Phase 1 will implement this. Documented now so the shape
-> is visible.
-
 ## Tool config (in your home directory)
 
 Tool settings live at:
@@ -56,7 +53,6 @@ In order, the workflows resolve the vault path as:
 1. `--vault PATH` argument
 2. `PARA_QUEST_VAULT` environment variable
 3. Walk up from `cwd` looking for a vault marker (a directory
-   containing both `areas/` and `projects/`, or a configured marker
-   file). _(To be implemented in Phase 1.)_
+   containing both `areas/` and `projects/`).
 4. `vault:` setting in `config.yaml`
 5. Error with a helpful message
