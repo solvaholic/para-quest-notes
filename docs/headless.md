@@ -15,7 +15,7 @@ a "what not to cron" callout.
 
 ## Structured output: `--format json`
 
-Every CLI accepts `--format json` and prints a single JSON document
+Every workflow CLI accepts `--format json` and prints a single JSON document
 to stdout. Text output goes to stderr, so you can mix the two
 without polluting the JSON.
 

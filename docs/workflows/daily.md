@@ -16,8 +16,8 @@ Eight pure steps (`--apply` only gates the actual disk write/move):
    or when an explicit path lands outside that scope.
 2. **`detect_shape`** — basename must match
    `^\d{4}-\d{2}-\d{2}\.md$` *and* parse as a real calendar date
-   (rejects e.g. `2026-02-31.md`). Stashes year / month / day for
-   later steps. Escalates otherwise.
+   (rejects e.g. `2026-02-31.md`). Stashes the ISO date plus year and
+   month for later steps. Escalates otherwise.
 3. **`inspect_parent`** — examines the source's vault-relative parent.
    Allowed: vault root, `inbox/...`, `resources/daily_notes/...`.
    Escalates when under `projects/`, `areas/`, `archive/`, or any

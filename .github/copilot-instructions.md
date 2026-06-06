@@ -16,7 +16,9 @@ Then read whichever of these your task touches:
 
 ## Verify before declaring done
 
-These are the exact checks CI runs. All must pass:
+Run all of these before declaring done. CI runs every step except
+`pqn-eval --fake` (an extra local/agent check that uses the in-repo
+`FakeLLM`):
 
 ```bash
 uv sync

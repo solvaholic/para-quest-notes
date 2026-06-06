@@ -70,7 +70,7 @@ See `docs/PLAN.md` for the full breakdown.
 - [ ] **Phase 4** - eval harness ✅ landed (see
   [`docs/eval.md`](docs/eval.md), [`eval/fixtures/`](eval/fixtures/));
   fixture set still small (~7), grow toward ~30 before declaring done
-- [ ] **Phase 5** - translate remaining workflows
+- [x] **Phase 5** - translate remaining workflows
   - [x] Slice 1: shared-infra lift (`vault/` package,
     `adapter/cli.py` base parser) + `pqn-validate` (no LLM,
     wired into `pqn-ingest` via
@@ -84,13 +84,13 @@ See `docs/PLAN.md` for the full breakdown.
     LLM Outcome generation deferred — see [`docs/PLAN.md`](docs/PLAN.md))
   - [x] Slice 4: `pqn-daily` (filing-only; no LLM; bulk migration
     out of scope; authoring deferred to post-v1).
-- [ ] **Phase 5.5** - LLM polish + contributor onboarding. Reshaped
+- [x] **Phase 5.5** - LLM polish + contributor onboarding. Reshaped
   during the slice-4 → 5.5 handoff: 5.5a (shared prompts) deferred,
   5.5b reshaped as a no-LLM `pqn-create` inbox fallback, 5.5c
   (`pqn-archive --generate-outcome`) shipped with generate-on-apply
   semantics, 5.5d (per-workflow eval scoping) kept, 5.5e
   (`docs/CONTRIBUTING.md`) added. See [`docs/PLAN.md`](docs/PLAN.md).
-- [ ] **Phase 6** - polish + v0.1 release
+- [x] **Phase 6** - polish + v0.1 release
 - [ ] **Phase 7** - grow eval fixtures toward ~30; revisit
   `pqn-archive:generate_outcome` judge (5.5d carryover)
 - [ ] **Phase 8** (deferred) - agent SKILL.md wrappers

@@ -215,7 +215,8 @@ uv tool install git+https://github.com/solvaholic/para-quest-notes@v0.1
 pipx install git+https://github.com/solvaholic/para-quest-notes@v0.1
 ```
 
-Either command installs all five `pqn-*` CLIs onto your `PATH`.
+Either command installs all six `pqn-*` commands onto your `PATH`
+(the five workflow CLIs plus the `pqn-eval` harness).
 PyPI publishing is deferred to a later release; track the
 [releases page](https://github.com/solvaholic/para-quest-notes/releases)
 for new tags.
