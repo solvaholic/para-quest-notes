@@ -1,26 +1,39 @@
 You pick a clean filename for a markdown note. The inbox source name
 failed a strict structural check; you choose how to fix it.
 
-Structural rules the chosen filename must satisfy:
+A filename is valid if it matches EITHER of these patterns:
+
+Title Case (prose-style names):
 - Words separated by single spaces.
 - Every word starts with an uppercase letter or a digit (strict — no
   lowercase joiners like "a", "of", "to"; brand names with interior
   caps like "DeepWiki" are fine).
-- No path separators, no quotes, no emoji, no underscores.
-- End with ".md".
+- No path separators, no quotes, no emoji.
+
+Identifier-style (qualified identifiers, IDs, codes):
+- Dot-, hyphen-, or underscore-joined segments, each of letters,
+  digits, and underscores, with NO spaces. Examples:
+  "sklearn.linear_model.SGDClassifier", "RFC-2119", "CVE-2021-44228",
+  "sgd_classifier_v2".
+- Use this ONLY when the source genuinely IS an identifier, ID, or
+  code (a module path, API route, CVE/RFC number, etc.). Do NOT turn
+  ordinary prose into a dotted/underscored name, and do NOT "repair" a
+  real identifier into Title Case — keep it verbatim.
+
+Both patterns must end with ".md".
 
 You have three choices:
-- "keep": return the original source basename unchanged. Pick this only
-  if the original is genuinely fine and the structural check was too
-  strict (rare).
+- "keep": return the original source basename unchanged. Pick this when
+  the original is genuinely fine — including a real identifier-style
+  name the structural check was too strict about, or a Title Case name.
 - "repair": return the mechanically repaired basename unchanged. Pick
   this when the only problem is lowercase word starts and the repair is
   faithful to the source.
 - "generate": return a new Title Case filename. Pick this when the
-  source is uninformative, snake_case / kebab-case / camelCase, or the
-  repair would still violate the rules. Prefer 2-5 words. Preserve
-  meaningful specificity (dates, named entities) from the source or
-  title when present.
+  source is uninformative, snake_case / kebab-case / camelCase prose
+  (not a real identifier), or the repair would still violate the rules.
+  Prefer 2-5 words. Preserve meaningful specificity (dates, named
+  entities) from the source or title when present.
 
 Inputs:
 - Source basename: $source_basename
@@ -36,14 +49,17 @@ Examples of good final filenames:
 - "Sourdough Notes.md"
 - "Notes On Sourdough.md"
 - "Chat With DeepWiki About Goose 2026-05-15.md"
+- "sklearn.linear_model.SGDClassifier.md"  (real identifier — keep)
+- "CVE-2021-44228.md"                       (real ID — keep)
 
 Examples of bad filenames (do NOT do this):
 - "RunA5K.md"             (PascalCase blob, no spaces)
-- "build_raised_beds.md"  (snake_case, lowercase)
-- "sourdough-notes.md"    (kebab-case)
+- "build_raised_beds.md"  (snake_case prose, not a real identifier)
+- "sourdough-notes.md"    (kebab-case prose, not a real identifier)
 - "Notes on Sourdough.md" (lowercase joiner — must be "On")
+- "notes.on.sourdough.md" (dotting ordinary prose — should be Title Case)
 
 Reply with a single JSON object:
 {"choice": "keep" | "repair" | "generate",
- "filename": "<Title Case Name.md>",
+ "filename": "<Title Case Name.md or identifier.md>",
  "reason": "<one short sentence>"}

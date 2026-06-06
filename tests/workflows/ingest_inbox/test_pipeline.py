@@ -74,6 +74,32 @@ def test_ingest_one_dry_run(tmp_path: Path):
     assert any(h["file"] == "areas/Health.md" for h in fr.change.wikilinks_rewritten)
 
 
+def test_ingest_one_keeps_identifier_filename(tmp_path: Path):
+    # An identifier-style source basename passes the structural check, so
+    # propose_filename auto-skips the LLM and keeps the name verbatim.
+    vault = _seed_vault(tmp_path)
+    src = vault / "inbox/sklearn.linear_model.SGDClassifier.md"
+    src.write_text("# SGDClassifier\nestimator notes\n")
+
+    llm = FakeLLM(
+        responder=_build_responder(
+            {
+                "classify_para": {"type": "resource", "confidence": 0.9, "reason": "ok"},
+                # pick_quest is skipped for resources; propose_filename
+                # auto-skips, so neither prompt should be consulted.
+            }
+        )
+    )
+    fr = ingest_one(src, vault=vault, llm=llm, apply=True)
+    assert fr.ok
+    assert fr.decisions.para_type == "resource"
+    assert fr.decisions.destination == "resources/sklearn.linear_model.SGDClassifier.md"
+    assert (vault / "resources/sklearn.linear_model.SGDClassifier.md").exists()
+    assert not src.exists()
+    # propose_filename never called the LLM for this source.
+    assert not any((call.prompt_id or "").startswith("propose_filename@") for call in llm.calls)
+
+
 def test_ingest_inbox_processes_all_files(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     (vault / "inbox/note a.md").write_text("# A\n")

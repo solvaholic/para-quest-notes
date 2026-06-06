@@ -2,10 +2,13 @@
 
 Two-tier behavior:
 
-1. If the inbox source basename already passes a strict structural check
-   (Title Case with spaces between words), keep it as-is and skip the
-   LLM entirely. This preserves user-curated filenames (dates,
-   specificity, brand names like ``DeepWiki``) that the LLM would
+1. If the inbox source basename already passes a structural check, keep
+   it as-is and skip the LLM entirely. A stem passes when it is either
+   *Title Case* (spaces between words, each starting uppercase/digit) or
+   *identifier-style* (dot/hyphen/underscore-joined segments, no spaces —
+   e.g. ``sklearn.linear_model.SGDClassifier`` or ``CVE-2021-44228``).
+   This preserves user-curated filenames (dates, specificity, brand
+   names like ``DeepWiki``, qualified identifiers) that the LLM would
    otherwise rewrite-and-lose.
 2. Otherwise, call the LLM with a bounded-choice prompt: pick ``keep``,
    ``repair`` (mechanical first-letter capitalization), or ``generate``
@@ -28,18 +31,29 @@ from para_quest_notes.workflows.ingest_inbox.steps._llm import call_llm_json, re
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
 from para_quest_notes.workflows.validate.api import check_basename_available
 
-# Allowed characters: letters, digits, spaces, and a small punctuation set.
-# Notably no underscore (rejects snake_case stems).
-_FILENAME_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 \-()'.,&]*\.md$")
+# Allowed characters for Title Case stems: letters, digits, spaces, and a
+# small punctuation set. Underscores are allowed at the character level so
+# identifier-style stems (checked separately by _passes_identifier_check)
+# clear this gate; the Title Case word rule still rejects snake_case prose.
+_FILENAME_OK = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 \-()'.,&_]*\.md$")
+
+# Identifier-style stems: dot-, hyphen-, or underscore-joined segments of
+# ``[A-Za-z0-9_]`` with no spaces — qualified module paths, snake_case
+# tokens, etc. Segments are joined by "." or "-"; underscores live inside
+# a segment. The actual accept decision additionally requires a "." or
+# "_" (see _passes_identifier_check) so lowercase kebab-case prose stays
+# in Title Case / repair territory.
+_IDENTIFIER_SEGMENT = "[A-Za-z0-9_]+"
+_IDENTIFIER_OK = re.compile(rf"^{_IDENTIFIER_SEGMENT}(?:[.\-]{_IDENTIFIER_SEGMENT})*$")
 BODY_PREVIEW_CHARS = 2000
 
 
-def _passes_structural_check(stem: str) -> bool:
-    """Strict structural check for filename stems.
+def _passes_title_case_check(stem: str) -> bool:
+    """Strict Title Case rule for filename stems.
 
     A stem passes when:
     - the full ``<stem>.md`` matches :data:`_FILENAME_OK` (allowed chars,
-      no path separators or underscores), and
+      no path separators), and
     - every whitespace-separated word's first *alphanumeric* character is
       an uppercase letter or a digit (strict — no lowercase joiners like
       ``a``, ``of``, ``to``; brand names with interior caps like
@@ -59,6 +73,30 @@ def _passes_structural_check(stem: str) -> bool:
         if not (first_alnum.isupper() or first_alnum.isdigit()):
             return False
     return True
+
+
+def _passes_identifier_check(stem: str) -> bool:
+    """Identifier-style rule for filename stems.
+
+    A stem passes when it is a dot-, hyphen-, or underscore-joined
+    sequence of ``[A-Za-z0-9_]`` segments with no spaces, *and* it
+    contains at least one ``.`` or ``_``. The dot/underscore requirement
+    is the discriminator that keeps lowercase ``kebab-case`` prose (which
+    the Title Case rule and mechanical repair handle) out, while still
+    accepting qualified identifiers and snake_case tokens. Hyphen-and-
+    digit IDs like ``RFC-2119`` / ``CVE-2021-44228`` already satisfy the
+    Title Case rule (uppercase first letter), so they don't need this
+    branch. Examples that pass here: ``sklearn.linear_model.SGDClassifier``,
+    ``sgd_classifier_v2``, ``3D.printing.notes``.
+    """
+    if not _IDENTIFIER_OK.match(stem):
+        return False
+    return "." in stem or "_" in stem
+
+
+def _passes_structural_check(stem: str) -> bool:
+    """A stem is acceptable if it is Title Case *or* identifier-style."""
+    return _passes_title_case_check(stem) or _passes_identifier_check(stem)
 
 
 def _mechanical_repair(stem: str) -> str:
@@ -146,8 +184,10 @@ class ProposeFilename:
         if not _passes_structural_check(filename[:-3]):
             raise EscalateToUser(
                 step=self.name,
-                reason="filename is not Title Case; each word must start with an "
-                "uppercase letter or digit",
+                reason="filename is not Title Case or identifier-style; Title "
+                "Case needs each word to start with an uppercase letter or "
+                "digit, and identifier-style names use dot/hyphen/underscore-"
+                "joined segments with no spaces",
                 options=[],
                 context={"filename": filename, "choice": choice},
             )

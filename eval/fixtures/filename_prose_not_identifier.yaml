@@ -1,0 +1,24 @@
+# Over-application guard: the source is ordinary lowercase/kebab prose
+# that merely *mentions* identifier-like words (library names). It fails
+# both structural patterns (lowercase, hyphen-only with no "." or "_"),
+# so it reaches the LLM. The LLM must produce a Title Case prose name and
+# must NOT "over-apply" the identifier pattern by dotting/underscoring the
+# words into something like "thoughts.on.sklearn.and.pandas.md".
+id: filename-prose-not-identifier
+title: "thoughts on sklearn and pandas"
+body: |
+  Loose comparison notes: pandas for wrangling, scikit-learn for the
+  modelling. When to reach for each, and where they hand off to one
+  another in a typical workflow.
+quest_catalog:
+  - { name: Create, kind: main }
+expected:
+  classify_para:
+    type: resource
+  pick_quest:
+    skipped: true
+  propose_filename:
+    # Expect spaced prose, not a dotted/underscored identifier.
+    canonical: "thoughts on sklearn and pandas"
+  plan_destination:
+    destination: "resources/Thoughts On Sklearn And Pandas.md"

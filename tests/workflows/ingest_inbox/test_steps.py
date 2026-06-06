@@ -365,19 +365,76 @@ def test_propose_filename_rejects_lowercase_joiner(tmp_path: Path):
     assert "title case" in exc.value.reason.lower()
 
 
-def test_propose_filename_rejects_snake_case(tmp_path: Path):
+@pytest.mark.parametrize(
+    "good",
+    [
+        "sklearn.linear_model.SGDClassifier.md",  # dotted Python identifier
+        "RFC-2119.md",  # hyphen-joined ID
+        "CVE-2021-44228.md",  # multi-hyphen ID
+        "sgd_classifier_v2.md",  # snake_case identifier token
+        "3D.printing.notes.md",  # leading-digit segment is fine
+    ],
+)
+def test_propose_filename_accepts_identifier_style(tmp_path: Path, good: str):
+    # Identifier-style stems are a second valid pattern alongside Title
+    # Case: dot/hyphen/underscore-joined segments with no spaces. The LLM
+    # may return them verbatim instead of forcing Title Case.
     vault = _make_vault(tmp_path)
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"choice": "generate", "filename": "build_raised_beds.md"}))
+    llm.queue(json.dumps({"choice": "keep", "filename": good}))
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "resource"
+    out = ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert out.output["filename"] == good
+
+
+def test_propose_filename_auto_skips_identifier_source(tmp_path: Path):
+    # A source basename that is already identifier-style auto-skips the
+    # LLM, exactly like a Title Case source does.
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/sklearn.linear_model.SGDClassifier.md"
+    src.write_text("# SGDClassifier\n")
+    ctx = _ctx(vault)  # no LLM queued: must not be called
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "resource"
+    out = ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert out.output["filename"] == "sklearn.linear_model.SGDClassifier.md"
+    assert out.meta["used_llm"] is False
+
+
+def test_propose_filename_accepts_identifier_snake_case(tmp_path: Path):
+    # snake_case stems are now valid identifier-style names (e.g.
+    # sgd_classifier_v2), so the LLM may return them verbatim.
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# Raw\n")
+    llm = FakeLLM()
+    llm.queue(json.dumps({"choice": "keep", "filename": "build_raised_beds.md"}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
+    out = ProposeFilename(prompt=_fn_prompt()).run(ctx)
+    assert out.output["filename"] == "build_raised_beds.md"
+
+
+def test_propose_filename_rejects_mixed_prose_and_identifier(tmp_path: Path):
+    # The two patterns are distinct: a name with spaces AND a dotted
+    # identifier segment is neither Title Case (lowercase joiner) nor
+    # identifier-style (has spaces), so it escalates.
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# Raw\n")
+    llm = FakeLLM()
+    llm.queue(json.dumps({"choice": "generate", "filename": "Notes on sklearn.linear_model.md"}))
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "resource"
     with pytest.raises(EscalateToUser) as exc:
         ProposeFilename(prompt=_fn_prompt()).run(ctx)
-    # Snake case fails the character regex, not the structural rule.
-    assert "disallowed" in exc.value.reason
+    assert "identifier" in exc.value.reason.lower()
 
 
 @pytest.mark.parametrize(
