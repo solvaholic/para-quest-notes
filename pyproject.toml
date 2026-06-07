@@ -1,6 +1,6 @@
 [project]
 name = "para-quest-notes"
-version = "0.1.1"
+version = "0.2.0"
 description = "Local, scripted workflows for managing PARA + Quest markdown notes with small LLMs via Ollama."
 readme = "README.md"
 license = { text = "MIT" }
