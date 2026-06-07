@@ -10,10 +10,18 @@ human users and AI workflows:
 > **Path conventions.** All paths in this doc are relative to the root
 > of your notes vault. Directory names use `snake_case`. Note filenames
 > use `Title Case.md` so wikilinks read naturally (e.g.,
-> `[[Health]]`, `[[Replace Water Heater]]`). Wikilinks omit paths;
-> Obsidian's prefix search (`[[hea...`) makes typed links fast. The
-> trade-off is that two notes can't share a title - the
-> `pqn-validate` workflow catches that.
+> `[[Health]]`, `[[Replace Water Heater]]`). Notes named after a
+> *qualified identifier* — a Python module path, CVE/RFC ID, API route,
+> etc. — may instead use an **identifier-style** name: dot-, hyphen-,
+> or underscore-joined segments with no spaces (e.g.
+> `sklearn.linear_model.SGDClassifier.md`, `CVE-2021-44228.md`), so the
+> wikilink reads naturally to anyone who knows the identifier
+> (`[[sklearn.linear_model.SGDClassifier]]`) without needing an alias.
+> The two patterns are kept distinct: a name is one or the other, not a
+> mix of prose and dotted segments. Wikilinks omit paths; Obsidian's
+> prefix search (`[[hea...`) makes typed links fast. The trade-off is
+> that two notes can't share a title - the `pqn-validate` workflow
+> catches that.
 
 ## Two overlapping models
 

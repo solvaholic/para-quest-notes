@@ -13,9 +13,10 @@ steps in order:
 3. **pick_quest** (LLM) — pick one or more Quests from the vault's
    declared Main + Side Quests. Skipped for resources.
 4. **propose_filename** (LLM, may skip) — if the source basename
-   already passes a strict structural check, keep it and skip the
-   LLM; otherwise ask the LLM to pick from {keep, repair, generate}.
-   Validated locally for collisions outside `archive/`.
+   already passes a structural check (Title Case or identifier-style),
+   keep it and skip the LLM; otherwise ask the LLM to pick from {keep,
+   repair, generate}. Validated locally for collisions outside
+   `archive/`.
 5. **plan_destination** (pure) — flat layout under the PARA top-dir
    (`projects/`, `areas/`, `resources/`).
 6. **apply_move** (pure, atomic) — dry-run by default. With `--apply`,
@@ -129,16 +130,21 @@ caller; `context` carries free-form state useful for triage.
   already has `type: project`, `type: area`, or `type: resource`,
   `classify_para` is skipped and the existing value is used.
 - **Filename auto-skip.** If the inbox source basename already passes
-  the structural check (Title Case with spaces, each word starting
-  uppercase/digit), `propose_filename` keeps the source name and does
-  not call the LLM. This preserves user-curated specifics (dates,
-  brand names like `DeepWiki`, etc.) that an LLM rewrite often loses.
+  the structural check — either Title Case (spaces between words, each
+  starting uppercase/digit) or identifier-style (dot/hyphen/underscore-
+  joined segments with no spaces, e.g.
+  `sklearn.linear_model.SGDClassifier`, `CVE-2021-44228`),
+  `propose_filename` keeps the source name and does not call the LLM.
+  This preserves user-curated specifics (dates, brand names like
+  `DeepWiki`, qualified identifiers) that an LLM rewrite often loses.
   The collision check still runs.
 - **Filename validation** rejects path separators and disallowed
-  characters; appends `.md` if missing. Enforces a structural rule:
-  every whitespace-separated word starts with an uppercase letter or
-  digit (no lowercase joiners like `a`, `of`, `to`). Brand names with
-  interior caps like `DeepWiki`, `GitHub`, `iPhone` are fine.
+  characters; appends `.md` if missing. Enforces a structural rule: the
+  stem must be **Title Case** (every whitespace-separated word starts
+  with an uppercase letter or digit — no lowercase joiners like `a`,
+  `of`, `to`; brand names with interior caps like `DeepWiki`, `GitHub`,
+  `iPhone` are fine) **or identifier-style** (dot/hyphen/underscore-
+  joined segments with no spaces, for qualified identifiers and IDs).
 - **Bounded-choice rename.** When the structural check fails, the LLM
   is asked to pick one of `keep` (use source as-is), `repair` (use a
   mechanically capitalized variant), or `generate` (compose a new

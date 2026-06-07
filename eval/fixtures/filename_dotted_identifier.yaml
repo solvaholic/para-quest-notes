@@ -1,0 +1,23 @@
+# Source basename is a qualified Python identifier. It fails the Title
+# Case rule (single dotted token, lowercase start) but passes the new
+# identifier-style pattern, so propose_filename should keep it verbatim
+# rather than rewrite it into prose. The fixture id IS the source stem
+# the runner feeds in (inbox/<id>.md), so it must stay identifier-shaped.
+id: sklearn.linear_model.SGDClassifier
+title: "sklearn.linear_model.SGDClassifier"
+body: |
+  Notes on scikit-learn's SGDClassifier: hyperparameters, loss
+  functions, and when linear SGD beats a tree ensemble.
+quest_catalog:
+  - { name: Create, kind: main }
+expected:
+  classify_para:
+    type: resource
+  pick_quest:
+    skipped: true
+  propose_filename:
+    # Identifier-style names are kept verbatim; canonical matching
+    # lowercases and strips punctuation to spaces.
+    canonical: "sklearn linear model sgdclassifier"
+  plan_destination:
+    destination: "resources/sklearn.linear_model.SGDClassifier.md"

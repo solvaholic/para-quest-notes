@@ -1,0 +1,20 @@
+# Source basename is a hyphen-joined ID (a CVE number). Uppercase-acronym
+# IDs like this already clear the Title Case rule (first letter is a
+# capital), so propose_filename keeps them verbatim and does not "repair"
+# them into spaced prose. The fixture id IS the source stem.
+id: CVE-2021-44228
+title: "CVE-2021-44228"
+body: |
+  Log4Shell. Remote code execution in Log4j 2 via JNDI lookups in
+  logged strings. Affected versions, mitigations, and patch timeline.
+quest_catalog:
+  - { name: Create, kind: main }
+expected:
+  classify_para:
+    type: resource
+  pick_quest:
+    skipped: true
+  propose_filename:
+    canonical: "cve 2021 44228"
+  plan_destination:
+    destination: "resources/CVE-2021-44228.md"

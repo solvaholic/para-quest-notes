@@ -179,7 +179,7 @@ def test_fake_regression_on_real_ingest_fixtures(tmp_path: Path) -> None:
         out_dir=tmp_path,
     )
     rows = sorted((c.workflow, c.fixture_id, c.step, c.verdict.ok) for c in summary.cells)
-    assert len(rows) == 35
+    assert len(rows) == 47
     assert all(ok for _, _, _, ok in rows)
     assert {workflow for workflow, _, _, _ in rows} == {"archive", "ingest"}
 
