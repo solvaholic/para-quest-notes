@@ -141,8 +141,14 @@ uv tool uninstall para-quest-notes
 
 - [ ] Update `docs/PLAN.md` to tick boxes that closed at this
       release; move follow-ups to the next phase.
-- [ ] If this was a `v0.x` minor or higher: skim recent issues
-      and label anything fixed by this release as `fixed-in-vX.Y`.
+
+The issue-to-release mapping is already covered without extra
+bookkeeping: each closed issue's timeline shows the PR that closed
+it ("closed via PR #N"), and that PR is listed in the release's
+auto-generated notes. If you ever need to group fixed issues by
+shipped version for users, reach for a GitHub **Milestone per
+release** (it tracks issues and PRs together and surfaces on each
+one automatically) rather than per-issue labels.
 
 ## Lessons learned
 
@@ -155,3 +161,16 @@ Seed entries from real releases here; future-you will thank you.
   v0.1.0 (see the Phase 6 PRs #11-#15 for the audit trail), so
   the checklist captures what we actually did, not aspirations.
   Refine it on v0.1.1 / v0.2.0 with whatever this dry-run missed.
+- **v0.2.0** — first minor bump. The SemVer call was clear from
+  this doc's own rule ("prompt revisions that change eval scores"
+  = minor): two prompt revisions plus a new `pqn-validate` check
+  put it past patch. Real-model eval (5 models) was green at
+  100% responds-at-all, so the prompt changes didn't break
+  generation. We also dropped the post-release `fixed-in-vX.Y`
+  labeling step: it was added when this checklist was first
+  authored (v0.1.0) without a recorded use, nothing in the repo
+  ever consumed the labels, and the issue-to-release mapping is
+  already there in each issue's "closed via PR #N" timeline plus
+  the auto-generated release notes. Lesson: don't carry a
+  bookkeeping step without a consumer. Use a Milestone if you
+  ever need to group fixed issues by version.
