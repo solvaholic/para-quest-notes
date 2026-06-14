@@ -4,6 +4,7 @@ Start here, then branch out:
 
 - [`AGENTS.md`](../AGENTS.md) for repo orientation, layout, and conventions
 - [`docs/PLAN.md`](PLAN.md) for the current roadmap and slice status
+- [`docs/TRIAGE.md`](TRIAGE.md) for how issues get labeled and milestoned
 - [`docs/eval.md`](eval.md) for the full eval-harness design
 
 ## Dev setup
@@ -93,7 +94,15 @@ In the detail tables, `Verdict` is pass or fail for that judged step, and `Reaso
 
 For the full meaning of each artifact and judge, see [`docs/eval.md`](eval.md).
 
+## Triaging issues
+
+New issues get a quick, repeatable pass: a type label, a `semver:*`
+label for which release line the fix can ship in, a dup-check, any
+blockers, and a milestone-or-backlog call. The full checklist and
+label reference live in [`docs/TRIAGE.md`](TRIAGE.md).
+
 ## Where to look next
 
 - [`AGENTS.md`](../AGENTS.md) - orientation, package layout, commands, current phase summary
 - [`docs/PLAN.md`](PLAN.md) - authoritative roadmap and current slice definitions
+- [`docs/TRIAGE.md`](TRIAGE.md) - issue triage checklist and label reference
