@@ -37,6 +37,12 @@ Phase work lands one sub-slice at a time:
 - merge back to `main` as each slice lands
 - keep no more than two open slice branches at once
 
+PRs land via **rebase-and-merge** (or fast-forward) - no merge
+commits. `main` stays a linear history, so a release tag points at the
+PR's own commit rather than a separate merge commit. (Merge commits
+appear before PR #39; the switch to rebase landed with the v0.2.0
+release.)
+
 Recent commits also use this trailer:
 
 ```text
