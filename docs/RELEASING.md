@@ -101,9 +101,10 @@ Pick the right SemVer bump:
 # 1. Bump version in pyproject.toml, commit on a branch, open a
 #    PR titled "Release vX.Y.Z" that updates pyproject.toml plus
 #    any README/PLAN checkboxes that change at release time.
-#    Merge that PR before continuing.
+#    Merge that PR before continuing. PRs rebase-and-merge (no
+#    merge commit) - see docs/CONTRIBUTING.md "Branch flow".
 
-# 2. From main at the merge commit, tag and push.
+# 2. From the tip of main (the release PR's commit), tag and push.
 git checkout main && git pull --ff-only
 VERSION=$(grep '^version' pyproject.toml | cut -d'"' -f2)
 git tag -a "v${VERSION}" -m "Release v${VERSION}"
