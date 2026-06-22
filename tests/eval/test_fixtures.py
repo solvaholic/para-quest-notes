@@ -164,3 +164,46 @@ def test_top_level_must_be_mapping_or_list(tmp_path: Path) -> None:
     write(tmp_path, "bad.yaml", '"just a string"\n')
     with pytest.raises(FixtureError, match="mapping or a list"):
         load_fixtures(tmp_path)
+
+
+def test_source_filename_defaults_to_none(tmp_path: Path) -> None:
+    write(tmp_path, "one.yaml", "id: x\ntitle: x\nexpected: {}\n")
+    assert load_fixtures(tmp_path)[0].source_filename is None
+
+
+def test_source_filename_appends_md_extension(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "one.yaml",
+        "id: x\ntitle: x\nsource_filename: CVE-2021-44228\nexpected: {}\n",
+    )
+    assert load_fixtures(tmp_path)[0].source_filename == "CVE-2021-44228.md"
+
+
+def test_source_filename_keeps_existing_md_extension(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "one.yaml",
+        "id: x\ntitle: x\nsource_filename: notes.md\nexpected: {}\n",
+    )
+    assert load_fixtures(tmp_path)[0].source_filename == "notes.md"
+
+
+def test_source_filename_rejects_path_separators(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "bad.yaml",
+        "id: x\ntitle: x\nsource_filename: inbox/notes.md\nexpected: {}\n",
+    )
+    with pytest.raises(FixtureError, match="path separators"):
+        load_fixtures(tmp_path)
+
+
+def test_source_filename_rejects_empty_string(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "bad.yaml",
+        'id: x\ntitle: x\nsource_filename: "   "\nexpected: {}\n',
+    )
+    with pytest.raises(FixtureError, match="non-empty string"):
+        load_fixtures(tmp_path)

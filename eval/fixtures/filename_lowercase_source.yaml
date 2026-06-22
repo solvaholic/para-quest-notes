@@ -1,10 +1,12 @@
-# Source basename is lowercase / kebab-case (fails strict structural).
-# The bounded-choice prompt should produce a Title Case filename. The
-# canonical-form judge ignores casing and punctuation, so models that
-# pick "repair" (mechanical capitalize) and models that pick "generate"
-# (compose a fresh name) both pass as long as the core words match.
+# Source basename is lowercase / kebab-case (fails strict structural),
+# set explicitly via source_filename. The bounded-choice prompt should
+# produce a Title Case filename. The canonical-form judge ignores casing
+# and punctuation, so models that pick "repair" (mechanical capitalize)
+# and models that pick "generate" (compose a fresh name) both pass as
+# long as the core words match.
 id: filename-lowercase-source
 title: "notes from github interview"
+source_filename: notes-from-github-interview.md
 body: |
   Loose notes from yesterday's chat with the GitHub recruiter. Topics
   covered: team makeup, on-call expectations, interview loop format.
@@ -17,7 +19,7 @@ expected:
   pick_quest:
     skipped: true
   propose_filename:
-    # The source stem is "filename-lowercase-source", but canonical
+    # The source stem is "notes-from-github-interview", but canonical
     # matching just strips non-alphanumerics and lowercases, so we
     # compare against the title words the LLM should preserve.
     canonical: "notes from github interview"

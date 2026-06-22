@@ -31,7 +31,10 @@ def _build_scan(fixture: Fixture) -> ScanResult:
         body=fixture.body,
         had_frontmatter=bool(fixture.frontmatter),
     )
-    fake_source = Path("inbox") / f"{fixture.id}.md"
+    # source_filename (when a fixture declares one) is the explicit inbox
+    # basename propose_filename sees; otherwise derive it from the id.
+    basename = fixture.source_filename or f"{fixture.id}.md"
+    fake_source = Path("inbox") / basename
     return ScanResult(
         source=fake_source,
         parsed=parsed,

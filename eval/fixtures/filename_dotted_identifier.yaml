@@ -1,10 +1,11 @@
-# Source basename is a qualified Python identifier. It fails the Title
-# Case rule (single dotted token, lowercase start) but passes the new
-# identifier-style pattern, so propose_filename should keep it verbatim
-# rather than rewrite it into prose. The fixture id IS the source stem
-# the runner feeds in (inbox/<id>.md), so it must stay identifier-shaped.
-id: sklearn.linear_model.SGDClassifier
+# Source basename is a qualified Python identifier, set explicitly via
+# source_filename. It fails the Title Case rule (single dotted token,
+# lowercase start) but passes the identifier-style pattern, so
+# propose_filename should keep it verbatim rather than rewrite it into
+# prose.
+id: filename-dotted-identifier
 title: "sklearn.linear_model.SGDClassifier"
+source_filename: sklearn.linear_model.SGDClassifier.md
 body: |
   Notes on scikit-learn's SGDClassifier: hyperparameters, loss
   functions, and when linear SGD beats a tree ensemble.

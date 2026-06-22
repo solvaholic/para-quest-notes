@@ -33,6 +33,10 @@ body: |                     # optional, multi-line markdown body
   Want to run a 5K by spring...
 frontmatter:                # optional, YAML mapping seeded into ScanResult
   type: project
+source_filename: notes.md   # optional, explicit inbox source basename
+                            # propose_filename sees; missing .md is added,
+                            # path separators rejected. Defaults to
+                            # inbox/<id>.md when omitted.
 quest_catalog:              # required if pick_quest is expected
   - { name: Health,  kind: main }
   - { name: Connect, kind: main }
