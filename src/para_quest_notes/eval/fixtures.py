@@ -82,6 +82,9 @@ class Fixture:
     quest_catalog: tuple[CatalogQuest, ...]
     expected: Expected
     frontmatter: dict[str, Any] = field(default_factory=dict)
+    # Explicit inbox source filename (the basename propose_filename sees).
+    # When None, the harness falls back to ``inbox/<id>.md``.
+    source_filename: str | None = None
     source: Path | None = None  # YAML file this came from
     workflow: str = DEFAULT_WORKFLOW
 
@@ -195,6 +198,7 @@ def parse_ingest_fixture(raw: Any, source: Path) -> Fixture:
 
     catalog = _parse_catalog(raw.get("quest_catalog") or [], source=source, fid=fid)
     expected = _parse_expected(raw.get("expected") or {}, source=source, fid=fid)
+    source_filename = _parse_source_filename(raw.get("source_filename"), source=source, fid=fid)
 
     if expected.pick_quest is not None and not expected.pick_quest.skipped and not catalog:
         raise FixtureError(f"{source} ({fid}): pick_quest expected but quest_catalog is empty")
@@ -206,6 +210,7 @@ def parse_ingest_fixture(raw: Any, source: Path) -> Fixture:
         quest_catalog=tuple(catalog),
         expected=expected,
         frontmatter=fm,
+        source_filename=source_filename,
         source=source,
         workflow=DEFAULT_WORKFLOW,
     )
@@ -237,6 +242,24 @@ def parse_archive_fixture(raw: Any, source: Path) -> ArchiveFixture:
         fake_response=fake_response,
         source=source,
     )
+
+
+def _parse_source_filename(raw: Any, *, source: Path, fid: str) -> str | None:
+    """Validate the optional explicit inbox source filename.
+
+    A bare filename (no path separators). A missing ``.md`` extension is
+    appended. Absent -> ``None`` (harness falls back to ``inbox/<id>.md``).
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, str) or not raw.strip():
+        raise FixtureError(f"{source} ({fid}): 'source_filename' must be a non-empty string")
+    name = raw.strip()
+    if "/" in name or "\\" in name:
+        raise FixtureError(f"{source} ({fid}): 'source_filename' must not contain path separators")
+    if not name.endswith(".md"):
+        name = f"{name}.md"
+    return name
 
 
 def _parse_catalog(items: Iterable[Any], *, source: Path, fid: str) -> list[CatalogQuest]:

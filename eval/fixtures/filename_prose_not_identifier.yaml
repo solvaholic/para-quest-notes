@@ -1,11 +1,13 @@
 # Over-application guard: the source is ordinary lowercase/kebab prose
-# that merely *mentions* identifier-like words (library names). It fails
-# both structural patterns (lowercase, hyphen-only with no "." or "_"),
-# so it reaches the LLM. The LLM must produce a Title Case prose name and
-# must NOT "over-apply" the identifier pattern by dotting/underscoring the
-# words into something like "thoughts.on.sklearn.and.pandas.md".
+# (set explicitly via source_filename) that merely *mentions* identifier-
+# like words (library names). It fails both structural patterns
+# (lowercase, hyphen-only with no "." or "_"), so it reaches the LLM. The
+# LLM must produce a Title Case prose name and must NOT "over-apply" the
+# identifier pattern by dotting/underscoring the words into something like
+# "thoughts.on.sklearn.and.pandas.md".
 id: filename-prose-not-identifier
 title: "thoughts on sklearn and pandas"
+source_filename: thoughts-on-sklearn-and-pandas.md
 body: |
   Loose comparison notes: pandas for wrangling, scikit-learn for the
   modelling. When to reach for each, and where they hand off to one

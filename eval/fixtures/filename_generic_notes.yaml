@@ -1,8 +1,10 @@
-# Filename collision-prone: a generic title that an LLM might keep
-# verbatim. We just want it Title-Cased; nothing else in the test
-# vault collides because we don't have a real vault here.
+# Filename collision-prone: a generic source name that an LLM might keep
+# verbatim, set explicitly via source_filename. We just want it
+# Title-Cased; nothing else in the test vault collides because we don't
+# have a real vault here.
 id: filename-generic-notes
 title: "notes"
+source_filename: notes.md
 body: |
   People tend to remember stories more easily than isolated facts.
   Visual cues can make information feel more concrete, and
