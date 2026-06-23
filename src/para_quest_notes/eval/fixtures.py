@@ -55,7 +55,22 @@ class ExpectedPickQuest:
 
 @dataclass(frozen=True)
 class ExpectedFilename:
-    canonical: str  # already canonicalized; see judges.canonical_filename
+    """Expected filename outcome.
+
+    ``acceptable`` is a tuple of acceptable filename strings; the pick
+    passes if its canonical form (see :func:`judges.canonical_filename`)
+    matches any one of them. A fixture writes either a single
+    ``canonical:`` string (the common "preserve the words" case) or an
+    ``acceptable:`` list (upgrade-style fixtures where a few descriptive
+    names are all valid).
+    """
+
+    acceptable: tuple[str, ...] = ()
+
+    @property
+    def canonical(self) -> str:
+        """First acceptable value; back-compat for single-value callers."""
+        return self.acceptable[0] if self.acceptable else ""
 
 
 @dataclass(frozen=True)
@@ -355,8 +370,26 @@ def _parse_filename(raw: Any, *, source: Path, fid: str) -> ExpectedFilename | N
         return None
     if not isinstance(raw, dict):
         raise FixtureError(f"{source} ({fid}): expected.propose_filename must be a mapping")
-    canonical = _require_str(raw, "canonical", source=source, ctx=f"{fid}.propose_filename")
-    return ExpectedFilename(canonical=canonical)
+    has_canonical = "canonical" in raw
+    has_acceptable = "acceptable" in raw
+    if has_canonical == has_acceptable:
+        raise FixtureError(
+            f"{source} ({fid}): propose_filename must declare exactly one of "
+            "'canonical' (a string) or 'acceptable' (a non-empty list of strings)"
+        )
+    if has_canonical:
+        canonical = _require_str(raw, "canonical", source=source, ctx=f"{fid}.propose_filename")
+        return ExpectedFilename(acceptable=(canonical,))
+    acc_raw = raw.get("acceptable")
+    if not isinstance(acc_raw, list) or not acc_raw:
+        raise FixtureError(
+            f"{source} ({fid}): propose_filename.acceptable must be a non-empty list of strings"
+        )
+    if not all(isinstance(x, str) and x.strip() for x in acc_raw):
+        raise FixtureError(
+            f"{source} ({fid}): propose_filename.acceptable entries must be non-empty strings"
+        )
+    return ExpectedFilename(acceptable=tuple(acc_raw))
 
 
 def _parse_destination(raw: Any, *, source: Path, fid: str) -> ExpectedDestination | None:

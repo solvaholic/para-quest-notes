@@ -1,0 +1,29 @@
+# Upgrade-generic: a generic source name ("notes") over a body with one
+# clear, dominant topic. The source stem fails the structural check, so
+# the LLM is asked; the desired behavior is to *generate* a descriptive
+# name from the body rather than keep the generic source. A miss here
+# (keeping "notes") is interpretable: the model failed to upgrade.
+# Uses an acceptable-set because several descriptive phrasings are all
+# valid - the judge passes if the canonical form matches any of them.
+# Pairs with filename_generic_preserve (same generic source, but a body
+# that does *not* justify upgrading).
+id: filename-generic-upgrade
+title: "notes"
+source_filename: notes.md
+body: |
+  Keeping the sourdough starter alive. Feed it 1:1:1 flour and water
+  every morning, leave it on the counter, and it should double within
+  six hours. If it smells sharp or goes grey, discard half and feed it
+  twice a day until it bounces back. Bake on the day it peaks.
+expected:
+  classify_para:
+    type: resource
+  propose_filename:
+    # The body is unambiguously about a sourdough starter; the model
+    # should upgrade the generic source name. Any of these phrasings is
+    # a good descriptive name.
+    acceptable:
+      - "sourdough starter notes"
+      - "sourdough starter"
+      - "sourdough starter routine"
+      - "sourdough notes"

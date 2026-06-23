@@ -171,8 +171,8 @@ def judge_propose_filename(actual: dict[str, Any] | None, expected: ExpectedFile
             reason=f"filename was {type(got).__name__}, not string",
         )
     got_canon = canonical_filename(got)
-    want_canon = canonical_filename(expected.canonical)
-    if got_canon == want_canon:
+    want_canons = [canonical_filename(c) for c in expected.acceptable]
+    if got_canon in want_canons:
         return Verdict(
             step="propose_filename",
             ok=True,
@@ -181,11 +181,11 @@ def judge_propose_filename(actual: dict[str, Any] | None, expected: ExpectedFile
     return Verdict(
         step="propose_filename",
         ok=False,
-        reason="canonical filename mismatch",
+        reason="canonical filename matched no acceptable name",
         detail={
             "got": got,
             "got_canonical": got_canon,
-            "expected_canonical": want_canon,
+            "acceptable_canonical": want_canons,
         },
     )
 

@@ -155,6 +155,61 @@ expected:
         load_fixtures(tmp_path)
 
 
+def test_propose_filename_canonical_form(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "f.yaml",
+        "id: x\ntitle: x\nexpected:\n  propose_filename:\n    canonical: notes\n",
+    )
+    fx = load_fixtures(tmp_path)[0]
+    assert fx.expected.propose_filename is not None
+    assert fx.expected.propose_filename.acceptable == ("notes",)
+    assert fx.expected.propose_filename.canonical == "notes"
+
+
+def test_propose_filename_acceptable_form(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "f.yaml",
+        """
+id: x
+title: x
+expected:
+  propose_filename:
+    acceptable:
+      - "sourdough starter notes"
+      - "sourdough starter"
+""",
+    )
+    fx = load_fixtures(tmp_path)[0]
+    assert fx.expected.propose_filename is not None
+    assert fx.expected.propose_filename.acceptable == (
+        "sourdough starter notes",
+        "sourdough starter",
+    )
+
+
+def test_propose_filename_requires_exactly_one_form(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "both.yaml",
+        "id: x\ntitle: x\nexpected:\n  propose_filename:\n"
+        '    canonical: notes\n    acceptable: ["notes"]\n',
+    )
+    with pytest.raises(FixtureError, match="exactly one"):
+        load_fixtures(tmp_path)
+
+
+def test_propose_filename_rejects_empty_acceptable(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "empty.yaml",
+        "id: x\ntitle: x\nexpected:\n  propose_filename:\n    acceptable: []\n",
+    )
+    with pytest.raises(FixtureError, match="exactly one|non-empty"):
+        load_fixtures(tmp_path)
+
+
 def test_empty_file_returns_nothing(tmp_path: Path) -> None:
     write(tmp_path, "empty.yaml", "")
     assert load_fixtures(tmp_path) == []

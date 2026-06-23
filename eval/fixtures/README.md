@@ -52,9 +52,17 @@ expected:
   propose_filename:
     canonical: "train plan" # canonical form: lowercase, alnum-only,
                              # single-spaced; matches judges.canonical_filename
+    # OR, when several descriptive names are all valid (e.g. upgrading a
+    # generic source name), list them and the judge passes on any match:
+    # acceptable:
+    #   - "sourdough starter notes"
+    #   - "sourdough starter"
   plan_destination:
     destination: "projects/Train Plan.md"  # vault-relative posix
 ```
+
+Declare exactly one of `canonical` (a single string) or `acceptable`
+(a non-empty list) under `propose_filename`.
 
 ### Archive fixtures
 

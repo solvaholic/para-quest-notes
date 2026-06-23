@@ -77,14 +77,22 @@ def test_canonical_filename_normalizes() -> None:
 
 
 def test_propose_filename_canonical_match() -> None:
-    exp = ExpectedFilename(canonical="run a 5k")
+    exp = ExpectedFilename(acceptable=("run a 5k",))
     assert judge_propose_filename({"filename": "Run a 5K.md"}, exp).ok
     assert judge_propose_filename({"filename": "run-a-5k.md"}, exp).ok
     assert not judge_propose_filename({"filename": "Train Plan.md"}, exp).ok
 
 
+def test_propose_filename_acceptable_set_matches_any() -> None:
+    exp = ExpectedFilename(acceptable=("sourdough starter notes", "sourdough starter"))
+    assert judge_propose_filename({"filename": "Sourdough Starter.md"}, exp).ok
+    assert judge_propose_filename({"filename": "Sourdough Starter Notes.md"}, exp).ok
+    v = judge_propose_filename({"filename": "Notes.md"}, exp)
+    assert not v.ok and "no acceptable name" in v.reason
+
+
 def test_propose_filename_handles_non_string() -> None:
-    exp = ExpectedFilename(canonical="x")
+    exp = ExpectedFilename(acceptable=("x",))
     v = judge_propose_filename({"filename": 42}, exp)
     assert not v.ok and "string" in v.reason
 

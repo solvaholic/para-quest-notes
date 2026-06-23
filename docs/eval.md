@@ -87,7 +87,8 @@ workflow-agnostic:
 - `pick_quest` (LLM) - set equality against any acceptable set;
   `skipped: true` for resources.
 - `propose_filename` (LLM) - canonical-form match
-  (lowercase, alphanumeric-only, single-spaced).
+  (lowercase, alphanumeric-only, single-spaced) against the fixture's
+  `canonical` string or any entry in its `acceptable` list.
 - `plan_destination` (pure) - exact path string.
 
 Plus a `responds`-at-all baseline per LLM cell: for JSON steps, did the
