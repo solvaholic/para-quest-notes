@@ -7,6 +7,42 @@ harness so new workflows can register their own steps without editing
 compare model choices on their own; also runnable via
 `python -m para_quest_notes.eval`.
 
+## Where eval fits (test layers)
+
+The repo has three guards that overlap in tooling but protect
+different things. Knowing which one owns what keeps fixtures and tests
+from drifting into each other's job.
+
+| Layer | Lives in | In CI? | LLM | Protects against |
+|---|---|---|---|---|
+| **Unit tests** | `tests/` (pytest) | Yes (blocking) | none / `FakeLLM` | regressions in individual functions and steps in isolation |
+| **Vault smoke** | `tests/.../test_pipeline.py` (pytest, `--apply`) | Yes (blocking) | `FakeLLM` | pipeline plumbing and production-output invariants - files moved, inbox drained, report fields like `wikilinks_rewritten`. See PR #51 / issues #18, #21. |
+| **Eval** | `eval/fixtures/*.yaml` (`pqn-eval`) | Not yet (see Future work) | `FakeLLM` for `--fake`; real Ollama otherwise | decision *quality* of LLM steps - did `classify_para` say `project`, did `propose_filename` land on the right canonical form |
+
+Key points:
+
+- **Eval scores decisions; the vault smoke checks side effects.** An
+  eval fixture asks "given this note, does the model make the right
+  calls?" The vault smoke asks "given plausible decisions, does the
+  pipeline produce correct files and reports?" They are complementary,
+  not redundant - `pytest` and `pqn-eval --fake` together still miss
+  production-output details that aren't asserted on, which is exactly
+  why the vault smoke exists.
+- **A whole-workflow eval fixture is not a substitute for a vault
+  smoke test, or vice versa.** Integration coverage is owned by the
+  deterministic, CI-blocking vault smoke. An eval fixture that asserts
+  every step is just a sanity check that a model can get an *easy*
+  case fully right end-to-end; it is a signal, not a gate, because
+  real-model runs are non-deterministic.
+- **`pqn-eval --fake` is CI-safe; it just isn't wired into CI yet.**
+  Both pytest and `--fake` are deterministic, so there's no
+  suitability difference between them. Auto-running `--fake` as a CI
+  smoke is a listed Future-work item, not a judgment that it's unfit.
+
+Practical division of labor: let **eval fixtures** focus on decision
+quality (which favors small, single-concern fixtures), and let
+**pytest vault smokes** own production-output invariants.
+
 ## What it does
 
 For each fixture x model x step, the runner:
