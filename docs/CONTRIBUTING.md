@@ -28,6 +28,12 @@ uv run mypy src
 uv run pytest
 ```
 
+`pytest` covers two layers: unit tests, plus a deterministic
+sample-vault smoke (`--apply`) that fences production-output
+invariants. `pqn-eval` is a separate layer that scores LLM *decision
+quality*. See [`docs/eval.md`](eval.md) "Where eval fits (test
+layers)" for which guard owns what.
+
 ## Branch flow
 
 Phase work lands one sub-slice at a time:
