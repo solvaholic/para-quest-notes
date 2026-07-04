@@ -1,29 +1,39 @@
-# Upgrade-generic: a generic source name ("notes") over a body with one
-# clear, dominant topic. The source stem fails the structural check, so
-# the LLM is asked; the desired behavior is to *generate* a descriptive
-# name from the body rather than keep the generic source. A miss here
-# (keeping "notes") is interpretable: the model failed to upgrade.
-# Uses an acceptable-set because several descriptive phrasings are all
-# valid - the judge passes if the canonical form matches any of them.
-# Pairs with filename_generic_preserve (same generic source, but a body
-# that does *not* justify upgrading).
+# Upgrade-generic: a generic source name ("notes") over a body that is
+# clearly *about one thing* - a reference note on sourdough starter
+# ratios and timing. Same para type as its pair (resource) and the same
+# generic source ("notes.md"); the ONLY thing that differs from
+# filename_generic_preserve is that this body has a dominant topic that
+# justifies a more specific name. The source stem fails the structural
+# check, so the LLM is asked; the desired behavior is to *generate* a
+# descriptive name rather than keep the generic source. A miss (keeping
+# "notes") is interpretable: the model failed to upgrade.
+#
+# Body is deliberately reference-shaped (facts and ratios, no tasks / no
+# end-state) so it classifies as a resource, not a project - keeping the
+# fixture a clean single-variable A/B against filename_generic_preserve.
+#
+# Uses an acceptable-set because a few descriptive phrasings are all
+# valid; the judge passes if the canonical form matches any of them.
+# Keep the set to genuinely-equivalent good names, not every name a
+# model might emit - otherwise the step can never fail and stops being
+# signal.
 id: filename-generic-upgrade
 title: "notes"
 source_filename: notes.md
 body: |
-  Keeping the sourdough starter alive. Feed it 1:1:1 flour and water
-  every morning, leave it on the counter, and it should double within
-  six hours. If it smells sharp or goes grey, discard half and feed it
-  twice a day until it bounces back. Bake on the day it peaks.
+  Sourdough starter, at a glance. A healthy starter is fed 1:1:1 by
+  weight - equal parts starter, flour, and water. Kept at room
+  temperature it peaks in roughly four to six hours; in the fridge it
+  can rest a week between feedings. It's ready to bake with when it has
+  doubled and the surface is domed and bubbly. A thin layer of grey
+  liquid on top just means it's hungry.
 expected:
   classify_para:
     type: resource
   propose_filename:
     # The body is unambiguously about a sourdough starter; the model
-    # should upgrade the generic source name. Any of these phrasings is
-    # a good descriptive name.
+    # should upgrade the generic source name.
     acceptable:
       - "sourdough starter notes"
       - "sourdough starter"
-      - "sourdough starter routine"
       - "sourdough notes"

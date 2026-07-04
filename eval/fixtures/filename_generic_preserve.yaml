@@ -1,20 +1,22 @@
-# Preserve-generic: a genuinely generic note - a grab-bag of unrelated
-# jottings with no single topic. The source stem "notes" fails the
+# Preserve-generic: a genuinely generic note - unrelated trivia facts
+# with no single dominant topic. The source stem "notes" fails the
 # structural check, so the LLM is asked; the right call is to keep the
 # generic name rather than invent a topic the body doesn't support.
-# Pairs with filename_generic_upgrade (same generic source, but a body
-# that *does* justify upgrading). Asserts classify_para + propose_filename
-# only: in eval, propose_filename's para_type is seeded from
-# expected.classify_para, so classify stays asserted; pick_quest and
-# plan_destination aren't the point of this fixture.
+# Pairs with filename_generic_upgrade as a single-variable A/B: same
+# generic source ("notes.md"), same para type (resource), the ONLY
+# difference is that the upgrade body has a dominant topic and this one
+# doesn't. Asserts classify_para + propose_filename only: in eval,
+# propose_filename's para_type is seeded from expected.classify_para,
+# so classify stays asserted; pick_quest and plan_destination aren't
+# the point of this fixture.
 id: filename-generic-preserve
 title: "notes"
 source_filename: notes.md
 body: |
-  - Call the dentist back about rescheduling
-  - Library books due Thursday
-  - Try the new ramen place on 5th
-  - Find the warranty card for the blender
+  - The first moon landing was completed in 1969
+  - Some dinosaurs were covered with feathers
+  - Pokémon was created in Japan
+  - Giant pandas are classified as bears
 expected:
   classify_para:
     type: resource

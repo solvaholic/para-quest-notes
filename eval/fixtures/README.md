@@ -105,6 +105,38 @@ judges steps you provide an `expected.<step>` for.
 - **Keep legacy ingest fixtures unchanged unless needed.** Omitting
   `workflow:` still means `ingest`.
 
+## When a cell fails: is the golden right?
+
+A fixture's `expected` block is a **golden** - the behavior *you*
+decided is correct, independent of what today's models happen to do.
+When a model disagrees and a cell goes red, decide *before* touching
+the fixture:
+
+1. **The golden is right → keep it.** The red cell is signal: this
+   model is weak at this case. That's the eval doing its job. Don't
+   edit the fixture just to turn it green.
+2. **The golden is wrong → fix it.** The fixture's *content*
+   contradicts its *intent* - e.g. a body written as a to-do list but
+   labelled `resource`, so models reasonably read `project`. Rewrite
+   the content (or correct the golden) so the two agree.
+
+The trap is a third move: sliding the golden to wherever the models
+already land, just to clear red. Do that enough and the eval can no
+longer tell you a model is weak at *X*, because you've defined *X* as
+"whatever the models do." A fixture that can never fail carries no
+signal.
+
+Two habits that follow from this:
+
+- **Change one variable across a pair.** When two fixtures form an A/B
+  (e.g. `filename_generic_preserve` vs `filename_generic_upgrade`),
+  hold everything constant except the one thing under test. A second
+  difference (a different `para_type`, say) is a confound that makes
+  failures ambiguous.
+- **Keep `acceptable` sets tight.** List genuinely-equivalent good
+  answers, not every name a model emits. An over-wide set is the same
+  overfitting trap in miniature: the step stops being able to fail.
+
 ## Status
 
 Phase 4 lands with ~7 starter fixtures. Plan target is ~30 before Phase
