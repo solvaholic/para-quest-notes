@@ -11,9 +11,11 @@ Six steps, all pure (`--apply` only gates the actual disk write):
 1. **`validate_inputs`** - checks `--type`, `--quest`, `--title`
    (Title Case, allowed character set, no camelCase/PascalCase),
    `--supports` wikilink format, `--sub-path` shape, and resource
-   constraints (`--quest none` for resources). For project and area
-   notes without `--supports`, it records an inbox-fallback note in the
-   plan instead of escalating.
+   constraints (`--quest none` for resources). When `--quest main` and
+   no `--supports` is given, infers `--supports "[[<title>]]"` (a main
+   quest area supports itself). For other project/area notes without
+   `--supports`, it records an inbox-fallback note in the plan instead
+   of escalating.
 2. **`compute_destination`** - chooses either the canonical PARA path
    (`<vault>/<type>s/[sub_path/]<Title>.md`) or `inbox/<Title>.md` when
    a project or area note has no `--supports`.
@@ -63,11 +65,18 @@ pqn-create --vault ~/notes \
 pqn-create --vault ~/notes --format json \
   --type area --title "Home" \
   --supports "[[Home]]" --supports "[[Family]]" --apply
+
+# Create a new main quest (--supports inferred as "[[Coffee]]").
+pqn-create --vault ~/notes \
+  --type area --quest main --title "Coffee" --apply
 ```
 
-`--supports` is optional. When omitted for a `project` or `area`,
-`pqn-create` files the note into `inbox/` so the user can flesh out the
-body and let `pqn-ingest` resolve the Quest later.
+`--supports` is optional. When `--quest main` is given without
+`--supports`, `pqn-create` infers `--supports "[[<title>]]"` and files
+to the canonical `areas/` path (a main quest area supports itself).
+For other projects or areas without `--supports`, `pqn-create` files the
+note into `inbox/` so the user can flesh out the body and let
+`pqn-ingest` resolve the Quest later.
 
 Vault discovery follows the standard order
 ([`docs/configuration.md`](../configuration.md)).
@@ -108,8 +117,8 @@ Canonical destination example:
 
 ### Inbox fallback
 
-When `--supports` is omitted for a `project` or `area`, the plan reports
-that choice explicitly:
+When `--supports` is omitted for a `project` or `area` that is *not*
+`--quest main`, the plan reports that choice explicitly:
 
 ```json
 {

@@ -72,6 +72,12 @@ because that's what enables project/activity prioritization.
 - **Agent integration:** deferred to a later phase. v1 ships CLIs +
   documented JSON contracts. SKILL.md wrappers come once the CLIs
   are stable.
+- **Main-quest `--supports` inference (decided 2026-07-04, #41):**
+  `pqn-create --type area --quest main` without `--supports` is valid.
+  A main quest area note supports itself, so `pqn-create` infers
+  `--supports "[[<title>]]"` and files to `areas/` (canonical path).
+  The inbox fallback still applies to projects/areas with a non-main
+  quest when `--supports` is omitted.
 
 ## Architecture sketch
 
@@ -279,8 +285,9 @@ extraction and for confirming the per-slice branch flow.
 - Out of scope: Capability index notes (escalate and stop — see
   "Open questions"), Daily notes (slice 4), modifying any existing
   file, auto-linking the new note from a Quest landing page.
-- Known limitation: Areas without tasks must still pass `--supports`
-  in v0.1; documented in `docs/workflows/create.md`.
+- Known limitation (relaxed in v0.3, #41): `--quest main` areas infer
+  `--supports "[[<title>]]"` automatically. Other projects/areas
+  without `--supports` still fall back to inbox.
 
 #### Slice 3 — `pqn-archive` (shipped, Projects only, no-LLM)
 
