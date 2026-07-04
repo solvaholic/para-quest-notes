@@ -52,7 +52,8 @@ para-quest-notes/
 │   │                          #   (frontmatter parser, quest discovery)
 │   ├── workflows/<name>/      # one dir per workflow
 │   ├── corpus/                # Phase 2: synthetic note generator
-│   └── eval/                  # Phase 4: per-step eval harness
+│   └── eval/                  # Phase 4: eval harness code (runner, judges)
+├── eval/fixtures/             # golden inputs + expected step outputs
 ├── docs/                      # specs, plan, per-workflow docs
 ├── tests/                     # pytest, fake LLM only
 └── .github/workflows/ci.yml   # lint + types + tests matrix
@@ -67,9 +68,9 @@ See `docs/PLAN.md` for the full breakdown.
 - [x] **Phase 2** - synthetic corpus generator (see
   [`docs/corpus.md`](docs/corpus.md), [`samples/vault/`](samples/vault/))
 - [x] **Phase 3** - pilot workflow (`pqn-ingest`)
-- [ ] **Phase 4** - eval harness ✅ landed (see
+- [x] **Phase 4** - eval harness ✅ landed (see
   [`docs/eval.md`](docs/eval.md), [`eval/fixtures/`](eval/fixtures/));
-  fixture set still small (~7), grow toward ~30 before declaring done
+  fixture set at ~15, growing toward ~30 (Phase 7)
 - [x] **Phase 5** - translate remaining workflows
   - [x] Slice 1: shared-infra lift (`vault/` package,
     `adapter/cli.py` base parser) + `pqn-validate` (no LLM,

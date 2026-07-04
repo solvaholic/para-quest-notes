@@ -16,6 +16,9 @@ deferred; users install with
 - [ ] `README.md`, `docs/PLAN.md`, and any per-workflow docs in
       `docs/workflows/` reflect what's actually shipping. The
       Quickstart commands must work as written.
+- [ ] `README.md` Install section references the tag you're about
+      to cut (not a stale older tag). Status banner reflects current
+      state.
 - [ ] All internal links in `README.md` resolve (one-liner:
       `grep -oE '\]\([^)]+\)' README.md | sed 's/](\(.*\))/\1/'
       | grep -v '^http' | while read l; do [ -e "${l%%#*}" ] ||

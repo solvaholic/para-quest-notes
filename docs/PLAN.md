@@ -90,10 +90,12 @@ para-quest-notes/
 │   │   ├── llm.py                  # Ollama client wrapper
 │   │   ├── prompts.py              # template loader, render
 │   │   ├── step.py                 # Step / Workflow abstraction
-│   │   ├── escalation.py           # raise EscalateToUser pattern
+│   │   ├── errors.py              # EscalateToUser + workflow errors
 │   │   ├── config.py               # XDG config load + defaults
 │   │   ├── vault.py                # vault path discovery
-│   │   └── io.py                   # YAML, JSON output
+│   │   ├── cli.py                  # shared base parser (--vault, --format)
+│   │   ├── fake_llm.py            # test double for unit/eval
+│   │   └── trace.py               # JSONL run-trace logger
 │   ├── workflows/
 │   │   └── ingest_inbox/           # pilot
 │   │       ├── __init__.py
@@ -112,11 +114,11 @@ para-quest-notes/
 │   │   ├── seeds.yaml              # generic Quests/Areas (e.g. Health,
 │   │   │                           # Family, Craft) - no personal data
 │   │   └── shapes/
-│   └── eval/
+│   └── eval/                       # eval harness code
 │       ├── runner.py
 │       ├── judges.py
-│       ├── report.py
-│       └── fixtures/               # golden inputs + expected step outputs
+│       └── report.py
+├── eval/fixtures/                  # golden inputs + expected step outputs
 └── tests/                          # unit + integration (fake LLM)
 ```
 
