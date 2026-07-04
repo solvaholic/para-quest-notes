@@ -108,6 +108,10 @@ class ValidateInputs:
         else:
             ctx.scratchpad["sub_path"] = ""
 
+        # A main quest area supports itself - infer --supports "[[<title>]]".
+        if i.quest == "main" and not supports:
+            supports = [f"[[{title}]]"]
+
         notes: list[str] = []
         if i.type in ("project", "area") and not supports:
             notes.append(f"filed to inbox because no --supports was provided for type={i.type}")

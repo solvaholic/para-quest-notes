@@ -89,3 +89,23 @@ def test_validate_inputs_escalation_short_circuits(tmp_path: Path):
     assert not result.ok
     assert result.escalation is not None
     assert result.escalation["step"] == "validate_inputs"
+
+
+def test_quest_main_without_supports_files_to_canonical(tmp_path: Path):
+    """#41: --quest main without --supports infers supports and files to areas/."""
+    vault = _seed_vault(tmp_path)
+    inputs = CreateInputs(title="Coffee", type="area", quest="main")
+
+    result = create_note(inputs, vault=vault, apply=True, today="2026-07-04")
+
+    assert result.ok
+    assert result.written
+    assert result.plan.destination == "areas/Coffee.md"
+    assert result.plan.destination_mode == "canonical"
+    assert result.plan.frontmatter["supports"] == ["[[Coffee]]"]
+    dest = vault / "areas" / "Coffee.md"
+    assert dest.exists()
+    text = dest.read_text()
+    assert "type: area" in text
+    assert "quest: main" in text
+    assert "[[Coffee]]" in text

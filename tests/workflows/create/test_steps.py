@@ -68,6 +68,24 @@ def test_validate_inputs_allows_missing_supports_for_area():
     ]
 
 
+def test_validate_inputs_infers_supports_for_quest_main():
+    """--quest main without --supports infers supports=[[<title>]]."""
+    inputs = CreateInputs(title="Coffee", type="area", quest="main")
+    ctx = _ctx()
+    result = ValidateInputs(inputs).run(ctx)
+    assert result.output["notes"] == []
+    assert ctx.scratchpad["inputs"].supports == ["[[Coffee]]"]
+
+
+def test_validate_inputs_quest_main_does_not_override_explicit_supports():
+    """Explicit --supports is kept even with --quest main."""
+    inputs = CreateInputs(title="Coffee", type="area", quest="main", supports=["[[Brewing]]"])
+    ctx = _ctx()
+    result = ValidateInputs(inputs).run(ctx)
+    assert result.output["notes"] == []
+    assert ctx.scratchpad["inputs"].supports == ["[[Brewing]]"]
+
+
 def test_validate_inputs_resource_must_be_quest_none():
     inputs = CreateInputs(title="A Read", type="resource", quest="main")
     with pytest.raises(EscalateToUser):
