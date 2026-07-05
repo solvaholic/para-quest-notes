@@ -47,17 +47,24 @@ _IDENTIFIER_SEGMENT = "[A-Za-z0-9_]+"
 _IDENTIFIER_OK = re.compile(rf"^{_IDENTIFIER_SEGMENT}(?:[.\-]{_IDENTIFIER_SEGMENT})*$")
 BODY_PREVIEW_CHARS = 2000
 
+# Lowercase joiner/stop words allowed in interior positions of a Title
+# Case filename. Standard title-case convention (APA/Chicago-style).
+_LOWERCASE_JOINERS = frozenset(
+    {"a", "an", "and", "as", "at", "by", "for", "in", "of", "on", "or", "the", "to", "vs"}
+)
+
 
 def _passes_title_case_check(stem: str) -> bool:
-    """Strict Title Case rule for filename stems.
+    """Title Case rule for filename stems.
 
     A stem passes when:
     - the full ``<stem>.md`` matches :data:`_FILENAME_OK` (allowed chars,
       no path separators), and
-    - every whitespace-separated word's first *alphanumeric* character is
-      an uppercase letter or a digit (strict — no lowercase joiners like
-      ``a``, ``of``, ``to``; brand names with interior caps like
-      ``DeepWiki`` are fine). Leading punctuation is skipped, so words
+    - the first and last word start with an uppercase letter or digit, and
+    - every interior word either starts with an uppercase letter or digit,
+      or is a recognized lowercase joiner/stop word (see
+      :data:`_LOWERCASE_JOINERS`). Brand names with interior caps like
+      ``DeepWiki`` are fine. Leading punctuation is skipped, so words
       like ``(Python`` pass and pure-punctuation words like the ``-`` in
       ``Sheet - Python`` are allowed.
     """
@@ -66,12 +73,16 @@ def _passes_title_case_check(stem: str) -> bool:
     words = stem.split()
     if not words:
         return False
-    for w in words:
+    for i, w in enumerate(words):
         first_alnum = next((c for c in w if c.isalnum()), None)
         if first_alnum is None:
             continue  # pure-punctuation word, e.g. the "-" in "A - B"
-        if not (first_alnum.isupper() or first_alnum.isdigit()):
-            return False
+        if first_alnum.isupper() or first_alnum.isdigit():
+            continue
+        # Lowercase joiner allowed only in interior positions.
+        if 0 < i < len(words) - 1 and w.lower() in _LOWERCASE_JOINERS:
+            continue
+        return False
     return True
 
 
@@ -190,8 +201,9 @@ class ProposeFilename:
             raise EscalateToUser(
                 step=self.name,
                 reason="filename is not Title Case or identifier-style; Title "
-                "Case needs each word to start with an uppercase letter or "
-                "digit, and identifier-style names use dot/hyphen/underscore-"
+                "Case needs the first and last word to start uppercase, "
+                "interior words may be lowercase joiners (and, of, the, ...), "
+                "and identifier-style names use dot/hyphen/underscore-"
                 "joined segments with no spaces",
                 options=[],
                 context={"filename": filename, "choice": choice},

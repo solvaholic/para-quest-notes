@@ -350,13 +350,13 @@ def test_propose_filename_rejects_lowercase_start(tmp_path: Path, bad: str):
     assert "title case" in exc.value.reason.lower()
 
 
-def test_propose_filename_rejects_lowercase_joiner(tmp_path: Path):
-    # Strict rule 3: every word must start uppercase or digit.
+def test_propose_filename_rejects_lowercase_joiner_at_start(tmp_path: Path):
+    # Joiner words are only allowed in interior positions, not first/last.
     vault = _make_vault(tmp_path)
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
     llm = FakeLLM()
-    llm.queue(json.dumps({"choice": "generate", "filename": "Notes on Sourdough.md"}))
+    llm.queue(json.dumps({"choice": "generate", "filename": "on Sourdough Notes.md"}))
     ctx = _ctx(vault, llm)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "resource"
@@ -422,8 +422,8 @@ def test_propose_filename_accepts_identifier_snake_case(tmp_path: Path):
 
 def test_propose_filename_rejects_mixed_prose_and_identifier(tmp_path: Path):
     # The two patterns are distinct: a name with spaces AND a dotted
-    # identifier segment is neither Title Case (lowercase joiner) nor
-    # identifier-style (has spaces), so it escalates.
+    # identifier segment is neither Title Case (last word starts lowercase)
+    # nor identifier-style (has spaces), so it escalates.
     vault = _make_vault(tmp_path)
     src = vault / "inbox/raw.md"
     src.write_text("# Raw\n")
@@ -440,14 +440,17 @@ def test_propose_filename_rejects_mixed_prose_and_identifier(tmp_path: Path):
 @pytest.mark.parametrize(
     "good",
     [
-        "Run A 5K.md",  # strict: lowercase "a" not allowed
+        "Run A 5K.md",  # "A" is uppercase anyway
         "Health.md",  # single word, no interior caps
-        "Notes On Sourdough.md",  # strict: "On" capitalized
+        "Notes On Sourdough.md",  # "On" capitalized (was strict)
+        "Notes on Sourdough.md",  # "on" is an interior joiner (#56)
+        "Notes About Moon Landing and Dinosaurs.md",  # "and" is an interior joiner (#56)
         "Build Raised Beds.md",
         "Plan Family Reunion.md",
         "Chat With DeepWiki About Goose.md",  # brand name with interior caps in multi-word stem
         "A - B.md",  # "-" between words is pure punctuation, not a joiner (#34)
         "Scikit-Learn Cheat Sheet - Python Machine Learning.md",  # #34
+        "Guide to the Galaxy.md",  # "to" and "the" are interior joiners (#56)
     ],
 )
 def test_propose_filename_accepts_strict_title_case(tmp_path: Path, good: str):

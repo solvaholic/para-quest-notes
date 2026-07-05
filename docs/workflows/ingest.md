@@ -139,9 +139,10 @@ caller; `context` carries free-form state useful for triage.
   already has `type: project`, `type: area`, or `type: resource`,
   `classify_para` is skipped and the existing value is used.
 - **Filename auto-skip.** If the inbox source basename already passes
-  the structural check — either Title Case (spaces between words, each
-  starting uppercase/digit) or identifier-style (dot/hyphen/underscore-
-  joined segments with no spaces, e.g.
+  the structural check — either Title Case (first and last word start
+  uppercase/digit, interior words may be lowercase joiners like `and`,
+  `of`, `the`) or identifier-style (dot/hyphen/underscore-joined
+  segments with no spaces, e.g.
   `sklearn.linear_model.SGDClassifier`, `CVE-2021-44228`),
   `propose_filename` keeps the source name and does not call the LLM.
   This preserves user-curated specifics (dates, brand names like
@@ -149,11 +150,13 @@ caller; `context` carries free-form state useful for triage.
   The collision check still runs.
 - **Filename validation** rejects path separators and disallowed
   characters; appends `.md` if missing. Enforces a structural rule: the
-  stem must be **Title Case** (every whitespace-separated word starts
-  with an uppercase letter or digit — no lowercase joiners like `a`,
-  `of`, `to`; brand names with interior caps like `DeepWiki`, `GitHub`,
-  `iPhone` are fine) **or identifier-style** (dot/hyphen/underscore-
-  joined segments with no spaces, for qualified identifiers and IDs).
+  stem must be **Title Case** (first and last words start with an
+  uppercase letter or digit; interior words may be recognized lowercase
+  joiners — `a`, `an`, `and`, `as`, `at`, `by`, `for`, `in`, `of`,
+  `on`, `or`, `the`, `to`, `vs`; brand names with interior caps like
+  `DeepWiki`, `GitHub`, `iPhone` are fine) **or identifier-style**
+  (dot/hyphen/underscore-joined segments with no spaces, for qualified
+  identifiers and IDs).
 - **Bounded-choice rename.** When the structural check fails, the LLM
   is asked to pick one of `keep` (use source as-is), `repair` (use a
   mechanically capitalized variant), or `generate` (compose a new
