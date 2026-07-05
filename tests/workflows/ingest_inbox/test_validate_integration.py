@@ -130,7 +130,7 @@ def test_archive_collisions_are_ignored(tmp_path: Path):
 def test_no_collision_proceeds(tmp_path: Path):
     vault = _seed(tmp_path)
     src = vault / "inbox" / "fresh note.md"
-    src.write_text("# Fresh\n")
+    src.write_text("# Fresh\nI want to plan something new this week.\n")
 
     llm = FakeLLM(
         responder=_responder(

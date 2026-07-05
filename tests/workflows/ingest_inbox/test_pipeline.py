@@ -104,8 +104,8 @@ def test_ingest_one_keeps_identifier_filename(tmp_path: Path):
 
 def test_ingest_inbox_processes_all_files(tmp_path: Path):
     vault = _seed_vault(tmp_path)
-    (vault / "inbox/note a.md").write_text("# A\n")
-    (vault / "inbox/note b.md").write_text("# B\n")
+    (vault / "inbox/note a.md").write_text("# A\nI want to plan a garden project.\n")
+    (vault / "inbox/note b.md").write_text("# B\nI want to research composting methods.\n")
 
     plans = iter(
         [

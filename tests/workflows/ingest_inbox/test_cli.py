@@ -21,7 +21,7 @@ def _seed_vault(tmp_path: Path) -> Path:
 
 def test_cli_dry_run_json(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
-    (vault / "inbox/Note.md").write_text("# Note\n")
+    (vault / "inbox/Note.md").write_text("# Note\nI want to plan a garden project.\n")
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
 
     fake_responses = iter(
@@ -56,7 +56,7 @@ def test_cli_dry_run_json(tmp_path: Path, capsys, monkeypatch):
 
 def test_cli_text_dry_run(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
-    (vault / "inbox/Note.md").write_text("# Note\n")
+    (vault / "inbox/Note.md").write_text("# Note\nI want to plan a garden project.\n")
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
 
     fake_responses = iter(
@@ -88,7 +88,7 @@ def test_cli_text_dry_run(tmp_path: Path, capsys, monkeypatch):
 
 def test_cli_returns_nonzero_on_escalation(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
-    (vault / "inbox/Note.md").write_text("# Note\n")
+    (vault / "inbox/Note.md").write_text("# Note\nI want to plan a garden project.\n")
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
 
     class FakeOllama:
@@ -108,7 +108,7 @@ def test_cli_returns_nonzero_on_escalation(tmp_path: Path, capsys, monkeypatch):
 def test_cli_skip_rename_flag(tmp_path: Path, capsys, monkeypatch):
     """#33: --skip-rename is accepted and keeps the original filename."""
     vault = _seed_vault(tmp_path)
-    (vault / "inbox/train plan.md").write_text("# Train Plan\n")
+    (vault / "inbox/train plan.md").write_text("# Train Plan\nI want to run a marathon.\n")
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
 
     fake_responses = iter(

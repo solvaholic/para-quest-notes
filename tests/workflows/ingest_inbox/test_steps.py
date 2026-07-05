@@ -84,7 +84,7 @@ def test_classify_para_happy_path(tmp_path: Path):
 def test_classify_para_low_confidence_escalates(tmp_path: Path):
     vault = _make_vault(tmp_path)
     src = vault / "inbox/Foo.md"
-    src.write_text("# Foo\n")
+    src.write_text("# Foo\nI want to plan something this weekend.\n")
     llm = FakeLLM()
     llm.queue(json.dumps({"type": "project", "confidence": 0.2, "reason": "meh"}))
     ctx = _ctx(vault, llm)
@@ -97,7 +97,7 @@ def test_classify_para_low_confidence_escalates(tmp_path: Path):
 def test_classify_para_invalid_type_escalates(tmp_path: Path):
     vault = _make_vault(tmp_path)
     src = vault / "inbox/Foo.md"
-    src.write_text("# Foo\n")
+    src.write_text("# Foo\nSome real prose that needs LLM classification.\n")
     llm = FakeLLM()
     llm.queue(json.dumps({"type": "wat", "confidence": 0.9}))
     ctx = _ctx(vault, llm)
@@ -109,7 +109,7 @@ def test_classify_para_invalid_type_escalates(tmp_path: Path):
 def test_classify_para_empty_response_escalates(tmp_path: Path):
     vault = _make_vault(tmp_path)
     src = vault / "inbox/Foo.md"
-    src.write_text("# Foo\n")
+    src.write_text("# Foo\nSome real prose that needs LLM classification.\n")
     llm = FakeLLM()
     llm.queue("")
     ctx = _ctx(vault, llm)
@@ -117,6 +117,95 @@ def test_classify_para_empty_response_escalates(tmp_path: Path):
     with pytest.raises(EscalateToUser) as exc:
         ClassifyPara(prompt=_para_prompt()).run(ctx)
     assert "empty" in exc.value.reason
+
+
+def test_classify_para_heuristic_empty_body(tmp_path: Path):
+    """#58: empty body (title only) -> resource via heuristic."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Foo.md"
+    src.write_text("# Foo\n")
+    ctx = _ctx(vault)  # no LLM queued: must not be called
+    ScanNote(source=src).run(ctx)
+    out = ClassifyPara(prompt=_para_prompt()).run(ctx)
+    assert out.output["type"] == "resource"
+    assert out.output["skipped"] is True
+    assert out.meta["source"] == "heuristic"
+    assert ctx.scratchpad["para_type"] == "resource"
+
+
+def test_classify_para_heuristic_code_blocks(tmp_path: Path):
+    """#58: body entirely fenced code blocks -> resource via heuristic."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Snippet.md"
+    src.write_text("# Snippet\n```python\nprint('hello')\n```\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    out = ClassifyPara(prompt=_para_prompt()).run(ctx)
+    assert out.output["type"] == "resource"
+    assert out.output["skipped"] is True
+
+
+def test_classify_para_heuristic_single_url(tmp_path: Path):
+    """#58: body is a single URL -> resource via heuristic."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Link.md"
+    src.write_text("# Link\nhttps://example.com/article\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    out = ClassifyPara(prompt=_para_prompt()).run(ctx)
+    assert out.output["type"] == "resource"
+    assert out.output["skipped"] is True
+
+
+def test_classify_para_heuristic_url_with_description(tmp_path: Path):
+    """#58: URL + short description -> resource via heuristic."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Link.md"
+    src.write_text("# Link\nA helpful article\nhttps://example.com/article\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    out = ClassifyPara(prompt=_para_prompt()).run(ctx)
+    assert out.output["type"] == "resource"
+    assert out.output["skipped"] is True
+
+
+def test_classify_para_heuristic_blockquote(tmp_path: Path):
+    """#58: body is only blockquotes -> resource via heuristic."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Quote.md"
+    src.write_text("# Quote\n> The only thing we have to fear\n> is fear itself.\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    out = ClassifyPara(prompt=_para_prompt()).run(ctx)
+    assert out.output["type"] == "resource"
+    assert out.output["skipped"] is True
+
+
+def test_classify_para_heuristic_no_match_falls_through(tmp_path: Path):
+    """#58: prose body doesn't match any heuristic -> falls through to LLM."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Plan.md"
+    src.write_text("# Plan\nI want to build a garden shed this summer.\n")
+    llm = FakeLLM()
+    llm.queue(json.dumps({"type": "project", "confidence": 0.9, "reason": "tasks"}))
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    out = ClassifyPara(prompt=_para_prompt()).run(ctx)
+    assert out.output["type"] == "project"
+    assert "skipped" not in out.output
+
+
+def test_classify_para_frontmatter_takes_priority_over_heuristic(tmp_path: Path):
+    """#58: frontmatter type: still wins over heuristic."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/Plan.md"
+    # Empty body would match heuristic, but frontmatter says "project".
+    src.write_text("---\ntype: project\n---\n# Plan\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    out = ClassifyPara(prompt=_para_prompt()).run(ctx)
+    assert out.output["type"] == "project"
+    assert out.meta["source"] == "frontmatter"
 
 
 # ---- pick_quest ---------------------------------------------------------
