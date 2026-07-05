@@ -55,6 +55,20 @@ Recent commits also use this trailer:
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
 ```
 
+## Smoke testing
+
+`scripts/smoke.sh` runs all `pqn-*` commands in sequence against a
+disposable copy of `samples/vault/`. No Ollama required.
+
+```bash
+./scripts/smoke.sh            # dry-run assertions only
+./scripts/smoke.sh --apply    # also runs the apply path
+```
+
+Use it for pre-release confidence and after cross-cutting changes.
+For the intended command ordering and dependency map, see
+[`docs/workflows/command-sequence.md`](workflows/command-sequence.md).
+
 ## Adding an eval fixture
 
 Put fixtures under [`eval/fixtures/`](../eval/fixtures/). Start with [`eval/fixtures/README.md`](../eval/fixtures/README.md), then copy a nearby example like:

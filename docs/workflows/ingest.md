@@ -135,6 +135,13 @@ caller; `context` carries free-form state useful for triage.
 - **Resources skip the Quest step.** Per
   [`docs/notes-system.md`](../notes-system.md), `supports:` is
   optional on resources.
+- **Heuristic pre-classification.** Before calling the LLM,
+  `classify_para` runs a fast heuristic that short-circuits for notes
+  whose body strongly signals a PARA type (e.g. a note that is almost
+  entirely a link list is classified as `resource` without an LLM
+  call). When the heuristic fires, the JSON output includes
+  `"reason": "heuristic pre-classification"`. The heuristic is
+  conservative - ambiguous notes still go to the LLM.
 - **Pre-set `type:` frontmatter is authoritative.** If an inbox note
   already has `type: project`, `type: area`, or `type: resource`,
   `classify_para` is skipped and the existing value is used.

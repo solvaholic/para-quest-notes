@@ -84,9 +84,17 @@ uv tool uninstall para-quest-notes
 rm -rf dist/
 ```
 
-If anything in the wheel-install smoke fails, fix in a follow-up
-PR before tagging. A failing smoke means real users get the same
-failure on the documented install command.
+Before the wheel-install smoke, run the behavioral smoke script
+which exercises all CLIs against the sample vault (no Ollama, no
+wheel needed):
+
+```sh
+./scripts/smoke.sh --apply
+```
+
+If anything in either smoke fails, fix in a follow-up PR before
+tagging. A failing smoke means real users get the same failure on
+the documented install command.
 
 ## Cut the release
 

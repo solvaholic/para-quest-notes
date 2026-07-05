@@ -195,7 +195,9 @@ discovery rules and config-file shape.
 Every CLI accepts `--format json`, shares a uniform exit-code
 contract, and writes a JSONL trace you can consume after the fact.
 See [`docs/headless.md`](docs/headless.md) for crontab examples,
-exit codes, and a "what not to cron" callout.
+exit codes, and a "what not to cron" callout. For the intended
+command ordering and dependency map across all five CLIs, see
+[`docs/workflows/command-sequence.md`](docs/workflows/command-sequence.md).
 
 ### Generating a fresh sample vault
 

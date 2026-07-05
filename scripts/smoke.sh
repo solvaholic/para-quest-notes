@@ -163,6 +163,20 @@ check_fail "archive escalates when no projects/ dir" \
     --outcome "N/A" "Nonexistent"
 
 echo ""
+echo "=== pqn-create: --quest main infers --supports ==="
+check "create --quest main infers supports" \
+  uv run pqn-create --vault "$VAULT" --format json \
+    --type area --quest main --title "Inferred Area"
+
+if $APPLY; then
+  check "create --quest main --apply" \
+    uv run pqn-create --vault "$VAULT" --format json --apply \
+      --type area --quest main --title "Inferred Area"
+  check "inferred area filed to areas/" \
+    test -f "$VAULT/areas/Inferred Area.md"
+fi
+
+echo ""
 echo "=== pqn-ingest: dry-run without Ollama (expect escalation) ==="
 # Without a running Ollama, ingest will either connect-error or, with
 # gibberish notes, escalate. Either way it should not crash with a
@@ -171,6 +185,9 @@ echo "=== pqn-ingest: dry-run without Ollama (expect escalation) ==="
 # will hit the real model and likely escalate on gibberish content.
 check_fail "ingest dry-run (escalations expected on gibberish)" \
   uv run pqn-ingest --vault "$VAULT" --format json
+
+check_fail "ingest --skip-rename (escalations expected on gibberish)" \
+  uv run pqn-ingest --vault "$VAULT" --format json --skip-rename
 
 echo ""
 echo "=== pqn-validate: vault still well-formed after mutations ==="
