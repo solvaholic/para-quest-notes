@@ -338,3 +338,53 @@ def test_apply_mode_sample_vault_invariants(tmp_path: Path):
     assert saw_same_stem, "seeded same-basename move was not exercised"
     assert (vault / "resources" / f"{same_stem}.md").exists()
     assert f"[[{same_stem}]]" in backlink.read_text(encoding="utf-8")
+
+
+def test_skip_rename_keeps_original_filename(tmp_path: Path):
+    """#33: --skip-rename keeps the original filename without LLM or structural check."""
+    vault = _seed_vault(tmp_path)
+    src = vault / "inbox/train plan.md"
+    src.write_text("# Train Plan\nrun a 5k\n")
+
+    llm = FakeLLM(
+        responder=_build_responder(
+            {
+                "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
+                "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
+            }
+        )
+    )
+    fr = ingest_one(src, vault=vault, llm=llm, apply=True, skip_rename=True)
+
+    assert fr.ok, fr.escalation or fr.error
+    assert fr.applied is True
+    # Original filename kept even though it fails the structural check.
+    assert fr.decisions.filename == "train plan.md"
+    assert fr.decisions.destination == "projects/train plan.md"
+    assert (vault / "projects/train plan.md").exists()
+    assert not src.exists()
+    # propose_filename never called the LLM.
+    assert not any((call.prompt_id or "").startswith("propose_filename@") for call in llm.calls)
+
+
+def test_skip_rename_still_checks_collisions(tmp_path: Path):
+    """#33: --skip-rename still escalates on filename collision."""
+    vault = _seed_vault(tmp_path)
+    src = vault / "inbox/Health.md"
+    src.write_text("# Health\nan inbox note about health\n")
+    # areas/Health.md already exists from _seed_vault
+
+    llm = FakeLLM(
+        responder=_build_responder(
+            {
+                "classify_para": {"type": "area", "confidence": 0.9, "reason": "ok"},
+                "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
+            }
+        )
+    )
+    fr = ingest_one(src, vault=vault, llm=llm, apply=True, skip_rename=True)
+
+    assert not fr.ok
+    assert fr.escalation is not None
+    assert fr.escalation["step"] == "propose_filename"
+    assert "collides" in fr.escalation["reason"]

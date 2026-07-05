@@ -103,3 +103,46 @@ def test_cli_returns_nonzero_on_escalation(tmp_path: Path, capsys, monkeypatch):
     with patch.object(cli, "OllamaClient", FakeOllama):
         rc = cli.main(["--vault", str(vault), "--config", str(tmp_path / "noconf.yaml")])
     assert rc == 1
+
+
+def test_cli_skip_rename_flag(tmp_path: Path, capsys, monkeypatch):
+    """#33: --skip-rename is accepted and keeps the original filename."""
+    vault = _seed_vault(tmp_path)
+    (vault / "inbox/train plan.md").write_text("# Train Plan\n")
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+
+    fake_responses = iter(
+        [
+            json.dumps({"type": "project", "confidence": 0.9, "reason": "ok"}),
+            json.dumps({"quests": ["Health"], "confidence": 0.9, "reason": "ok"}),
+            # No propose_filename response needed - skip_rename bypasses LLM.
+        ]
+    )
+
+    class FakeOllama:
+        def __init__(self, *a, **kw):
+            pass
+
+        def generate(self, *a, prompt_id=None, **kw):
+            from para_quest_notes.adapter.llm import LLMResponse
+
+            return LLMResponse(
+                text=next(fake_responses), model="fake", latency_ms=0, prompt_id=prompt_id
+            )
+
+    with patch.object(cli, "OllamaClient", FakeOllama):
+        rc = cli.main(
+            [
+                "--vault",
+                str(vault),
+                "--format",
+                "json",
+                "--skip-rename",
+                "--config",
+                str(tmp_path / "noconf.yaml"),
+            ]
+        )
+    assert rc == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["files"][0]["decisions"]["filename"] == "train plan.md"
+    assert out["files"][0]["decisions"]["destination"] == "projects/train plan.md"

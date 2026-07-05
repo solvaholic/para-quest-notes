@@ -35,6 +35,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         help="Process only this file (relative to the vault or absolute). Repeatable.",
     )
+    p.add_argument(
+        "--skip-rename",
+        action="store_true",
+        help="Keep the original filename instead of proposing a rename.",
+    )
     return p
 
 
@@ -66,6 +71,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             config=config,
             trace=trace,
             files=files,
+            skip_rename=args.skip_rename,
         )
 
     if args.format == "json":

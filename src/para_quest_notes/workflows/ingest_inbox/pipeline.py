@@ -32,7 +32,9 @@ from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanNote
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 
-def build_workflow(source: Path, *, apply: bool, model: str | None = None) -> Workflow:
+def build_workflow(
+    source: Path, *, apply: bool, model: str | None = None, skip_rename: bool = False
+) -> Workflow:
     loader = PromptLoader(PROMPTS_DIR)
     return Workflow(
         name="ingest_inbox",
@@ -40,7 +42,9 @@ def build_workflow(source: Path, *, apply: bool, model: str | None = None) -> Wo
             ScanNote(source=source),
             ClassifyPara(prompt=loader.get("classify_para"), model=model),
             PickQuest(prompt=loader.get("pick_quest"), model=model),
-            ProposeFilename(prompt=loader.get("propose_filename"), model=model),
+            ProposeFilename(
+                prompt=loader.get("propose_filename"), model=model, skip_rename=skip_rename
+            ),
             PlanDestination(),
             ApplyMove(apply=apply),
         ],
@@ -57,9 +61,10 @@ def ingest_one(
     config: Config | None = None,
     trace: TraceWriter | None = None,
     vault_quests: list[Quest] | None = None,
+    skip_rename: bool = False,
 ) -> FileResult:
     quests = vault_quests if vault_quests is not None else discover_quests(vault)
-    wf = build_workflow(source, apply=apply, model=model)
+    wf = build_workflow(source, apply=apply, model=model, skip_rename=skip_rename)
     wf_result = wf.run(
         vault=vault,
         config=config,
@@ -80,6 +85,7 @@ def ingest_inbox(
     trace: TraceWriter | None = None,
     files: Iterable[Path] | None = None,
     run_id: str = "",
+    skip_rename: bool = False,
 ) -> IngestResult:
     inbox_dir = vault / "inbox"
     if files is not None:
@@ -102,6 +108,7 @@ def ingest_inbox(
                 config=config,
                 trace=trace,
                 vault_quests=quests,
+                skip_rename=skip_rename,
             )
         )
     if not result.run_id and result.files:

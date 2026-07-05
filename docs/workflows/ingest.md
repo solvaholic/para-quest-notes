@@ -44,6 +44,9 @@ pqn-ingest --vault ~/notes --file inbox/quick-note.md
 # Apply changes (moves, renames, frontmatter, wikilink rewrites).
 pqn-ingest --vault ~/notes --apply
 
+# Keep original filenames (skip renaming).
+pqn-ingest --vault ~/notes --skip-rename --apply
+
 # Override the default model from config.yaml.
 pqn-ingest --vault ~/notes --model qwen3:30b
 ```
@@ -118,6 +121,12 @@ caller; `context` carries free-form state useful for triage.
 ## Behavior notes
 
 - **Dry run by default.** `--apply` is required to touch disk.
+- **`--skip-rename`** keeps the original inbox filename unchanged. The
+  file is still classified, Quest-picked, and moved to its PARA
+  destination directory - just without renaming. The collision check
+  still runs against the destination. Useful when filenames carry
+  special meaning (e.g., `sklearn.linear_model.SGDClassifier.md`) or
+  must match references in other documents.
 - **Wikilink rewriting** updates `[[old]]`, `[[old|alias]]`, and
   `[[old#anchor|alias]]` to the new title. Aliases and anchors are
   preserved.

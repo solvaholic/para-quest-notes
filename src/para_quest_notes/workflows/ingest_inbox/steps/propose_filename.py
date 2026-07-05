@@ -119,9 +119,10 @@ def _mechanical_repair(stem: str) -> str:
 class ProposeFilename:
     name = "propose_filename"
 
-    def __init__(self, prompt: Prompt, *, model: str | None = None):
+    def __init__(self, prompt: Prompt, *, model: str | None = None, skip_rename: bool = False):
         self.prompt = prompt
         self.model = model
+        self.skip_rename = skip_rename
 
     def run(self, ctx: StepContext) -> StepResult:
         scan: ScanResult = ctx.scratchpad["scan"]
@@ -131,9 +132,13 @@ class ProposeFilename:
         source_stem = scan.source.stem
         source_basename = scan.source.name
 
-        if _passes_structural_check(source_stem):
+        if self.skip_rename or _passes_structural_check(source_stem):
             filename = source_basename
-            reason = "source filename already passes the structural check"
+            reason = (
+                "rename skipped by --skip-rename"
+                if self.skip_rename
+                else "source filename already passes the structural check"
+            )
             choice = "keep"
             return self._finalize(
                 ctx,
