@@ -231,3 +231,102 @@ def test_cli_no_type_no_path_returns_2(tmp_path: Path, capsys, monkeypatch):
             ]
         )
     assert exc.value.code == 2
+
+
+# ---- Partial path: --type given, path is [sub-path/]<title> (#45) -------
+
+
+def test_cli_type_with_bare_title_path(tmp_path: Path, capsys, monkeypatch):
+    """--type project + bare title path."""
+    vault = _seed_vault(tmp_path)
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--format",
+            "json",
+            "--type",
+            "project",
+            "--supports",
+            "[[Quest]]",
+            "Improve PQN",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["plan"]["destination"] == "projects/Improve PQN.md"
+
+
+def test_cli_type_with_sub_path_title(tmp_path: Path, capsys, monkeypatch):
+    """--type project + sub-path/title path."""
+    vault = _seed_vault(tmp_path)
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--format",
+            "json",
+            "--type",
+            "project",
+            "--supports",
+            "[[Quest]]",
+            "quest/Improve PQN",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["plan"]["destination"] == "projects/quest/Improve PQN.md"
+
+
+def test_cli_type_with_explicit_sub_path_override(tmp_path: Path, capsys, monkeypatch):
+    """Explicit --sub-path overrides path-inferred sub-path."""
+    vault = _seed_vault(tmp_path)
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--format",
+            "json",
+            "--type",
+            "project",
+            "--sub-path",
+            "override",
+            "--supports",
+            "[[Quest]]",
+            "wrong/Improve PQN",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["plan"]["destination"] == "projects/override/Improve PQN.md"
+
+
+def test_cli_no_para_dir_without_type_still_errors(tmp_path: Path, capsys, monkeypatch):
+    """Without --type, a path lacking a PARA dir still errors."""
+    vault = _seed_vault(tmp_path)
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "quest/Improve PQN",
+        ]
+    )
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert "PARA directory" in err

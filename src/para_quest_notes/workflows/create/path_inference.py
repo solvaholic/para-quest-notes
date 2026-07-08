@@ -4,16 +4,21 @@ Parses a single positional path argument into the components
 ``pqn-create`` normally requires as explicit flags: ``--vault``,
 ``--type``, ``--sub-path``, and ``--title``.
 
-A valid path has the shape::
+Two modes:
 
-    [<vault>/]<para-type-dir>/<sub-path?>/<filename>.md
+1. **Full path** (no ``--type`` given)::
 
-where ``<para-type-dir>`` is one of ``projects``, ``areas``, or
-``resources`` (the plural PARA directory names used in the vault layout).
+       [<vault>/]<para-type-dir>/<sub-path?>/<filename>.md
 
-The vault is resolved by walking up from the path until the standard
-vault markers are found (or via the normal ``--vault`` / env / config
-discovery if not embedded in the path).
+   where ``<para-type-dir>`` is one of ``projects``, ``areas``, or
+   ``resources``.
+
+2. **Partial path** (``--type`` already given)::
+
+       [<sub-path>/]<filename>[.md]
+
+   The path is interpreted as just the sub-path + title, since the
+   PARA type is known from the flag.
 """
 
 from __future__ import annotations
@@ -55,12 +60,18 @@ class PathInferenceError(Exception):
     """Raised when the path cannot be parsed into valid components."""
 
 
-def infer_from_path(path_str: str) -> InferredInputs:
+def _strip_md(filename: str) -> str:
+    """Remove .md suffix if present, return the title."""
+    return filename[: -len(_MD_SUFFIX)] if filename.lower().endswith(_MD_SUFFIX) else filename
+
+
+def infer_from_path(path_str: str, *, has_type: bool = False) -> InferredInputs:
     """Parse a path string into inferred create inputs.
 
-    The path is interpreted as a POSIX-style relative or absolute path.
-    We look for a PARA directory name (``projects/``, ``areas/``,
-    ``resources/``) as the signal for where the type starts.
+    When ``has_type`` is False (default), the path must contain a PARA
+    directory marker to infer the type. When ``has_type`` is True, the
+    path is interpreted as ``[sub-path/]<title>[.md]`` - no PARA dir
+    needed.
 
     Raises :class:`PathInferenceError` on ambiguous or invalid paths.
     """
@@ -74,6 +85,48 @@ def infer_from_path(path_str: str) -> InferredInputs:
     if not parts:
         raise PathInferenceError("path is empty after normalization")
 
+    if has_type:
+        return _infer_partial(parts, path_str)
+    return _infer_full(parts, path_str)
+
+
+def _infer_partial(parts: list[str], path_str: str) -> InferredInputs:
+    """Infer from a partial path when --type is already known.
+
+    Path shape: ``[sub-path/]<title>[.md]``
+
+    If the path happens to start with a PARA dir that matches the
+    already-known type, we still consume it correctly (the caller's
+    explicit --type overrides). But we don't require it.
+    """
+    # Check if the first part is a PARA dir - if so, skip it
+    # (the user may have typed "projects/sub/Title" with --type project)
+    first_lower = parts[0].lower()
+    if first_lower in _DIR_TO_TYPE or first_lower in _DIR_TO_TYPE_SINGULAR:
+        # Looks like a PARA dir - fall through to full inference
+        return _infer_full(parts, path_str)
+
+    # Last part is the filename/title
+    filename = parts[-1]
+    title = _strip_md(filename)
+    if not title.strip():
+        raise PathInferenceError(f"path has an empty filename/title: {path_str!r}")
+
+    # Everything before the last part is sub-path
+    sub_path: str | None = None
+    if len(parts) > 1:
+        sub_path = "/".join(parts[:-1])
+
+    return InferredInputs(
+        vault=None,
+        type=None,  # Caller already has --type
+        sub_path=sub_path,
+        title=title,
+    )
+
+
+def _infer_full(parts: list[str], path_str: str) -> InferredInputs:
+    """Infer from a full path that must contain a PARA directory marker."""
     # Find the PARA directory marker in the path
     para_idx: int | None = None
     para_type: ParaType | None = None
@@ -108,8 +161,7 @@ def infer_from_path(path_str: str) -> InferredInputs:
     sub_path_parts = after_para[:-1]
 
     # Extract title from filename
-    title = filename[: -len(_MD_SUFFIX)] if filename.lower().endswith(_MD_SUFFIX) else filename
-
+    title = _strip_md(filename)
     if not title.strip():
         raise PathInferenceError(f"path has an empty filename/title: {path_str!r}")
 

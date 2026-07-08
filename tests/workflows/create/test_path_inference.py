@@ -95,3 +95,46 @@ def test_infer_para_dir_only_no_filename():
 def test_infer_empty_title():
     with pytest.raises(PathInferenceError, match="empty filename"):
         infer_from_path("projects/.md")
+
+
+# ---- Partial path (has_type=True) ---------------------------------------
+
+
+def test_partial_bare_title():
+    """Bare title when --type is known."""
+    result = infer_from_path("Improve PQN", has_type=True)
+    assert result.title == "Improve PQN"
+    assert result.sub_path is None
+    assert result.type is None  # caller already has --type
+
+
+def test_partial_title_with_md():
+    result = infer_from_path("Improve PQN.md", has_type=True)
+    assert result.title == "Improve PQN"
+    assert result.sub_path is None
+
+
+def test_partial_sub_path_and_title():
+    """sub-path/title when --type is known."""
+    result = infer_from_path("quest/Improve PQN", has_type=True)
+    assert result.title == "Improve PQN"
+    assert result.sub_path == "quest"
+
+
+def test_partial_deep_sub_path():
+    result = infer_from_path("quest/sub/Improve PQN.md", has_type=True)
+    assert result.title == "Improve PQN"
+    assert result.sub_path == "quest/sub"
+
+
+def test_partial_with_para_dir_falls_through():
+    """If path starts with a PARA dir even in partial mode, use full inference."""
+    result = infer_from_path("projects/quest/Improve PQN.md", has_type=True)
+    assert result.type == "project"
+    assert result.title == "Improve PQN"
+    assert result.sub_path == "quest"
+
+
+def test_partial_empty_title():
+    with pytest.raises(PathInferenceError, match="empty filename"):
+        infer_from_path(".md", has_type=True)

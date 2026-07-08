@@ -94,7 +94,8 @@ def _resolve_inputs(args: argparse.Namespace) -> tuple[CreateInputs, Path | None
     vault_hint: Path | None = None
 
     if args.path is not None:
-        inferred = infer_from_path(args.path)
+        # When --type is already given, the path doesn't need a PARA dir
+        inferred = infer_from_path(args.path, has_type=args.type is not None)
         vault_hint = inferred.vault
 
     # Explicit flags override inferred values
