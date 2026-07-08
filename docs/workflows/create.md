@@ -46,6 +46,14 @@ written by `pqn-create`.
 pqn-create --vault ~/notes \
   --type project --title "Brew Setup" --supports "[[Coffee]]"
 
+# Same thing using a positional path (infers --type, --title).
+pqn-create --vault ~/notes --supports "[[Coffee]]" \
+  "projects/Brew Setup.md"
+
+# Infer everything from a full path (vault + type + sub-path + title).
+pqn-create --supports "[[Coffee]]" \
+  "~/notes/projects/2026/Brew Setup.md"
+
 # Plan a new project when you do not know the Quest yet.
 pqn-create --vault ~/notes \
   --type project --title "Brew Setup"
@@ -70,6 +78,26 @@ pqn-create --vault ~/notes --format json \
 pqn-create --vault ~/notes \
   --type area --quest main --title "Coffee" --apply
 ```
+
+### Positional path inference
+
+`pqn-create` accepts an optional positional path that infers `--type`,
+`--title`, `--sub-path`, and optionally `--vault` from the path structure:
+
+```
+[<vault>/]<para-dir>/<sub-path?>/<filename>.md
+```
+
+where `<para-dir>` is `projects`, `areas`, or `resources` (singular forms
+also accepted). Examples:
+
+- `projects/My Note.md` -> `--type project --title "My Note"`
+- `areas/home/Garden.md` -> `--type area --sub-path home --title "Garden"`
+- `~/notes/resources/python/Decorators.md` -> `--vault ~/notes --type resource --sub-path python --title "Decorators"`
+
+**Explicit flags always override inferred values.** If you pass both
+`--type area` and a path like `projects/Foo.md`, the explicit `--type area`
+wins.
 
 `--supports` is optional. When `--quest main` is given without
 `--supports`, `pqn-create` infers `--supports "[[<title>]]"` and files
