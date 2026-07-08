@@ -10,8 +10,13 @@ steps in order:
 1. **scan_note** (pure) — read frontmatter + body, detect sibling
    attachments.
 2. **classify_para** (LLM) — pick one of `project | area | resource`.
-3. **pick_quest** (LLM) — pick one or more Quests from the vault's
-   declared Main + Side Quests. Skipped for resources.
+3. **pick_quest** (deterministic + LLM fallback) — pick one or more
+   Quests from the vault's declared Main + Side Quests. Skipped for
+   resources. Before calling the LLM, tries a deterministic no-LLM
+   resolution: if the inbox basename matches an Area note that
+   declares `supports:`, those Quests win outright (no LLM call). If
+   that misses, checks sibling consensus in the destination directory.
+   Only falls through to the LLM when both deterministic checks miss.
 4. **propose_filename** (LLM, may skip) — if the source basename
    already passes a structural check (Title Case or identifier-style),
    keep it and skip the LLM; otherwise ask the LLM to pick from {keep,
@@ -135,6 +140,16 @@ caller; `context` carries free-form state useful for triage.
 - **Resources skip the Quest step.** Per
   [`docs/notes-system.md`](../notes-system.md), `supports:` is
   optional on resources.
+- **Deterministic Quest inference.** Before calling the LLM,
+  `pick_quest` tries a no-LLM resolution from the inbox basename:
+  (1) if a same-named Area note (`areas/<stem>.md`, snake_case
+  normalized) declares `supports:`, those Quests win outright;
+  (2) if no Area note matches, sibling notes already in the
+  destination directory are checked for a majority consensus. On a
+  hit, the JSON output includes `"reason": "deterministic:
+  area_note"` or `"deterministic: sibling_consensus"` and
+  `confidence` is `1.0`. A miss falls through to the LLM with no
+  behavior change.
 - **Heuristic pre-classification.** Before calling the LLM,
   `classify_para` runs a fast heuristic that short-circuits for notes
   whose body strongly signals a PARA type (e.g. a note that is almost

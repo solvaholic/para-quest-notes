@@ -1,7 +1,12 @@
-"""Step 3: pick_quest (LLM).
+"""Step 3: pick_quest (LLM, with deterministic fast path).
 
 Picks one or more Quests from the vault's declared Main + Side Quests.
 Skipped for resources (the spec makes ``supports`` optional there).
+
+Before calling the LLM, tries a deterministic no-LLM resolution via
+:func:`~para_quest_notes.vault.quests.resolve_quest_from_path` (issue #47):
+same-named Area note wins outright, then sibling consensus. On a
+confident hit, the LLM is skipped entirely.
 
 Reads the Quest list from ``ctx.scratchpad['quests']`` (set by the
 pipeline once per run, since vault discovery is shared across files).
@@ -12,7 +17,7 @@ from __future__ import annotations
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.prompts import Prompt
 from para_quest_notes.adapter.step import StepContext, StepResult
-from para_quest_notes.vault.quests import Quest
+from para_quest_notes.vault.quests import Quest, resolve_quest_from_path
 from para_quest_notes.workflows.ingest_inbox.steps._llm import (
     call_llm_json,
     confidence_ok,
@@ -21,6 +26,16 @@ from para_quest_notes.workflows.ingest_inbox.steps._llm import (
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
 
 BODY_PREVIEW_CHARS = 2000
+
+
+def _ingest_match_key(scan: ScanResult) -> str:
+    """Derive a match key from the inbound inbox basename.
+
+    For pqn-ingest, the source filename is the best signal available at
+    pick_quest time (the cleaned filename isn't decided yet). Light
+    normalization (stem extraction) is enough - a miss just falls through.
+    """
+    return scan.source.stem
 
 
 class PickQuest:
@@ -52,8 +67,31 @@ class PickQuest:
                 context={"hint": "add quest: main or quest: side to areas/*.md"},
             )
 
-        catalog = "\n".join(f"- {q.name}" for q in quests)
         valid_names = {q.name for q in quests}
+
+        # Deterministic fast path (#47): try to resolve Quest from the
+        # destination path without calling the LLM.
+        if ctx.vault is not None:
+            match_key = _ingest_match_key(scan)
+            resolved = resolve_quest_from_path(ctx.vault, match_key, valid_quests=valid_names)
+            if resolved.quests:
+                ctx.scratchpad["quests"] = resolved.quests
+                return StepResult(
+                    name=self.name,
+                    output={
+                        "quests": resolved.quests,
+                        "confidence": 1.0,
+                        "reason": f"deterministic: {resolved.source}",
+                    },
+                    meta={
+                        "quests": resolved.quests,
+                        "confidence": 1.0,
+                        "source": resolved.source,
+                    },
+                )
+
+        # LLM fallback: existing behavior.
+        catalog = "\n".join(f"- {q.name}" for q in quests)
 
         parsed = call_llm_json(
             ctx_llm=ctx.llm,

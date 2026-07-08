@@ -293,6 +293,67 @@ def test_pick_quest_no_vault_quests_escalates(tmp_path: Path):
         PickQuest(prompt=_quest_prompt()).run(ctx)
 
 
+def test_pick_quest_deterministic_area_note_hit(tmp_path: Path):
+    """When the inbox basename matches an area note, skip the LLM."""
+    vault = _make_vault(tmp_path)
+    # Create an area note named "Health" with quest declaration
+    (vault / "areas/Health.md").write_text(
+        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+    )
+    # Inbox note named "Health.md" - its stem matches the area note
+    src = vault / "inbox/Health.md"
+    src.write_text("# Health\nSome new health note\n")
+    # No LLM needed - deterministic path should fire
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    ctx.scratchpad["vault_quests"] = _quests()
+    out = PickQuest(prompt=_quest_prompt()).run(ctx)
+    assert out.output["quests"] == ["Health"]
+    assert "deterministic" in out.output["reason"]
+    assert out.meta["source"] == "area_note"
+    assert ctx.scratchpad["quests"] == ["Health"]
+
+
+def test_pick_quest_deterministic_miss_falls_through_to_llm(tmp_path: Path):
+    """When no area note matches, fall through to the LLM."""
+    vault = _make_vault(tmp_path)
+    (vault / "areas/Health.md").write_text(
+        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+    )
+    # Inbox note "Random.md" - doesn't match any area note
+    src = vault / "inbox/Random.md"
+    src.write_text("# Random\nSomething unrelated\n")
+    llm = FakeLLM()
+    llm.queue(json.dumps({"quests": ["Health"], "confidence": 0.9, "reason": "fits"}))
+    ctx = _ctx(vault, llm)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    ctx.scratchpad["vault_quests"] = _quests()
+    out = PickQuest(prompt=_quest_prompt()).run(ctx)
+    # Should have used the LLM (no "deterministic" in reason)
+    assert out.output["quests"] == ["Health"]
+    assert "deterministic" not in out.output["reason"]
+
+
+def test_pick_quest_deterministic_inbound_name_normalized(tmp_path: Path):
+    """Inbound basenames are snake_case normalized before matching."""
+    vault = _make_vault(tmp_path)
+    (vault / "areas/Maintain Home.md").write_text(
+        "---\ntype: area\nquest: side\nsupports:\n- '[[Health]]'\n---\n"
+    )
+    # Inbox note with underscores instead of spaces
+    src = vault / "inbox/maintain_home.md"
+    src.write_text("# Maintain Home\nStuff\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "area"
+    ctx.scratchpad["vault_quests"] = _quests()
+    out = PickQuest(prompt=_quest_prompt()).run(ctx)
+    assert out.output["quests"] == ["Health"]
+    assert out.meta["source"] == "area_note"
+
+
 # ---- propose_filename ---------------------------------------------------
 
 

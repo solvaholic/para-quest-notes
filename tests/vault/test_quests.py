@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from para_quest_notes.vault.quests import discover_quests
+from para_quest_notes.vault.quests import discover_quests, resolve_quest_from_path
 
 
 def _write(p: Path, text: str) -> None:
@@ -64,3 +64,122 @@ def test_frontmatter_wins_over_backmatter(tmp_path: Path):
     )
     quests = discover_quests(tmp_path)
     assert [(q.name, q.quest_kind) for q in quests] == [("Health", "main")]
+
+
+# ---- resolve_quest_from_path (#47) --------------------------------------
+
+
+def test_resolve_area_note_hit(tmp_path: Path):
+    """Same-named Area note with supports: resolves the Quest."""
+    _write(
+        tmp_path / "areas/Health.md",
+        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
+    )
+    result = resolve_quest_from_path(tmp_path, "Health.md", valid_quests={"Health"})
+    assert result.quests == ["Health"]
+    assert result.source == "area_note"
+
+
+def test_resolve_area_note_snake_case_match(tmp_path: Path):
+    """Match key is normalized to snake_case before comparing to area stems."""
+    _write(
+        tmp_path / "areas/Maintain Home.md",
+        "---\ntype: area\nquest: side\nsupports:\n- '[[Health]]'\n---\n",
+    )
+    result = resolve_quest_from_path(tmp_path, "maintain_home.md", valid_quests={"Health"})
+    assert result.quests == ["Health"]
+    assert result.source == "area_note"
+
+
+def test_resolve_area_note_wins_over_sibling(tmp_path: Path):
+    """Same-named Area note wins even when sibling consensus differs."""
+    _write(
+        tmp_path / "areas/Health.md",
+        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n",
+    )
+    # Sibling notes in projects/ all support Create
+    _write(
+        tmp_path / "projects/A.md",
+        "---\ntype: project\nsupports:\n- '[[Create]]'\n---\n# A\n",
+    )
+    _write(
+        tmp_path / "projects/B.md",
+        "---\ntype: project\nsupports:\n- '[[Create]]'\n---\n# B\n",
+    )
+    result = resolve_quest_from_path(
+        tmp_path, "projects/Health.md", valid_quests={"Health", "Create"}
+    )
+    assert result.quests == ["Health"]
+    assert result.source == "area_note"
+
+
+def test_resolve_sibling_consensus_hit(tmp_path: Path):
+    """When no matching Area note, sibling consensus resolves the Quest."""
+    _write(
+        tmp_path / "projects/A.md",
+        "---\ntype: project\nsupports:\n- '[[Create]]'\n---\n# A\n",
+    )
+    _write(
+        tmp_path / "projects/B.md",
+        "---\ntype: project\nsupports:\n- '[[Create]]'\n---\n# B\n",
+    )
+    _write(
+        tmp_path / "projects/C.md",
+        "---\ntype: project\nsupports:\n- '[[Health]]'\n---\n# C\n",
+    )
+    result = resolve_quest_from_path(
+        tmp_path, "projects/NewNote.md", valid_quests={"Create", "Health"}
+    )
+    assert result.quests == ["Create"]
+    assert result.source == "sibling_consensus"
+
+
+def test_resolve_sibling_consensus_no_majority(tmp_path: Path):
+    """No clear majority among siblings results in a miss."""
+    _write(
+        tmp_path / "projects/A.md",
+        "---\ntype: project\nsupports:\n- '[[Create]]'\n---\n# A\n",
+    )
+    _write(
+        tmp_path / "projects/B.md",
+        "---\ntype: project\nsupports:\n- '[[Health]]'\n---\n# B\n",
+    )
+    result = resolve_quest_from_path(
+        tmp_path, "projects/NewNote.md", valid_quests={"Create", "Health"}
+    )
+    assert result.quests == []
+    assert result.source == "miss"
+
+
+def test_resolve_miss_no_matching_area(tmp_path: Path):
+    """No matching Area note and no siblings yields a miss."""
+    _write(
+        tmp_path / "areas/Health.md",
+        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n",
+    )
+    result = resolve_quest_from_path(tmp_path, "projects/Unrelated.md", valid_quests={"Health"})
+    assert result.quests == []
+    assert result.source == "miss"
+
+
+def test_resolve_filters_to_valid_quests(tmp_path: Path):
+    """Area note supports: values not in valid_quests are filtered out."""
+    _write(
+        tmp_path / "areas/Foo.md",
+        "---\ntype: area\nquest: side\nsupports:\n- '[[Bogus]]'\n---\n",
+    )
+    result = resolve_quest_from_path(tmp_path, "Foo.md", valid_quests={"Health"})
+    # Bogus is not valid, so it's a miss
+    assert result.quests == []
+    assert result.source == "miss"
+
+
+def test_resolve_bare_basename(tmp_path: Path):
+    """A bare basename (no directory) still matches an Area note."""
+    _write(
+        tmp_path / "areas/Create.md",
+        "---\ntype: area\nquest: main\nsupports:\n- '[[Create]]'\n---\n",
+    )
+    result = resolve_quest_from_path(tmp_path, "Create.md", valid_quests={"Create"})
+    assert result.quests == ["Create"]
+    assert result.source == "area_note"
