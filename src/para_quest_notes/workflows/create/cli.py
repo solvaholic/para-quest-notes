@@ -77,6 +77,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Source URL for a Resource note (stored in frontmatter and surfaced in the body).",
     )
     p.add_argument(
+        "--template",
+        default=None,
+        help=(
+            "Body template name or vault-relative path. Looked up in "
+            "<vault>/resources/templates/ (or the configured template_dir). "
+            "Variables: $title, $type, $quest, $supports, $source_url, $created."
+        ),
+    )
+    p.add_argument(
         "--body-stdin",
         dest="body_stdin",
         action="store_true",
@@ -133,6 +142,7 @@ def _resolve_inputs(args: argparse.Namespace) -> tuple[CreateInputs, Path | None
         sub_path=sub_path,
         source_url=args.source_url,
         body=None,  # filled by main() from stdin when --body-stdin is set
+        template=args.template,
     )
     return inputs, vault_hint
 

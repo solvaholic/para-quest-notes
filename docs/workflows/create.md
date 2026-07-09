@@ -92,7 +92,36 @@ echo "# Meeting Notes\n\nDecided to use React." | \
 # Pipe from a file.
 cat draft.md | pqn-create --vault ~/notes \
   --type project --title "Research Summary" --body-stdin --apply
+
+# Use a named body template (from <vault>/resources/templates/).
+pqn-create --vault ~/notes --type project --title "Weekly Review" \
+  --supports "[[Work]]" --template weekly-review --apply
 ```
+
+### Body templates
+
+`pqn-create` supports user-defined body templates stored in the vault at
+`<vault>/resources/templates/<name>.md` (configurable). Templates use
+`$variable` syntax for substitution. Available variables: `$title`,
+`$type`, `$quest`, `$supports`, `$source_url`, `$created`.
+
+**Priority:** stdin (`--body-stdin`) > explicit `--template` > config
+default > built-in skeleton.
+
+**Config defaults** (in `config.yaml`):
+
+```yaml
+workflows:
+  create:
+    template_dir: resources/templates  # vault-relative, this is the default
+    defaults:
+      project: weekly-review   # auto-applies when --type project
+      resource: reference      # auto-applies when --type resource
+```
+
+When a config default is set for a type, that template is used
+automatically (no `--template` flag needed). An explicit `--template`
+overrides the config default.
 
 ### Positional path inference
 
