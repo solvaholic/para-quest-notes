@@ -195,16 +195,19 @@ def resolve_quest_from_path(
 
     Checks, in order:
 
-    1. **Same-named Area note** - if ``areas/<match_key>.md`` exists and
-       declares ``supports:``, those Quests win outright.
-    2. **Sibling consensus** - other notes already in the destination
+    1. **Same-named Area note (filename)** - if ``areas/<stem>.md``
+       exists (where stem is the filename stem, snake_case normalized)
+       and declares ``supports:``, those Quests win outright.
+    2. **Same-named Area note (path segments)** - walk up the path's
+       intermediate directories (most-specific first), checking each
+       against area notes. First match wins.
+    3. **Sibling consensus** - other notes already in the destination
        folder that declare a Quest. Used only when no same-named Area
        note exists.
 
     ``dest_path`` is a vault-relative posix path like
     ``projects/sub/filename.md`` or just a bare basename like
-    ``my note.md``. The match key for step 1 is derived from the
-    filename stem (snake_case normalized).
+    ``my note.md``.
 
     ``valid_quests`` is the set of known Quest names in the vault. When
     provided, sibling consensus only counts Quests in this set.
@@ -213,25 +216,38 @@ def resolve_quest_from_path(
     source of the inference. On miss, ``quests`` is empty and ``source``
     is ``"miss"``.
     """
-    # Extract the filename stem as the match key
     from pathlib import PurePosixPath
 
     parts = PurePosixPath(dest_path)
     stem = parts.stem  # e.g. "my note" from "projects/my note.md"
 
-    # Step 1: Same-named Area note
+    # Step 1: Same-named Area note (filename stem)
     area_note = _find_area_note(vault, stem)
     if area_note is not None:
         quests = _read_quest_from_note(area_note)
         if quests:
-            # Filter to valid quests if provided
             if valid_quests is not None:
                 quests = [q for q in quests if q in valid_quests]
             if quests:
                 return ResolvedQuest(quests=quests, source="area_note")
 
-    # Step 2: Sibling consensus
-    # The destination directory is everything before the filename
+    # Step 2: Same-named Area note (path segments, most-specific first)
+    # For "projects/health/running/Note.md", try "running" then "health"
+    # Skip the PARA top-dir (first segment like "projects")
+    all_parts = list(parts.parts)
+    # Remove filename (last) and PARA dir (first, if present)
+    dir_segments = all_parts[1:-1] if len(all_parts) > 2 else []
+    for segment in reversed(dir_segments):
+        area_note = _find_area_note(vault, segment)
+        if area_note is not None:
+            quests = _read_quest_from_note(area_note)
+            if quests:
+                if valid_quests is not None:
+                    quests = [q for q in quests if q in valid_quests]
+                if quests:
+                    return ResolvedQuest(quests=quests, source="area_note")
+
+    # Step 3: Sibling consensus
     dest_dir = str(parts.parent) if str(parts.parent) != "." else ""
     if dest_dir and valid_quests:
         consensus = _sibling_consensus(vault, dest_dir, valid_quests)

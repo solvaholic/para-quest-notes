@@ -20,6 +20,7 @@ from para_quest_notes.workflows.create.contract import (
 from para_quest_notes.workflows.create.steps.check_collision import CheckCollision
 from para_quest_notes.workflows.create.steps.compose_note import ComposeNote
 from para_quest_notes.workflows.create.steps.compute_destination import ComputeDestination
+from para_quest_notes.workflows.create.steps.resolve_quest import ResolveQuest
 from para_quest_notes.workflows.create.steps.validate_after import ValidateAfter
 from para_quest_notes.workflows.create.steps.validate_inputs import ValidateInputs
 from para_quest_notes.workflows.create.steps.write_note import WriteNote
@@ -30,6 +31,7 @@ def build_workflow(inputs: CreateInputs, *, apply: bool, today: str | None = Non
         name="create",
         steps=[
             ValidateInputs(inputs),
+            ResolveQuest(),
             ComputeDestination(),
             CheckCollision(),
             ComposeNote(today=today),
@@ -64,6 +66,13 @@ def _to_create_result(wf: WorkflowResult, *, vault: Path, apply: bool) -> Create
     for step in wf.steps:
         if step.name == "validate_inputs" and isinstance(step.output, dict):
             plan.notes.extend(str(note) for note in step.output.get("notes") or [])
+        elif step.name == "resolve_quest" and isinstance(step.output, dict):
+            if step.output.get("resolved"):
+                # Quest was resolved - replace the inbox note with a resolution note
+                plan.notes = [n for n in plan.notes if "filed to inbox" not in n]
+                source = step.output.get("source", "")
+                quests = step.output.get("quests", [])
+                plan.notes.append(f"quest resolved via {source}: {', '.join(quests)}")
         elif step.name == "compute_destination" and isinstance(step.output, dict):
             plan.filename = step.output.get("filename")
             plan.destination = step.output.get("destination")

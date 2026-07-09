@@ -6,7 +6,7 @@ No moves, no rewrites - just one new file.
 
 ## What it does
 
-Six steps, all pure (`--apply` only gates the actual disk write):
+Seven steps, all pure (`--apply` only gates the actual disk write):
 
 1. **`validate_inputs`** - checks `--type`, `--quest`, `--title`
    (Title Case, allowed character set, no camelCase/PascalCase),
@@ -16,22 +16,28 @@ Six steps, all pure (`--apply` only gates the actual disk write):
    quest area supports itself). For other project/area notes without
    `--supports`, it records an inbox-fallback note in the plan instead
    of escalating.
-2. **`compute_destination`** - chooses either the canonical PARA path
+2. **`resolve_quest`** - when `--supports` is omitted for a
+   project/area, tries to resolve the Quest deterministically from the
+   destination path (same-named Area note from the filename stem or
+   sub-path segments, then sibling consensus). On a hit, fills in
+   `supports` and routes to the canonical destination instead of inbox.
+   On a miss, leaves inputs unchanged (inbox fallback). No LLM.
+3. **`compute_destination`** - chooses either the canonical PARA path
    (`<vault>/<type>s/[sub_path/]<Title>.md`) or `inbox/<Title>.md` when
    a project or area note has no `--supports`.
-3. **`check_collision`** - refuses to overwrite the planned path, then
+4. **`check_collision`** - refuses to overwrite the planned path, then
    delegates to `validate.api.check_basename_available` so a duplicate
    basename anywhere in the vault is also caught. Wikilinks resolve by
    basename.
-4. **`compose_note`** - emits canonical frontmatter via
+5. **`compose_note`** - emits canonical frontmatter via
    `vault.frontmatter.dump_frontmatter` (single source of truth) plus a
    type-appropriate body skeleton. Empty `supports` is dropped from
    frontmatter.
-5. **`write_note`** - `--apply` only. Creates the parent directory if
+6. **`write_note`** - `--apply` only. Creates the parent directory if
    needed and writes atomically (sibling temp + `os.replace`). A
    defensive re-check guards the TOCTOU window between collision check
    and write.
-6. **`validate_after`** - `--apply` only. Runs `validate.api.validate_paths`
+7. **`validate_after`** - `--apply` only. Runs `validate.api.validate_paths`
    scoped to the new file. Whole-vault validation stays the user's call
    (run `pqn-validate` for that).
 
@@ -194,10 +200,12 @@ contains the structured payload:
 
 ## Known limitations (v0.1)
 
-* **No quest-resolution help.** If you do not know which Quest a note
-  supports, `pqn-create` will not guess for you. The inbox fallback is
-  the supported path until a real second consumer justifies a shared
-  prompt.
+* **Deterministic-only Quest resolution.** When `--supports` is omitted,
+  `pqn-create` resolves the Quest deterministically from the destination
+  path (area note match from sub-path or filename). There is no LLM
+  fallback yet - if the deterministic branch misses, the note goes to
+  `inbox/`. An LLM branch (using `pick_quest`'s prompt) is planned once
+  stdin body support (#46) provides the signal it needs.
 * **Inbox fallback ignores `--sub-path`.** An unknown-Quest note is filed
   directly under `inbox/` so `pqn-ingest` sees it.
 * **No Daily-note or Capability-index authoring.** Both are out of
