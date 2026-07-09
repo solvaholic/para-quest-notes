@@ -78,8 +78,8 @@ See `docs/PLAN.md` for the full breakdown.
     `validate.api.check_basename_available`) + frontmatter locked
     as canonical metadata location (backmatter tolerated on read,
     migrated on touch).
-  - [x] Slice 2: `pqn-create` (shipped no-LLM; LLM `resolve_quest`
-    and shared `pick_quest.txt` extraction deferred — see
+  - [x] Slice 2: `pqn-create` (shipped; deterministic Quest
+    resolution landed post-v0.3; LLM fallback deferred — see
     [`docs/PLAN.md`](docs/PLAN.md))
   - [x] Slice 3: `pqn-archive` (shipped Projects-only, no-LLM;
     LLM Outcome generation deferred — see [`docs/PLAN.md`](docs/PLAN.md))

@@ -273,9 +273,11 @@ extraction and for confirming the per-slice branch flow.
   `canonical_frontmatter()` and `dump_frontmatter()`; `pqn-ingest`'s
   `apply_move` step routes its frontmatter merge through the same
   helpers, so writers stay in lockstep.
-- **Deferred to a later slice (no consumer yet):**
-  - LLM `resolve_quest` step for `pqn-create` — defer until a real
-    user hits the "I don't know which Quest" case.
+- **Deferred (status updated post-v0.3):**
+  - Deterministic `resolve_quest` step landed (path-based inference
+    from sub-path/filename). LLM fallback when deterministic
+    resolution misses — defer until stdin body signal makes it
+    useful.
   - Moving `pick_quest.txt` to a shared prompts location — defer
     until a second workflow needs it (shared infra without a second
     consumer is speculation).

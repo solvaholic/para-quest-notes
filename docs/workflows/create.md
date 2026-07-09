@@ -223,7 +223,7 @@ contains the structured payload:
 }
 ```
 
-## Known limitations (v0.1)
+## Known limitations
 
 * **Deterministic-only Quest resolution.** When `--supports` is omitted,
   `pqn-create` resolves the Quest deterministically from the destination

@@ -129,8 +129,8 @@ uv run pqn-create --vault /tmp/demo-vault \
 
 Files a new Project at `projects/Tidy The Garage.md` with
 frontmatter pre-populated. Drop `--apply` for dry-run. Omit
-`--supports` on a Project or Area to file it into `inbox/`
-instead. Full options:
+`--supports` and `pqn-create` tries to infer the Quest from the
+destination path; on miss it files to `inbox/`. Full options:
 [`docs/workflows/create.md`](docs/workflows/create.md).
 
 ### 4. `pqn-daily` — file a daily note into `resources/daily_notes/` (no LLM)
