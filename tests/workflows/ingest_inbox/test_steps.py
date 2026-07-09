@@ -294,15 +294,16 @@ def test_pick_quest_no_vault_quests_escalates(tmp_path: Path):
 
 
 def test_pick_quest_deterministic_area_note_hit(tmp_path: Path):
-    """When the inbox basename matches an area note, skip the LLM."""
+    """When the inbox subdirectory matches an area note, skip the LLM."""
     vault = _make_vault(tmp_path)
     # Create an area note named "Health" with quest declaration
     (vault / "areas/Health.md").write_text(
         "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
-    # Inbox note named "Health.md" - its stem matches the area note
-    src = vault / "inbox/Health.md"
-    src.write_text("# Health\nSome new health note\n")
+    # Inbox note in a "health" subdirectory - dir name matches the area note
+    (vault / "inbox/health").mkdir()
+    src = vault / "inbox/health/A Project.md"
+    src.write_text("# A Project\nSome new health project\n")
     # No LLM needed - deterministic path should fire
     ctx = _ctx(vault)
     ScanNote(source=src).run(ctx)
@@ -312,16 +313,17 @@ def test_pick_quest_deterministic_area_note_hit(tmp_path: Path):
     assert out.output["quests"] == ["Health"]
     assert "deterministic" in out.output["reason"]
     assert out.meta["source"] == "area_note"
+    assert out.meta["match_key"] == "health"
     assert ctx.scratchpad["quests"] == ["Health"]
 
 
 def test_pick_quest_deterministic_miss_falls_through_to_llm(tmp_path: Path):
-    """When no area note matches, fall through to the LLM."""
+    """When no subdirectory matches an area note, fall through to the LLM."""
     vault = _make_vault(tmp_path)
     (vault / "areas/Health.md").write_text(
         "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
-    # Inbox note "Random.md" - doesn't match any area note
+    # Inbox note directly in inbox/ (no subdirectory signal)
     src = vault / "inbox/Random.md"
     src.write_text("# Random\nSomething unrelated\n")
     llm = FakeLLM()
@@ -336,18 +338,39 @@ def test_pick_quest_deterministic_miss_falls_through_to_llm(tmp_path: Path):
     assert "deterministic" not in out.output["reason"]
 
 
-def test_pick_quest_deterministic_inbound_name_normalized(tmp_path: Path):
-    """Inbound basenames are snake_case normalized before matching."""
+def test_pick_quest_deterministic_walk_up_dirs(tmp_path: Path):
+    """Walk up parent dirs: most specific match wins."""
+    vault = _make_vault(tmp_path)
+    (vault / "areas/Health.md").write_text(
+        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n"
+    )
+    # Deep nesting: inbox/health/running/5ks/Note.md
+    (vault / "inbox/health/running/5ks").mkdir(parents=True)
+    src = vault / "inbox/health/running/5ks/Run Log.md"
+    src.write_text("# Run Log\nToday's run\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    ctx.scratchpad["vault_quests"] = _quests()
+    out = PickQuest(prompt=_quest_prompt()).run(ctx)
+    # "5ks" and "running" don't match area notes, but "health" does
+    assert out.output["quests"] == ["Health"]
+    assert out.meta["match_key"] == "health"
+
+
+def test_pick_quest_deterministic_normalized_dir_name(tmp_path: Path):
+    """Subdirectory names are snake_case normalized before matching."""
     vault = _make_vault(tmp_path)
     (vault / "areas/Maintain Home.md").write_text(
         "---\ntype: area\nquest: side\nsupports:\n- '[[Health]]'\n---\n"
     )
-    # Inbox note with underscores instead of spaces
-    src = vault / "inbox/maintain_home.md"
-    src.write_text("# Maintain Home\nStuff\n")
+    # Dir name with underscores matches "Maintain Home" area note
+    (vault / "inbox/maintain_home").mkdir()
+    src = vault / "inbox/maintain_home/Fix Faucet.md"
+    src.write_text("# Fix Faucet\nLeaky kitchen faucet\n")
     ctx = _ctx(vault)
     ScanNote(source=src).run(ctx)
-    ctx.scratchpad["para_type"] = "area"
+    ctx.scratchpad["para_type"] = "project"
     ctx.scratchpad["vault_quests"] = _quests()
     out = PickQuest(prompt=_quest_prompt()).run(ctx)
     assert out.output["quests"] == ["Health"]

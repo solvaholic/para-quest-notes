@@ -28,14 +28,35 @@ from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
 BODY_PREVIEW_CHARS = 2000
 
 
-def _ingest_match_key(scan: ScanResult) -> str:
-    """Derive a match key from the inbound inbox basename.
+def _ingest_match_keys(scan: ScanResult) -> list[str]:
+    """Derive match keys from the inbound inbox path.
 
-    For pqn-ingest, the source filename is the best signal available at
-    pick_quest time (the cleaned filename isn't decided yet). Light
-    normalization (stem extraction) is enough - a miss just falls through.
+    For pqn-ingest, the subdirectory structure under inbox/ is the
+    signal. Walk up from the file's immediate parent toward inbox/,
+    yielding each directory name as a match key. Most-specific-first:
+    if the user filed a note at inbox/health/running/Note.md, we try
+    "running" first, then "health".
+
+    Falls back to empty if the file is directly in inbox/ (no
+    subdirectory signal available).
     """
-    return scan.source.stem
+    # Get path parts relative to inbox
+    # source is like Path("inbox/health/running/Note.md") or absolute
+    source_parts = scan.source.parts
+
+    # Find "inbox" in the parts to get the relative subdirectory chain
+    try:
+        inbox_idx = list(p.lower() for p in source_parts).index("inbox")
+    except ValueError:
+        return []
+
+    # Parts between inbox/ and the filename are the directory chain
+    # e.g. ("inbox", "health", "running", "Note.md") → ["health", "running"]
+    dir_parts = list(source_parts[inbox_idx + 1 : -1])
+
+    # Walk from most-specific (immediate parent) to broadest
+    dir_parts.reverse()
+    return dir_parts
 
 
 class PickQuest:
@@ -70,25 +91,29 @@ class PickQuest:
         valid_names = {q.name for q in quests}
 
         # Deterministic fast path (#47): try to resolve Quest from the
-        # destination path without calling the LLM.
+        # inbox subdirectory structure without calling the LLM. Walk up
+        # from the file's parent directories, checking each against area
+        # notes. First match wins.
         if ctx.vault is not None:
-            match_key = _ingest_match_key(scan)
-            resolved = resolve_quest_from_path(ctx.vault, match_key, valid_quests=valid_names)
-            if resolved.quests:
-                ctx.scratchpad["quests"] = resolved.quests
-                return StepResult(
-                    name=self.name,
-                    output={
-                        "quests": resolved.quests,
-                        "confidence": 1.0,
-                        "reason": f"deterministic: {resolved.source}",
-                    },
-                    meta={
-                        "quests": resolved.quests,
-                        "confidence": 1.0,
-                        "source": resolved.source,
-                    },
-                )
+            match_keys = _ingest_match_keys(scan)
+            for key in match_keys:
+                resolved = resolve_quest_from_path(ctx.vault, key, valid_quests=valid_names)
+                if resolved.quests:
+                    ctx.scratchpad["quests"] = resolved.quests
+                    return StepResult(
+                        name=self.name,
+                        output={
+                            "quests": resolved.quests,
+                            "confidence": 1.0,
+                            "reason": f"deterministic: {resolved.source} (dir={key})",
+                        },
+                        meta={
+                            "quests": resolved.quests,
+                            "confidence": 1.0,
+                            "source": resolved.source,
+                            "match_key": key,
+                        },
+                    )
 
         # LLM fallback: existing behavior.
         catalog = "\n".join(f"- {q.name}" for q in quests)

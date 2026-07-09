@@ -141,15 +141,17 @@ caller; `context` carries free-form state useful for triage.
   [`docs/notes-system.md`](../notes-system.md), `supports:` is
   optional on resources.
 - **Deterministic Quest inference.** Before calling the LLM,
-  `pick_quest` tries a no-LLM resolution from the inbox basename:
-  (1) if a same-named Area note (`areas/<stem>.md`, snake_case
-  normalized) declares `supports:`, those Quests win outright;
-  (2) if no Area note matches, sibling notes already in the
-  destination directory are checked for a majority consensus. On a
+  `pick_quest` tries a no-LLM resolution from the inbox subdirectory
+  structure. If the inbox note lives under a subdirectory (e.g.
+  `inbox/health/A Project.md`), the step walks up from the file's
+  immediate parent toward `inbox/`, checking each directory name
+  (snake_case normalized) against area notes. First match wins. On a
   hit, the JSON output includes `"reason": "deterministic:
-  area_note"` or `"deterministic: sibling_consensus"` and
-  `confidence` is `1.0`. A miss falls through to the LLM with no
-  behavior change.
+  area_note (dir=health)"` and `confidence` is `1.0`. A miss (or a
+  flat `inbox/` file with no subdirectory) falls through to the LLM
+  with no behavior change. Deep nesting works:
+  `inbox/health/running/5ks/Run Log.md` tries `5ks`, then `running`,
+  then `health` - the first directory that matches an area note wins.
 - **Heuristic pre-classification.** Before calling the LLM,
   `classify_para` runs a fast heuristic that short-circuits for notes
   whose body strongly signals a PARA type (e.g. a note that is almost
