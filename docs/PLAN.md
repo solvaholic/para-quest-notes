@@ -483,6 +483,15 @@ let them creep into the v1 release.
     directly and also matched by a glob, or nested under a directory
     arg)? Pick once the feature gets scheduled, not before.
 
+- **Whole-note templates (#75).** Extend `pqn-create` templates from
+  body-only to whole-note: templates can include frontmatter that
+  merges under the generated values (generated wins on conflict,
+  template provides supplemental keys like `status: draft`). The
+  current body-only design (#42) is friendly to this evolution -
+  `split_note()` + `canonical_frontmatter()` merge handles it. Also:
+  exclude `resources/templates/` from `pqn-validate` since templates
+  aren't PARA notes.
+
 - **Task roundup in daily note.** A step on top of `pqn-daily` that
   scans the active vault (`areas/`, `projects/`) for tasks with
   scheduled/due metadata and writes a roundup section into today's
