@@ -43,6 +43,14 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 VAULT="$WORK_DIR/vault"
 cp -r "$SAMPLE_VAULT" "$VAULT"
 
+# Create resources/templates and a custom smoke test template
+mkdir -p "$VAULT/resources/templates"
+cat > "$VAULT/resources/templates/smoke-template.md" << 'EOF'
+# $title
+
+Custom smoke template content.
+EOF
+
 pass=0
 fail=0
 
@@ -89,6 +97,75 @@ if $APPLY; then
       --quest main --supports "[[Health]]"
   check "created file exists" \
     test -f "$VAULT/projects/Smoke Test Project.md"
+fi
+
+echo ""
+echo "=== pqn-create: template feature ==="
+check "create --template dry-run" \
+  uv run pqn-create --vault "$VAULT" --format json \
+    --type project --title "Project from Template" \
+    --quest main --supports "[[Health]]" \
+    --template "smoke-template"
+
+if $APPLY; then
+  check "create --template --apply" \
+    uv run pqn-create --vault "$VAULT" --format json --apply \
+      --type project --title "Project from Template" \
+      --quest main --supports "[[Health]]" \
+      --template "smoke-template"
+  check "created file from template exists" \
+    test -f "$VAULT/projects/Project from Template.md"
+  check "created file contains template content" \
+    grep -q "Custom smoke template content." "$VAULT/projects/Project from Template.md"
+fi
+
+echo ""
+echo "=== pqn-create: body-stdin feature ==="
+create_from_stdin() {
+  echo "Custom body from stdin." | uv run pqn-create --vault "$VAULT" --format json --type project --title "Project from Stdin" --quest main --supports "[[Health]]" --body-stdin "$@"
+}
+check "create --body-stdin dry-run" create_from_stdin
+
+if $APPLY; then
+  check "create --body-stdin --apply" create_from_stdin --apply
+  check "created file from stdin exists" \
+    test -f "$VAULT/projects/Project from Stdin.md"
+  check "created file contains stdin content" \
+    grep -q "Custom body from stdin." "$VAULT/projects/Project from Stdin.md"
+fi
+
+echo ""
+echo "=== pqn-create: positional path inference ==="
+check "create positional path dry-run (full inference)" \
+  uv run pqn-create --vault "$VAULT" --format json \
+    --supports "[[Health]]" "projects/Brew Setup.md"
+
+check "create positional path dry-run (partial inference)" \
+  uv run pqn-create --vault "$VAULT" --format json \
+    --type project --supports "[[Health]]" "Another Brew Setup"
+
+check "create positional path dry-run (vault inference)" \
+  uv run pqn-create --format json \
+    --supports "[[Health]]" "$VAULT/projects/Inferred Vault Project.md"
+
+if $APPLY; then
+  check "create positional path (full inference) --apply" \
+    uv run pqn-create --vault "$VAULT" --format json --apply \
+      --supports "[[Health]]" "projects/Brew Setup.md"
+  check "created file from full inference exists" \
+    test -f "$VAULT/projects/Brew Setup.md"
+
+  check "create positional path (partial inference) --apply" \
+    uv run pqn-create --vault "$VAULT" --format json --apply \
+      --type project --supports "[[Health]]" "Another Brew Setup"
+  check "created file from partial inference exists" \
+    test -f "$VAULT/projects/Another Brew Setup.md"
+
+  check "create positional path (vault inference) --apply" \
+    uv run pqn-create --format json --apply \
+      --supports "[[Health]]" "$VAULT/projects/Inferred Vault Project.md"
+  check "created file from vault inference exists" \
+    test -f "$VAULT/projects/Inferred Vault Project.md"
 fi
 
 echo ""
