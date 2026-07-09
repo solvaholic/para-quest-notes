@@ -123,6 +123,7 @@ class ValidateInputs:
             supports=supports or None,
             sub_path=i.sub_path,
             source_url=i.source_url,
+            body=i.body,
         )
         ctx.scratchpad["title"] = title
         ctx.scratchpad["inputs"] = normalized_inputs

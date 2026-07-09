@@ -83,6 +83,15 @@ pqn-create --vault ~/notes --format json \
 # Create a new main quest (--supports inferred as "[[Coffee]]").
 pqn-create --vault ~/notes \
   --type area --quest main --title "Coffee" --apply
+
+# Pipe body content from stdin (replaces the default skeleton).
+echo "# Meeting Notes\n\nDecided to use React." | \
+  pqn-create --vault ~/notes --type project --title "Frontend Rewrite" \
+  --supports "[[Work]]" --body-stdin --apply
+
+# Pipe from a file.
+cat draft.md | pqn-create --vault ~/notes \
+  --type project --title "Research Summary" --body-stdin --apply
 ```
 
 ### Positional path inference

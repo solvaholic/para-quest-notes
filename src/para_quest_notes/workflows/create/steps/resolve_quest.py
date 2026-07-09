@@ -75,6 +75,7 @@ class ResolveQuest:
             supports=supports,
             sub_path=inputs.sub_path,
             source_url=inputs.source_url,
+            body=inputs.body,
         )
         ctx.scratchpad["inputs"] = updated_inputs
 

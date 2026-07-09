@@ -77,6 +77,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Source URL for a Resource note (stored in frontmatter and surfaced in the body).",
     )
     p.add_argument(
+        "--body-stdin",
+        dest="body_stdin",
+        action="store_true",
+        help="Read note body content from stdin. Replaces the default skeleton.",
+    )
+    p.add_argument(
         "--apply",
         action="store_true",
         help="Write the file. Without this flag, runs as a dry-run.",
@@ -126,11 +132,12 @@ def _resolve_inputs(args: argparse.Namespace) -> tuple[CreateInputs, Path | None
         supports=list(args.supports) if args.supports else None,
         sub_path=sub_path,
         source_url=args.source_url,
+        body=None,  # filled by main() from stdin when --body-stdin is set
     )
     return inputs, vault_hint
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None, *, stdin: str | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     config = load_config(args.config)
@@ -140,6 +147,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     except PathInferenceError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+
+    # Read body from stdin when --body-stdin is set (or auto-detect piped input)
+    if args.body_stdin or stdin is not None:
+        body = stdin if stdin is not None else sys.stdin.read()
+        if body.strip():
+            inputs = CreateInputs(
+                title=inputs.title,
+                type=inputs.type,
+                quest=inputs.quest,
+                supports=inputs.supports,
+                sub_path=inputs.sub_path,
+                source_url=inputs.source_url,
+                body=body,
+            )
 
     # Vault resolution: explicit --vault > path-inferred vault > normal discovery
     vault_arg = args.vault

@@ -100,7 +100,10 @@ class ComposeNote:
 
         fm = canonical_frontmatter(_frontmatter_for(inputs, today=today))
         fm_text = dump_frontmatter(fm)
-        body = _body_for(inputs, title)
+
+        # Use stdin body when provided; otherwise generate a skeleton.
+        body = inputs.body if inputs.body is not None else _body_for(inputs, title)
+
         content = fm_text + body
 
         ctx.scratchpad["content"] = content
