@@ -100,28 +100,15 @@ pqn-create --vault ~/notes --type project --title "Weekly Review" \
 
 ### Body templates
 
-`pqn-create` supports user-defined body templates stored in the vault at
-`<vault>/resources/templates/<name>.md` (configurable). Templates use
-`$variable` syntax for substitution. Available variables: `$title`,
-`$type`, `$quest`, `$supports`, `$source_url`, `$created`.
+`pqn-create` supports user-defined body templates stored in the vault.
+See [`docs/templates.md`](../templates.md) for the full reference
+(template location, variables, escaping, config defaults, fallback
+behavior).
 
-**Priority:** stdin (`--body-stdin`) > explicit `--template` > config
-default > built-in skeleton.
-
-**Config defaults** (in `config.yaml`):
-
-```yaml
-workflows:
-  create:
-    template_dir: resources/templates  # vault-relative, this is the default
-    defaults:
-      project: weekly-review   # auto-applies when --type project
-      resource: reference      # auto-applies when --type resource
-```
-
-When a config default is set for a type, that template is used
-automatically (no `--template` flag needed). An explicit `--template`
-overrides the config default.
+Quick version: `--template weekly-review` loads
+`<vault>/resources/templates/weekly-review.md` and substitutes
+`$title`, `$type`, `$created`, etc. Priority: stdin > template >
+config default > built-in skeleton.
 
 ### Positional path inference
 
