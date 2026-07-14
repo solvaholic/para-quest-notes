@@ -66,7 +66,7 @@ class ValidateInputs:
                 options=[],
                 context={"title": title},
             )
-        if _INTERIOR_CAPS.search(title):
+        if " " not in title and _INTERIOR_CAPS.search(title):
             raise EscalateToUser(
                 step=self.name,
                 reason="--title looks like camelCase or PascalCase; "

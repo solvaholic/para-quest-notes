@@ -9,7 +9,7 @@ No moves, no rewrites - just one new file.
 Seven steps, all pure (`--apply` only gates the actual disk write):
 
 1. **`validate_inputs`** - checks `--type`, `--quest`, `--title`
-   (Title Case, allowed character set, no camelCase/PascalCase),
+   (Title Case, allowed character set, no spaceless camelCase/PascalCase),
    `--supports` wikilink format, `--sub-path` shape, and resource
    constraints (`--quest none` for resources). When `--quest main` and
    no `--supports` is given, infers `--supports "[[<title>]]"` (a main
