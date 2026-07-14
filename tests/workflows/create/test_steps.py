@@ -43,6 +43,15 @@ def test_validate_inputs_rejects_camel_case():
     assert "Title Case" in exc.value.reason
 
 
+@pytest.mark.parametrize(
+    "title",
+    ["Probe LeCun AI Architecture", "McDonald Research", "iPhone Setup"],
+)
+def test_validate_inputs_allows_mixed_case_proper_nouns(title: str):
+    inputs = CreateInputs(title=title, type="project", supports=["[[Health]]"])
+    ValidateInputs(inputs).run(_ctx())
+
+
 def test_validate_inputs_rejects_bad_chars():
     inputs = CreateInputs(title="My/Plan", type="project", supports=["[[Health]]"])
     with pytest.raises(EscalateToUser):
