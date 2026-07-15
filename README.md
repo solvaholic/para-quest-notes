@@ -213,9 +213,9 @@ See [`docs/corpus.md`](docs/corpus.md) for the full shape taxonomy.
 Install the released CLIs straight from this repo's git tag:
 
 ```bash
-uv tool install git+https://github.com/solvaholic/para-quest-notes@v0.4.0
+uv tool install git+https://github.com/solvaholic/para-quest-notes@v0.4.1
 # or
-pipx install git+https://github.com/solvaholic/para-quest-notes@v0.4.0
+pipx install git+https://github.com/solvaholic/para-quest-notes@v0.4.1
 ```
 
 Either command installs all six `pqn-*` commands onto your `PATH`
