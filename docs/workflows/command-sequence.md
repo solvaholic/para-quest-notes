@@ -7,6 +7,7 @@ them for common scenarios.
 
 ```
 pqn-validate   (read-only, no deps - run anytime)
+pqn-config     (read-only, no deps - inspect effective config)
 pqn-create     (needs vault path; creates areas/, projects/, resources/)
 pqn-daily      (needs vault path; files existing date-shaped notes)
 pqn-ingest     (needs Ollama + Quest notes in areas/ to classify against)
@@ -26,6 +27,9 @@ Key relationships:
   moves existing ones to their canonical path.
 - **`pqn-validate` is a bookend** - run it before and after mutations
   to confirm vault health.
+- **`pqn-config` is read-only inspection** - reports the effective
+  config (and its provenance) a run will use. Run it anytime to answer
+  "which vault/model/templates will this pick, and why?"
 
 ## Design principles
 

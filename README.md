@@ -66,7 +66,7 @@ The workflows preserve that reasoning, locally.
 
 A small (~30-note) sample vault lives at
 [`samples/vault/`](samples/vault/). The walkthrough below exercises
-all five `pqn-*` CLIs against a throwaway copy of it, so you can see
+all six `pqn-*` CLIs against a throwaway copy of it, so you can see
 the whole toolchain on first read without risking real notes.
 
 You'll need [Ollama](https://ollama.com) running locally for the
@@ -172,6 +172,21 @@ uv run pqn-archive --vault /tmp/demo-vault "Tidy The Garage" \
 Empty or `INSUFFICIENT_CONTEXT` responses escalate and abort the
 write (no `## Outcome` is appended, no move happens). Full options:
 [`docs/workflows/archive.md`](docs/workflows/archive.md).
+
+### 6. `pqn-config` — inspect the effective config with provenance (no LLM)
+
+Read-only: reports the config a `pqn-*` run will actually use, and where
+each value came from (default / `config.yaml` / env / flag).
+
+```bash
+# Full effective config, or one section at a time
+uv run pqn-config --vault /tmp/demo-vault
+uv run pqn-config --vault /tmp/demo-vault --section models --format json | jq
+```
+
+It also surfaces drift: any per-workflow `workflows.<name>.model` override
+is reported with `honored: false`, because no workflow reads it yet. Full
+options: [`docs/workflows/config.md`](docs/workflows/config.md).
 
 ### What just happened
 

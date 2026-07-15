@@ -56,3 +56,18 @@ In order, the workflows resolve the vault path as:
    containing both `areas/` and `projects/`).
 4. `vault:` setting in `config.yaml`
 5. Error with a helpful message
+
+## Inspecting the effective config
+
+To see the config a `pqn-*` run will actually use - and where each value
+came from (default / `config.yaml` / env / flag), plus which
+vault-discovery rung won - run the read-only inspector:
+
+```bash
+pqn-config                    # full effective config
+pqn-config --section models   # just the models section
+pqn-config --format json      # for piping / agent wrappers
+```
+
+See [`docs/workflows/config.md`](workflows/config.md) for the full output
+shape and the JSON contract.

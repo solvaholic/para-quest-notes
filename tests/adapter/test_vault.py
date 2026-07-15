@@ -8,7 +8,7 @@ import pytest
 
 from para_quest_notes.adapter.config import Config
 from para_quest_notes.adapter.errors import VaultError
-from para_quest_notes.adapter.vault import VAULT_ENV_VAR, find_vault, is_vault
+from para_quest_notes.adapter.vault import VAULT_ENV_VAR, find_vault, is_vault, resolve_vault
 
 
 def make_vault(root: Path) -> Path:
@@ -63,3 +63,14 @@ def test_helpful_error_when_unresolvable(tmp_path: Path) -> None:
     msg = str(exc.value)
     assert "--vault" in msg
     assert VAULT_ENV_VAR in msg
+
+
+def test_resolve_vault_reports_winning_rung(tmp_path: Path) -> None:
+    v = make_vault(tmp_path / "v")
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+
+    assert resolve_vault(v, env={}, start_dir=other) == (v.resolve(), "flag")
+    assert resolve_vault(env={VAULT_ENV_VAR: str(v)}, start_dir=other) == (v.resolve(), "env")
+    assert resolve_vault(env={}, start_dir=v / "areas") == (v.resolve(), "cwd")
+    assert resolve_vault(env={}, start_dir=other, config=Config(vault=v)) == (v.resolve(), "config")

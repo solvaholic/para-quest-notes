@@ -14,11 +14,16 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Literal
 
 from para_quest_notes.adapter.config import Config
 from para_quest_notes.adapter.errors import VaultError
 
 VAULT_ENV_VAR = "PARA_QUEST_VAULT"
+
+# Which rung of the discovery ladder produced the vault path. Kept in sync
+# with the resolution order in :func:`resolve_vault`.
+VaultSource = Literal["flag", "env", "cwd", "config"]
 
 # A directory looks like a PARA+Quest vault if it contains both `areas/`
 # and `projects/`. Cheap, conventional, and lets us detect a vault without
@@ -48,6 +53,24 @@ def find_vault(
     config: Config | None = None,
 ) -> Path:
     """Resolve the vault path. See module docstring for order."""
+    path, _ = resolve_vault(arg, env=env, start_dir=start_dir, config=config)
+    return path
+
+
+def resolve_vault(
+    arg: str | os.PathLike[str] | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+    start_dir: Path | None = None,
+    config: Config | None = None,
+) -> tuple[Path, VaultSource]:
+    """Resolve the vault path *and* report which rung won.
+
+    Same resolution order as the module docstring; the second element is
+    the winning :data:`VaultSource` (``"flag"``, ``"env"``, ``"cwd"``, or
+    ``"config"``). :func:`find_vault` delegates here so the rung reported
+    by ``pqn-config`` can never drift from the path the workflows use.
+    """
     env = env if env is not None else os.environ
 
     if arg:
@@ -56,7 +79,7 @@ def find_vault(
             raise VaultError(f"vault path does not exist: {p}")
         if not p.is_dir():
             raise VaultError(f"vault path is not a directory: {p}")
-        return p
+        return p, "flag"
 
     env_val = env.get(VAULT_ENV_VAR)
     if env_val:
@@ -65,17 +88,17 @@ def find_vault(
             raise VaultError(f"{VAULT_ENV_VAR} points to a nonexistent path: {p}")
         if not p.is_dir():
             raise VaultError(f"{VAULT_ENV_VAR} is not a directory: {p}")
-        return p
+        return p, "env"
 
     start = start_dir if start_dir is not None else Path.cwd()
     found = _walk_up_for_vault(start)
     if found is not None:
-        return found
+        return found, "cwd"
 
     if config is not None and config.vault is not None:
         p = config.vault.expanduser().resolve()
         if p.is_dir():
-            return p
+            return p, "config"
         raise VaultError(f"config.vault is set but not a directory: {p}")
 
     raise VaultError(
