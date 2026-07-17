@@ -8,6 +8,7 @@ them for common scenarios.
 ```
 pqn-validate   (read-only, no deps - run anytime)
 pqn-config     (read-only, no deps - inspect effective config)
+pqn-quests     (read-only, no deps - generate the Quest index)
 pqn-create     (needs vault path; creates areas/, projects/, resources/)
 pqn-daily      (needs vault path; files existing date-shaped notes)
 pqn-ingest     (needs Ollama + Quest notes in areas/ to classify against)
@@ -30,6 +31,11 @@ Key relationships:
 - **`pqn-config` is read-only inspection** - reports the effective
   config (and its provenance) a run will use. Run it anytime to answer
   "which vault/model/templates will this pick, and why?"
+- **`pqn-quests` is read-only reporting** - generates the Quest index
+  (Areas/Projects grouped by the Quests they support, Resources via
+  incoming links) to stdout. Redirect it into a note; it never owns or
+  overwrites one. Most useful once Quest notes and `supports:` tags
+  exist.
 
 ## Design principles
 

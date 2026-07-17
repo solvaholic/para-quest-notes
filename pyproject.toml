@@ -31,6 +31,7 @@ pqn-validate = "para_quest_notes.workflows.validate.cli:main"
 pqn-create = "para_quest_notes.workflows.create.cli:main"
 pqn-archive = "para_quest_notes.workflows.archive.cli:main"
 pqn-daily = "para_quest_notes.workflows.daily.cli:main"
+pqn-quests = "para_quest_notes.workflows.quests.cli:main"
 pqn-config = "para_quest_notes.workflows.config.cli:main"
 pqn-eval = "para_quest_notes.eval.__main__:main"
 
