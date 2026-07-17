@@ -38,11 +38,8 @@ from para_quest_notes.vault.frontmatter import (
     dump_frontmatter,
     merge,
 )
+from para_quest_notes.vault.tasks import TASKS_META_EMOJI
 
-# Obsidian Tasks emoji metadata that lives on a task line. Presence of
-# any of these means the line has scheduling/recurrence/due info we
-# shouldn't silently bulldoze.
-_TASKS_META_EMOJI = ("📅", "⏳", "🛫", "🔁", "✅", "❌")
 _BLOCK_ID = re.compile(r"\s+\^[A-Za-z0-9-]+\s*$")
 
 
@@ -150,7 +147,7 @@ def _rewrite_open_tasks(
         t = by_line[idx]
         text = str(t["text"])
         bullet = str(t["bullet"])
-        if any(em in text for em in _TASKS_META_EMOJI):
+        if any(em in text for em in TASKS_META_EMOJI):
             skipped.append(idx)
             out_lines.append(line)
             continue

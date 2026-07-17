@@ -62,6 +62,8 @@ The workflows preserve that reasoning, locally.
       v0.5.x). See [`docs/workflows/quests.md`](docs/workflows/quests.md).
       Lands the shared `vault/links.py` + `vault/scope.py` building
       blocks.
+- [x] `pqn-tasks` — read-only reporter for scheduled/due tasks
+      (v0.5; see [`docs/workflows/tasks.md`](docs/workflows/tasks.md))
 - [ ] Phase 7: grow eval fixtures toward ~30; revisit
       `generate_outcome` judge
 - [ ] Phase 8 (deferred): agent SKILL.md wrappers
@@ -70,8 +72,13 @@ The workflows preserve that reasoning, locally.
 
 A small (~30-note) sample vault lives at
 [`samples/vault/`](samples/vault/). The walkthrough below exercises
-all seven `pqn-*` workflow CLIs against a throwaway copy of it, so you
-can see the whole toolchain on first read without risking real notes.
+A small (~30-note) sample vault lives at
+[`samples/vault/`](samples/vault/). The walkthrough below exercises
+the seven core workflow `pqn-*` CLIs against a throwaway copy of it, so
+you can see the whole toolchain on first read without risking real
+notes. (The read-only `pqn-tasks` reporter isn't shown here — the
+sample vault carries no due-dated tasks — but see
+[`docs/workflows/tasks.md`](docs/workflows/tasks.md).)
 
 You'll need [Ollama](https://ollama.com) running locally for the
 LLM-using steps (`pqn-ingest`, the final `pqn-archive` step). The
@@ -233,7 +240,7 @@ Every CLI accepts `--format json`, shares a uniform exit-code
 contract, and writes a JSONL trace you can consume after the fact.
 See [`docs/headless.md`](docs/headless.md) for crontab examples,
 exit codes, and a "what not to cron" callout. For the intended
-command ordering and dependency map across all five CLIs, see
+command ordering and dependency map across the CLIs, see
 [`docs/workflows/command-sequence.md`](docs/workflows/command-sequence.md).
 
 ### Generating a fresh sample vault
@@ -255,8 +262,8 @@ uv tool install git+https://github.com/solvaholic/para-quest-notes@v0.4.1
 pipx install git+https://github.com/solvaholic/para-quest-notes@v0.4.1
 ```
 
-Either command installs all six `pqn-*` commands onto your `PATH`
-(the five workflow CLIs plus the `pqn-eval` harness).
+Either command installs all `pqn-*` commands onto your `PATH`
+(the eight workflow CLIs plus the `pqn-eval` harness).
 PyPI publishing is deferred to a later release; track the
 [releases page](https://github.com/solvaholic/para-quest-notes/releases)
 for new tags.

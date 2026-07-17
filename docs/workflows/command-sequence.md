@@ -9,6 +9,7 @@ them for common scenarios.
 pqn-validate   (read-only, no deps - run anytime)
 pqn-config     (read-only, no deps - inspect effective config)
 pqn-quests     (read-only, no deps - generate the Quest index)
+pqn-tasks      (read-only, no deps - report due/scheduled tasks)
 pqn-create     (needs vault path; creates areas/, projects/, resources/)
 pqn-daily      (needs vault path; files existing date-shaped notes)
 pqn-ingest     (needs Ollama + Quest notes in areas/ to classify against)
