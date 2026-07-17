@@ -58,6 +58,10 @@ The workflows preserve that reasoning, locally.
       [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md))
 - [x] Phase 6: polish + v0.1 release (see
       [`docs/RELEASING.md`](docs/RELEASING.md))
+- [x] `pqn-quests` — generated Quest index (read-only, no LLM;
+      v0.5.x). See [`docs/workflows/quests.md`](docs/workflows/quests.md).
+      Lands the shared `vault/links.py` + `vault/scope.py` building
+      blocks.
 - [ ] Phase 7: grow eval fixtures toward ~30; revisit
       `generate_outcome` judge
 - [ ] Phase 8 (deferred): agent SKILL.md wrappers
@@ -66,8 +70,8 @@ The workflows preserve that reasoning, locally.
 
 A small (~30-note) sample vault lives at
 [`samples/vault/`](samples/vault/). The walkthrough below exercises
-all six `pqn-*` CLIs against a throwaway copy of it, so you can see
-the whole toolchain on first read without risking real notes.
+all seven `pqn-*` workflow CLIs against a throwaway copy of it, so you
+can see the whole toolchain on first read without risking real notes.
 
 You'll need [Ollama](https://ollama.com) running locally for the
 LLM-using steps (`pqn-ingest`, the final `pqn-archive` step). The
@@ -187,6 +191,24 @@ uv run pqn-config --vault /tmp/demo-vault --section models --format json | jq
 It also surfaces drift: any per-workflow `workflows.<name>.model` override
 is reported with `honored: false`, because no workflow reads it yet. Full
 options: [`docs/workflows/config.md`](docs/workflows/config.md).
+
+### 7. `pqn-quests` — generate the Quest index (no LLM)
+
+Read-only: walks the vault, groups Areas/Projects by the Quest(s) they
+support (and Resources by incoming links), and prints the rollup. It
+never owns an index note — redirect the markdown wherever you want.
+
+```bash
+# Markdown index to stdout (redirect into a note)
+uv run pqn-quests --vault /tmp/demo-vault
+uv run pqn-quests --vault /tmp/demo-vault > /tmp/demo-vault/index.md
+
+# Flat JSON, or scoped to one Quest / PARA type
+uv run pqn-quests --vault /tmp/demo-vault --format json | jq
+uv run pqn-quests --vault /tmp/demo-vault --quest '[[Health]]'
+```
+
+Full options: [`docs/workflows/quests.md`](docs/workflows/quests.md).
 
 ### What just happened
 

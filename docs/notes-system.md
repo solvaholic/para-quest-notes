@@ -319,11 +319,16 @@ satisfied without per-task tagging.
 - Should one-off tasks (e.g., "call plumber") flow through the inbox
   and get assigned to an Area later, or should the workflow refuse to
   capture a task without a Quest link?
-- Do we want a lightweight "Main Quest index" note that lists all
-  Main and Side Quests in one place, or is the `areas/` directory
-  listing enough? (Leaning toward generated index.)
 - How do we deactivate an Area without archiving it? (Likely just
   `archive/areas/old-area.md` with a "why" note.)
 - Do Capabilities need their own top-level dir, or do they live in
   `areas/` with a flag? (Leaning toward `areas/` with
   `capability: true` in frontmatter.)
+
+## Settled questions
+
+- **Is there a dedicated "Main Quest index" note?** No. `pqn-quests`
+  generates the index to stdout; the user redirects the markdown into
+  whatever note they want (`pqn-quests > index.md`). The tool stays
+  stateless and never creates or overwrites an index note. See
+  [`docs/workflows/quests.md`](workflows/quests.md).

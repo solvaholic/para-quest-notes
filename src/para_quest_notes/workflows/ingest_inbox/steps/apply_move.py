@@ -26,6 +26,7 @@ from typing import Any
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.step import StepContext, StepResult
 from para_quest_notes.vault.frontmatter import ParsedNote, canonical_frontmatter, merge
+from para_quest_notes.vault.links import WIKILINK, iter_markdown, scan_backlinks
 from para_quest_notes.workflows.ingest_inbox.contract import AppliedChange
 from para_quest_notes.workflows.ingest_inbox.steps.scan_note import ScanResult
 
@@ -77,7 +78,7 @@ class ApplyMove:
                 for att in scan.attachments
             ]
             change.wikilinks_rewritten = (
-                [] if old_stem == new_stem else _scan_wikilinks(vault, old_stem, scan.source)
+                [] if old_stem == new_stem else scan_backlinks(vault, old_stem, exclude=scan.source)
             )
             return StepResult(
                 name=self.name,
@@ -163,45 +164,12 @@ def _rename_attachment(name: str, old_stem: str, new_stem: str) -> str:
     return name
 
 
-_WIKILINK = re.compile(r"\[\[([^\[\]|#]+?)(#[^\[\]|]+?)?(\|[^\[\]]+?)?\]\]")
-
-
-def _iter_md(vault: Path) -> list[Path]:
-    return [
-        p
-        for p in vault.rglob("*.md")
-        if not p.relative_to(vault).parts or p.relative_to(vault).parts[0] != "archive"
-    ]
-
-
-def _scan_wikilinks(vault: Path, old_stem: str, source: Path) -> list[dict[str, Any]]:
-    """Dry-run: report files that *would* be rewritten."""
-    hits: list[dict[str, Any]] = []
-    target = old_stem.strip().lower()
-    for md in _iter_md(vault):
-        if md.resolve() == source.resolve():
-            continue
-        try:
-            text = md.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        count = sum(1 for m in _WIKILINK.finditer(text) if m.group(1).strip().lower() == target)
-        if count:
-            hits.append(
-                {
-                    "file": str(md.relative_to(vault).as_posix()),
-                    "occurrences": count,
-                }
-            )
-    return hits
-
-
 def _rewrite_wikilinks(
     vault: Path, old_stem: str, new_stem: str, *, exclude: Path
 ) -> list[dict[str, Any]]:
     target = old_stem.strip().lower()
     hits: list[dict[str, Any]] = []
-    for md in _iter_md(vault):
+    for md in iter_markdown(vault):
         if md.resolve() == exclude.resolve():
             continue
         try:
@@ -221,7 +189,7 @@ def _rewrite_wikilinks(
             anchor = m.group(2) or ""
             return f"[[{new_stem}{anchor}{alias}]]"
 
-        new_text = _WIKILINK.sub(_sub, text)
+        new_text = WIKILINK.sub(_sub, text)
         if count:
             md.write_text(new_text, encoding="utf-8")
             hits.append(
