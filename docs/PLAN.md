@@ -494,20 +494,25 @@ let them creep into the v1 release.
   exclude `resources/templates/` from `pqn-validate` since templates
   aren't PARA notes.
 
-- **Task roundup in daily note.** A step on top of `pqn-daily` that
-  scans the active vault (`areas/`, `projects/`) for tasks with
-  scheduled/due metadata and writes a roundup section into today's
-  daily note (overdue, due today, scheduled this week). Idempotent
-  re-run (replace, don't append). Zero new dependencies; mirrors what
-  Obsidian Tasks-style queries provide without requiring the plugin.
-  - **Open design choice:** which task syntax to parse? Obsidian
-    Tasks emoji (`📅 2026-05-15`), Dataview inline fields
-    (`[due:: 2026-05-15]`), plain Markdown checkboxes, or all three.
-    One-way door — pick after `pqn-daily` ships its bare-bones
-    version so we have a feel for the data.
-  - Why not in v1: v0.1's pitch is "PARA+Quest hygiene, locally."
-    Task scheduling is adjacent, not core. Better as an additive
-    step on a stable `pqn-daily` than as a rushed inclusion.
+- **Task roundup in daily note.** The *reporting* half shipped as
+  the standalone `pqn-tasks` reporter (#83, v0.5; see
+  [`docs/workflows/tasks.md`](workflows/tasks.md)) — read-only,
+  scans the whole vault except `archive/` for open tasks carrying
+  Obsidian Tasks due dates and buckets them overdue / due today /
+  upcoming. What remains deferred is the `pqn-daily` *integration*: a
+  step that writes (and idempotently replaces) a roundup section into
+  today's daily note. `pqn-tasks` emits plain `-` bullets (not
+  `- [ ]`) precisely so a pasted roundup never re-parses as live
+  tasks.
+  - **Open design choice — resolved:** parse Obsidian Tasks emoji
+    (`📅 2026-05-15`) as the canonical syntax in v1. Dataview inline
+    fields (`[due:: 2026-05-15]`) and plain checkboxes are deferred to
+    a future contributor.
+  - Why the reporter came first: reporting and filing are separable,
+    and a reporter is useful to cron and agents on its own. Task
+    scheduling is adjacent to v0.1's "PARA+Quest hygiene, locally"
+    pitch, so it lands as an additive read-only tool rather than a
+    rushed inclusion.
 
 ## Key risks and mitigations
 
