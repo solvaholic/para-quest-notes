@@ -83,6 +83,14 @@ def test_quest_filter(tmp_path: Path):
     assert all(t.path.startswith("projects/") for t in report.tasks)
 
 
+def test_quest_filter_is_case_insensitive(tmp_path: Path):
+    # Parity with pqn-quests: --quest matches case-insensitively and
+    # tolerates a bare name (no wikilink).
+    report = scan_vault_tasks(_vault(tmp_path), today=TODAY, due_in=7, quest="maintain home")
+    assert report.tasks
+    assert all(t.path.startswith("projects/") for t in report.tasks)
+
+
 def test_scheduled_only_is_reported(tmp_path: Path):
     # A task with only a scheduled ("do") date must be reported — the
     # effective-date resolution falls through to it. No config needed.
