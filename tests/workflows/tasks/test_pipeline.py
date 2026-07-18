@@ -83,12 +83,67 @@ def test_quest_filter(tmp_path: Path):
     assert all(t.path.startswith("projects/") for t in report.tasks)
 
 
-def test_scheduled_parsed_but_not_required(tmp_path: Path):
+def test_scheduled_only_is_reported(tmp_path: Path):
+    # A task with only a scheduled ("do") date must be reported — the
+    # effective-date resolution falls through to it. No config needed.
     v = tmp_path / "v"
     _write(v / "projects" / "P.md", "# P\n- [ ] only scheduled ⏳ 2026-07-18\n")
     report = scan_vault_tasks(v, today=TODAY, due_in=7)
-    # No due date -> not reported.
-    assert report.tasks == []
+    (task,) = report.tasks
+    assert task.effective_date == "2026-07-18"
+    assert task.date_source == "scheduled"
+    assert task.bucket == "upcoming"
+
+
+def test_start_only_is_reported(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(v / "projects" / "P.md", "# P\n- [ ] start only 🛫 2026-07-01\n")
+    (task,) = scan_vault_tasks(v, today=TODAY, due_in=7).tasks
+    assert task.date_source == "start"
+    assert task.bucket == "overdue"
+
+
+def test_untracked_task_excluded(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(v / "projects" / "P.md", "# P\n- [ ] no dates at all\n")
+    assert scan_vault_tasks(v, today=TODAY, due_in=7).tasks == []
+
+
+def test_default_precedence_prefers_due(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(
+        v / "projects" / "P.md",
+        "# P\n- [ ] multi ⏳ 2026-07-16 📅 2026-07-01 🛫 2026-07-10\n",
+    )
+    (task,) = scan_vault_tasks(v, today=TODAY, due_in=7).tasks
+    assert task.date_source == "due"
+    assert task.effective_date == "2026-07-01"
+    assert task.bucket == "overdue"
+    # All three raw dates are still surfaced.
+    assert task.due == "2026-07-01"
+    assert task.scheduled == "2026-07-16"
+    assert task.start == "2026-07-10"
+
+
+def test_date_fields_reorders_precedence(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(
+        v / "projects" / "P.md",
+        "# P\n- [ ] multi ⏳ 2026-07-16 📅 2026-07-01\n",
+    )
+    (task,) = scan_vault_tasks(v, today=TODAY, due_in=7, date_fields=["scheduled", "due"]).tasks
+    assert task.date_source == "scheduled"
+    assert task.effective_date == "2026-07-16"
+
+
+def test_date_fields_filters_out_omitted(tmp_path: Path):
+    # date_fields=["scheduled"] ignores due-only tasks entirely.
+    v = tmp_path / "v"
+    _write(v / "projects" / "D.md", "# D\n- [ ] due only 📅 2026-07-17\n")
+    _write(v / "projects" / "S.md", "# S\n- [ ] sched only ⏳ 2026-07-17\n")
+    report = scan_vault_tasks(v, today=TODAY, due_in=7, date_fields=["scheduled"])
+    assert {t.path for t in report.tasks} == {"projects/S.md"}
+    assert report.date_fields == ["scheduled"]
 
 
 def test_archive_excluded_by_default(tmp_path: Path):
@@ -108,7 +163,7 @@ def test_file_line_numbers_account_for_frontmatter(tmp_path: Path):
     assert overdue.line == 11
 
 
-def test_sorted_by_due_date(tmp_path: Path):
+def test_sorted_by_effective_date(tmp_path: Path):
     report = scan_vault_tasks(_vault(tmp_path), today=TODAY, due_in=3650)
-    dues = [t.due for t in report.tasks]
-    assert dues == sorted(dues)
+    dates = [t.effective_date for t in report.tasks]
+    assert dates == sorted(dates)

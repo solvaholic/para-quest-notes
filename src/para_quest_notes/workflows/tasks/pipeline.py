@@ -1,29 +1,34 @@
-"""Scan a vault and report open tasks with Obsidian Tasks due dates.
+"""Scan a vault and report open tasks with Obsidian Tasks dates.
 
 Read-only, no LLM. The pipeline is deliberately dumb (mirrors
 ``pqn-validate``): walk the markdown files, scan each for tasks via the
 shared :mod:`para_quest_notes.vault.tasks` scanner, keep the open ones
-that carry a ``📅`` due date, bucket them by urgency relative to a
+that carry a tracked date, bucket them by urgency relative to a
 reference date, and derive Quest/Area grouping keys from each note's
 ``supports:`` frontmatter.
 
-Only tasks with a **due date** are reported. ``⏳`` scheduled and ``🛫``
-start dates are parsed and surfaced as fields but are not (yet) a
-bucketing axis — the report answers "what's due when". Done (``[x]``)
-and cancelled (``[-]``) tasks are never reported.
+Each task is bucketed on a single **effective date**: the first present
+date in a configurable precedence over Obsidian Tasks' three emoji
+fields — ``📅`` due, ``⏳`` scheduled, ``🛫`` start. Because the
+resolution falls through, a user who only sets one kind of date (e.g.
+``⏳`` scheduled as their "do date") is fully served without any
+configuration; precedence only disambiguates a task that carries
+several dates. A task with no tracked date is not reported. Done
+(``[x]``) and cancelled (``[-]``) tasks are never reported.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
 from para_quest_notes.vault.frontmatter import parse
 from para_quest_notes.vault.quests import Quest, discover_quests
-from para_quest_notes.vault.tasks import scan_tasks
+from para_quest_notes.vault.tasks import ScannedTask, scan_tasks
 
-from .contract import Bucket, TaskItem, TasksReport
+from .contract import DATE_FIELDS, Bucket, TaskItem, TasksReport
 
 # Directories we never scan (matches pqn-validate's convention). ``archive/``
 # is excluded too unless include_archive is set: archived tasks are
@@ -89,6 +94,20 @@ def _bucket_for(due: date, today: date, horizon: date) -> Bucket | None:
     return None
 
 
+def _effective_date(task: ScannedTask, date_fields: Sequence[str]) -> tuple[date, str] | None:
+    """Return ``(date, field_name)`` for the first present tracked date.
+
+    Iterates ``date_fields`` in precedence order and returns the first one
+    the task actually carries. Returns None when the task has none of the
+    tracked dates (it won't be reported).
+    """
+    for field_name in date_fields:
+        value = getattr(task, field_name)
+        if value is not None:
+            return value, field_name
+    return None
+
+
 def scan_vault_tasks(
     vault: Path,
     *,
@@ -97,18 +116,24 @@ def scan_vault_tasks(
     overdue_only: bool = False,
     quest: str | None = None,
     group_by: str = "due",
+    date_fields: Sequence[str] | None = None,
     include_archive: bool = False,
 ) -> TasksReport:
     """Scan ``vault`` and return a :class:`TasksReport`.
 
     ``today`` defaults to the system date (injectable for tests).
     ``due_in`` sets the upcoming horizon in days. ``overdue_only`` keeps
-    only tasks whose due date is in the past. ``quest`` filters to notes
-    whose ``supports:`` includes that Quest (wikilink syntax tolerated).
+    only tasks whose effective date is in the past. ``quest`` filters to
+    notes whose ``supports:`` includes that Quest (wikilink syntax
+    tolerated). ``date_fields`` is the ordered precedence over
+    ``("due", "scheduled", "start")`` used to pick each task's effective
+    (bucketing) date; a field omitted from the list is ignored entirely,
+    so ``["scheduled"]`` reports scheduled-dated tasks only.
     """
     ref = today or date.today()
     horizon = ref + timedelta(days=due_in)
     quest_filter = _strip_wikilink(quest) if quest else None
+    fields = list(date_fields) if date_fields else list(DATE_FIELDS)
 
     by_name = {q.name: q for q in discover_quests(vault)}
 
@@ -136,9 +161,13 @@ def scan_vault_tasks(
         line_offset = text.count("\n", 0, len(text) - len(parsed.body))
 
         for task in scan_tasks(parsed.body):
-            if not task.is_open or task.due is None:
+            if not task.is_open:
                 continue
-            bucket = _bucket_for(task.due, ref, horizon)
+            resolved = _effective_date(task, fields)
+            if resolved is None:
+                continue
+            eff_date, source = resolved
+            bucket = _bucket_for(eff_date, ref, horizon)
             if bucket is None:
                 continue
             if overdue_only and bucket != "overdue":
@@ -151,7 +180,9 @@ def scan_vault_tasks(
                     raw=task.text,
                     state=task.state,
                     bucket=bucket,
-                    due=task.due.isoformat(),
+                    effective_date=eff_date.isoformat(),
+                    date_source=source,
+                    due=task.due.isoformat() if task.due else None,
                     scheduled=task.scheduled.isoformat() if task.scheduled else None,
                     start=task.start.isoformat() if task.start else None,
                     block_id=task.block_id,
@@ -161,13 +192,14 @@ def scan_vault_tasks(
                 )
             )
 
-    items.sort(key=lambda t: (t.due or "", t.path, t.line))
+    items.sort(key=lambda t: (t.effective_date, t.path, t.line))
 
     return TasksReport(
         vault=str(vault),
         reference_date=ref.isoformat(),
         due_in=due_in,
         group_by=group_by,
+        date_fields=fields,
         include_archive=include_archive,
         files_scanned=len(files),
         tasks=items,

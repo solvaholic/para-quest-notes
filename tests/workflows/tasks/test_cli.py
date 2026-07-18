@@ -59,6 +59,28 @@ def test_group_by_quest_headers(tmp_path: Path, capsys):
     assert "overdue)" in out
 
 
+def test_scheduled_source_labeled_in_output(tmp_path: Path, capsys):
+    v = tmp_path / "sched"
+    _write(v / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\n# Health\n")
+    _write(v / "projects" / "P.md", f"# P\n- [ ] Water plants ⏳ {_PAST}\n")
+    rc = main(["--vault", str(v), "--overdue"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert f"- [[P]] Water plants (scheduled {_PAST})" in out
+
+
+def test_date_field_flag_filters(tmp_path: Path, capsys):
+    v = tmp_path / "mix"
+    _write(v / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\n# Health\n")
+    _write(v / "projects" / "D.md", f"# D\n- [ ] Deadline task 📅 {_PAST}\n")
+    _write(v / "projects" / "S.md", f"# S\n- [ ] Do-date task ⏳ {_PAST}\n")
+    rc = main(["--vault", str(v), "--overdue", "--date-field", "scheduled"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "Do-date task" in out
+    assert "Deadline task" not in out
+
+
 def test_empty_vault_reports_nothing(tmp_path: Path, capsys):
     v = tmp_path / "empty"
     _write(v / "projects" / "P.md", "# P\nno tasks here\n")
