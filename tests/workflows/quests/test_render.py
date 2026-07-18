@@ -45,6 +45,15 @@ def test_render_orders_main_then_side_then_capabilities_then_unassigned():
     assert "- [[Orphan]] (area)" in out
 
 
+def test_bullets_label_quest_kind():
+    out = render_markdown(_index())
+    # Quest notes are labeled by their kind, not their PARA type.
+    assert "- [[Health]] (main quest)" in out
+    assert "- [[Maintain Home]] (side quest)" in out
+    # Non-quest notes keep their PARA type.
+    assert "- [[Org]] (area)" in out
+
+
 def test_capability_not_listed_under_quest_section():
     out = render_markdown(_index())
     health_block = out.split("## [[Health]]", 1)[1].split("##", 1)[0]

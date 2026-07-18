@@ -12,11 +12,27 @@ from __future__ import annotations
 from .contract import NoteEntry, QuestIndex
 
 
-def _bullet(note: NoteEntry) -> str:
-    """One list item: a wikilink, with a light type hint for the mixed lists."""
+def _label(note: NoteEntry) -> str | None:
+    """The parenthetical hint for a bullet.
+
+    Main/Side Quest notes are labeled by their Quest kind (``main quest`` /
+    ``side quest``) so the reader can tell a Side Quest that serves this Quest
+    from a plain supporting Area at a glance. Everything else shows its PARA
+    type. Returns ``None`` when neither is known (untyped, non-quest note).
+    """
+    if note.quest == "main":
+        return "main quest"
+    if note.quest == "side":
+        return "side quest"
     if note.type in ("area", "project", "resource"):
-        return f"- [[{note.title}]] ({note.type})"
-    return f"- [[{note.title}]]"
+        return note.type
+    return None
+
+
+def _bullet(note: NoteEntry) -> str:
+    """One list item: a wikilink with a light kind/type hint."""
+    label = _label(note)
+    return f"- [[{note.title}]] ({label})" if label else f"- [[{note.title}]]"
 
 
 def _section(title: str, notes: list[NoteEntry]) -> list[str]:
