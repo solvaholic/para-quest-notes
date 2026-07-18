@@ -201,7 +201,9 @@ Both are reused by `pqn-search`.
 
 ## Limitations / non-goals
 
-- No `--depth` / level cap in v1 (deferred).
+- No `--depth` / level cap in v1 (deferred — tracked in
+  [#92](https://github.com/solvaholic/para-quest-notes/issues/92),
+  together with transitive rollup).
 - No single-note focus mode ("given note X, show its Quests and
   neighbors") — that overlaps backlinks and `pqn-search`.
 - Not a link-graph visualizer or orphan analyzer.
