@@ -13,10 +13,11 @@ steps in order:
 3. **pick_quest** (deterministic + LLM fallback) — pick one or more
    Quests from the vault's declared Main + Side Quests. Skipped for
    resources. Before calling the LLM, tries a deterministic no-LLM
-   resolution: if the inbox basename matches an Area note that
-   declares `supports:`, those Quests win outright (no LLM call). If
-   that misses, checks sibling consensus in the destination directory.
-   Only falls through to the LLM when both deterministic checks miss.
+   resolution from the inbox subdirectory structure: it walks up from
+   the note's parent directories toward `inbox/`, and if a directory
+   name matches an Area note that declares `supports:`, those Quests
+   win outright (no LLM call). Only falls through to the LLM when that
+   misses. See "Deterministic Quest inference" below.
 4. **propose_filename** (LLM, may skip) — if the source basename
    already passes a structural check (Title Case or identifier-style),
    keep it and skip the LLM; otherwise ask the LLM to pick from {keep,
