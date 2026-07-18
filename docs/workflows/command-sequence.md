@@ -10,6 +10,7 @@ pqn-validate   (read-only, no deps - run anytime)
 pqn-config     (read-only, no deps - inspect effective config)
 pqn-quests     (read-only, no deps - generate the Quest index)
 pqn-tasks      (read-only, no deps - report due/scheduled tasks)
+pqn-search     (read-only, no deps - keyword search over the vault)
 pqn-create     (needs vault path; creates areas/, projects/, resources/)
 pqn-daily      (needs vault path; files existing date-shaped notes)
 pqn-ingest     (needs Ollama + Quest notes in areas/ to classify against)
@@ -37,6 +38,11 @@ Key relationships:
   incoming links) to stdout. Redirect it into a note; it never owns or
   overwrites one. Most useful once Quest notes and `supports:` tags
   exist.
+- **`pqn-search` is read-only lookup** - keyword search over note
+  titles and bodies, scoped by `--type` / `--quest` and ranked by the
+  PARA + Quest model (title hits first; Resources tie-broken by
+  inbound-link count). It shares `pqn-quests`'s `vault/links.py` +
+  `vault/scope.py` building blocks.
 
 ## Design principles
 

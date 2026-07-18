@@ -64,6 +64,9 @@ The workflows preserve that reasoning, locally.
       blocks.
 - [x] `pqn-tasks` — read-only reporter for scheduled/due tasks
       (v0.5; see [`docs/workflows/tasks.md`](docs/workflows/tasks.md))
+- [x] `pqn-search` — read-only, PARA + Quest-aware keyword search over
+      the vault (title + content; ranks Resources by inbound links).
+      See [`docs/workflows/search.md`](docs/workflows/search.md).
 - [ ] Phase 7: grow eval fixtures toward ~30; revisit
       `generate_outcome` judge
 - [ ] Phase 8 (deferred): agent SKILL.md wrappers
@@ -216,6 +219,27 @@ uv run pqn-quests --vault /tmp/demo-vault --quest '[[Health]]'
 ```
 
 Full options: [`docs/workflows/quests.md`](docs/workflows/quests.md).
+
+### 8. `pqn-search` — keyword search over the vault (no LLM)
+
+Read-only: match notes by title and/or body, scope by `--type` /
+`--quest`, and rank hits by the PARA + Quest model (title hits first;
+Resources tie-broken by inbound-link count). Prints a flat list, text
+(default) or JSON.
+
+```bash
+# Title + body (default), whole active vault
+uv run pqn-search --vault /tmp/demo-vault sourdough
+
+# Scope to a type or Quest; cap results
+uv run pqn-search --vault /tmp/demo-vault --type resource shoes
+uv run pqn-search --vault /tmp/demo-vault --quest '[[Health]]' plan
+
+# Flat JSON for agents/tools
+uv run pqn-search --vault /tmp/demo-vault --format json sourdough | jq
+```
+
+Full options: [`docs/workflows/search.md`](docs/workflows/search.md).
 
 ### What just happened
 
