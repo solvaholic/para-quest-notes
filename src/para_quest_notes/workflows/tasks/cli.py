@@ -71,8 +71,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--quest",
         default=None,
-        help="Only report tasks in notes whose supports: includes this Quest "
-        "(wikilink syntax tolerated).",
+        help=(
+            "Restrict to a single Quest (wikilink or bare name). A task "
+            "matches when its note's 'supports:' includes that Quest."
+        ),
     )
     p.add_argument(
         "--include-archive",

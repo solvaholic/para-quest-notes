@@ -22,10 +22,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
 
 from para_quest_notes.vault.frontmatter import parse
 from para_quest_notes.vault.quests import Quest, discover_quests
+from para_quest_notes.vault.scope import Scope, note_supports
 from para_quest_notes.vault.tasks import ScannedTask, scan_tasks
 
 from .contract import DATE_FIELDS, Bucket, TaskItem, TasksReport
@@ -49,22 +49,6 @@ def list_markdown_files(vault: Path, *, include_archive: bool = False) -> list[P
             continue
         out.append(p)
     return out
-
-
-def _strip_wikilink(s: str) -> str:
-    s = s.strip()
-    if s.startswith("[[") and s.endswith("]]"):
-        s = s[2:-2]
-    if "|" in s:
-        s = s.split("|", 1)[0]
-    return s.strip()
-
-
-def _supports_targets(frontmatter: dict[str, Any]) -> list[str]:
-    raw = frontmatter.get("supports") or []
-    if not isinstance(raw, list):
-        raw = [raw]
-    return [_strip_wikilink(str(s)) for s in raw if s]
 
 
 def _main_quests(name: str, by_name: dict[str, Quest], seen: set[str]) -> set[str]:
@@ -124,15 +108,16 @@ def scan_vault_tasks(
     ``today`` defaults to the system date (injectable for tests).
     ``due_in`` sets the upcoming horizon in days. ``overdue_only`` keeps
     only tasks whose effective date is in the past. ``quest`` filters to
-    notes whose ``supports:`` includes that Quest (wikilink syntax
-    tolerated). ``date_fields`` is the ordered precedence over
+    notes whose ``supports:`` includes that Quest (wikilink or bare name,
+    matched case-insensitively — identical semantics to ``pqn-quests``).
+    ``date_fields`` is the ordered precedence over
     ``("due", "scheduled", "start")`` used to pick each task's effective
     (bucketing) date; a field omitted from the list is ignored entirely,
     so ``["scheduled"]`` reports scheduled-dated tasks only.
     """
     ref = today or date.today()
     horizon = ref + timedelta(days=due_in)
-    quest_filter = _strip_wikilink(quest) if quest else None
+    scope = Scope.from_args(quest=quest)
     fields = list(date_fields) if date_fields else list(DATE_FIELDS)
 
     by_name = {q.name: q for q in discover_quests(vault)}
@@ -147,9 +132,9 @@ def scan_vault_tasks(
             continue
         rel = path.relative_to(vault)
         parsed = parse(text)
-        supports = _supports_targets(parsed.frontmatter)
+        supports = note_supports(parsed.frontmatter)
 
-        if quest_filter is not None and quest_filter not in supports:
+        if not scope.matches_quest(supports):
             continue
 
         is_area_note = bool(rel.parts) and rel.parts[0] == "areas"

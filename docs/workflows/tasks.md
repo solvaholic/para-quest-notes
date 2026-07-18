@@ -88,7 +88,8 @@ pqn-tasks --vault ~/notes --overdue
 # Group by Main Quest.
 pqn-tasks --vault ~/notes --group-by quest
 
-# Only tasks serving a specific Quest.
+# Only tasks serving a specific Quest (wikilink or bare name,
+# matched case-insensitively — same as pqn-quests --quest).
 pqn-tasks --vault ~/notes --quest "[[Health]]"
 
 # Bucket on your "do date" (scheduled) instead of deadlines.
