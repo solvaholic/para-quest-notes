@@ -7,13 +7,17 @@ model. Read-only, stateless, no LLM.
 ## Why not just `rg`?
 
 Plain `rg` already does substring matching over `.md` files, so
-`pqn-search` only earns its place by knowing the model:
+`pqn-search` earns its place by knowing the model and meeting you where
+you work:
 
 - It filters by **note type** (`--type`) and **Quest** (`--quest`).
 - It ranks **Resources by incoming-link count** - an inbound wikilink is
   re-use, and re-use is evidence of value. `docs/notes-system.md` treats
   incoming links as how Resources are discovered, so a Resource many
   active notes point at is more likely what you're after.
+- It **finds your notes without making you think about where the vault
+  is or how it's organized** - vault discovery is built in, and it runs
+  the same way in every shell.
 
 If you want raw substring matching with no ranking or scope, `rg` wins.
 Reach for `pqn-search` when the PARA + Quest structure should shape the
