@@ -38,7 +38,14 @@ pqn-quests --vault ~/notes > index.md
 Always excluded:
 
 - **`inbox/`** — pre-PARA staging owned by `pqn-ingest`; un-triaged
-  notes don't belong in the Quest index.
+  notes don't belong in the Quest index. There is deliberately no
+  `--include-inbox` toggle (unlike `--include-archive`): archived notes
+  are fully-formed PARA notes that were merely relocated ("archive is a
+  location, not a type"), so toggling them back in yields a coherent
+  historical rollup. Inbox notes are the opposite — they usually lack
+  `type:` and `supports:`, so they'd land in Unassigned as noise.
+  Triage is `pqn-ingest`'s job; once a note is ingested it's placed and
+  shows up here naturally.
 - **`resources/daily_notes/`** — an activity log, not a reference
   Resource. (Daily-note wikilinks are usage *weight*, a separate axis
   `pqn-search` uses for ranking — not Quest *assignment*.)
@@ -92,17 +99,24 @@ and `## Unassigned`. A note supporting two Quests appears under **both** —
 intentional, and the reason JSON (not markdown) is the machine-readable
 surface.
 
+Each bullet carries a parenthetical hint: Main and Side Quest notes are
+labeled by their **Quest kind** (`main quest` / `side quest`) so a Side
+Quest serving this Quest is distinguishable from a plain supporting Area
+at a glance; everything else shows its PARA type.
+
 ```markdown
 # Quest index
 
 ## [[Health]]
 
-- [[Health]] (area)
+- [[Health]] (main quest)
+- [[Maintain Home]] (side quest)
 - [[Run a 5K]] (project)
 - [[Sourdough Notes]] (resource)
 
 ## [[Maintain Home]]
 
+- [[Maintain Home]] (side quest)
 - [[Workshop]] (area)
 
 ## Capabilities
