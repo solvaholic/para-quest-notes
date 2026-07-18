@@ -61,3 +61,17 @@ def test_body_hit_renders_snippet():
         )
     )
     assert 'body: "...a running plan..."' in out
+
+
+def test_empty_snippet_omits_quoted_tail():
+    out = render_text(
+        _results(
+            SearchResult(
+                path="resources/Running Shoes.md",
+                type="resource",
+                match_context=MatchContext(where="title", snippet=""),
+            )
+        )
+    )
+    assert "resources/Running Shoes.md (resource) - title" in out
+    assert '"' not in out.split("\n", 2)[-1]

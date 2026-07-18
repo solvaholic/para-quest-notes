@@ -36,22 +36,26 @@ from para_quest_notes.workflows.validate.pipeline import list_markdown_files
 
 from .contract import MatchContext, SearchResult, SearchResults
 
-_SNIPPET_RADIUS = 40
+DEFAULT_SNIPPET_RADIUS = 40
 
 
-def _snippet(body: str, keywords_lower: list[str]) -> str:
+def _snippet(body: str, keywords_lower: list[str], radius: int) -> str:
     """A whitespace-collapsed window around the first body keyword match.
 
-    Falls back to the leading body text if no keyword is found (shouldn't
-    happen for a body hit, but keeps the function total).
+    ``radius`` characters on each side of the match. A ``radius`` of 0 means
+    "no snippet" and returns the empty string. Falls back to the leading body
+    text if no keyword is found (shouldn't happen for a body hit, but keeps
+    the function total).
     """
+    if radius <= 0:
+        return ""
     low = body.lower()
     positions = [low.find(k) for k in keywords_lower if k in low]
     if not positions:
-        return " ".join(body.split())[: 2 * _SNIPPET_RADIUS].strip()
+        return " ".join(body.split())[: 2 * radius].strip()
     pos = min(positions)
-    start = max(0, pos - _SNIPPET_RADIUS)
-    end = min(len(body), pos + _SNIPPET_RADIUS)
+    start = max(0, pos - radius)
+    end = min(len(body), pos + radius)
     fragment = " ".join(body[start:end].split())
     prefix = "..." if start > 0 else ""
     suffix = "..." if end < len(body) else ""
@@ -68,6 +72,7 @@ def search(
     quest: str | None = None,
     include_archive: bool = False,
     limit: int | None = None,
+    snippet_radius: int = DEFAULT_SNIPPET_RADIUS,
 ) -> SearchResults:
     """Search ``vault`` for notes matching every keyword in ``query``.
 
@@ -80,7 +85,12 @@ def search(
     restricts to notes whose ``supports:`` includes that Quest (``--quest``);
     ``include_archive`` pulls ``archive/`` into the search set; ``limit`` caps
     the number of results (``None`` = unlimited).
+
+    ``snippet_radius`` is how many characters of context to show on each side
+    of a body match (and it gates the title snippet); ``0`` suppresses
+    snippets entirely. Negative values are clamped to ``0``.
     """
+    radius = max(0, snippet_radius)
     search_title = title or not (title or content)
     search_content = content or not (title or content)
     keywords = [k.lower() for k in query if k]
@@ -127,9 +137,10 @@ def search(
 
         title_has_any = search_title and any(kw in title_low for kw in keywords)
         if title_has_any:
-            match = MatchContext(where="title", snippet=title_text)
+            snippet = title_text if radius > 0 else ""
+            match = MatchContext(where="title", snippet=snippet)
         else:
-            match = MatchContext(where="body", snippet=_snippet(body_text, keywords))
+            match = MatchContext(where="body", snippet=_snippet(body_text, keywords, radius))
 
         incoming = len(backlinks.sources_for(md.stem)) if para_type == "resource" else 0
 
@@ -166,6 +177,7 @@ def search(
             "quest": scope.quest,
             "include_archive": include_archive,
             "limit": limit,
+            "snippet_radius": radius,
         },
         results=results,
     )

@@ -93,6 +93,10 @@ pqn-search --vault ~/notes --quest '[[Health]]' plan
 pqn-search --vault ~/notes --limit 10 notes
 pqn-search --vault ~/notes --include-archive manual
 
+# Widen the snippet, or turn snippets off entirely.
+pqn-search --vault ~/notes --snippet-radius 80 docker
+pqn-search --vault ~/notes --snippet-radius 0 docker
+
 # Flat JSON for agents/tools.
 pqn-search --vault ~/notes --format json sourdough | jq
 ```
@@ -114,6 +118,7 @@ isn't an error), `2` for an invocation problem (vault not found).
 | `--type`            | Include only this PARA type (`project` \| `area` \| `resource`). Repeatable, include-only.  |
 | `--quest`           | Restrict to notes whose `supports:` includes this Quest (wikilink or bare name).            |
 | `--limit`           | Cap the number of results. Default: unlimited.                                              |
+| `--snippet-radius`  | Characters of context per side of a body match (also gates the title snippet). `0` = no snippet. Default: 40. |
 | `--include-archive` | Include notes under `archive/` (excluded by default).                                       |
 | `--format`          | `text` (default) or `json`.                                                                  |
 | `--vault`           | Vault path (falls back to discovery).                                                        |
@@ -121,6 +126,22 @@ isn't an error), `2` for an invocation problem (vault not found).
 
 Passing both `--title` and `--content` is the same as passing neither:
 both fields are searched.
+
+## Configuration
+
+The snippet width has a per-workflow config default under `search:` in
+`config.yaml`, resolved as **`--snippet-radius` flag > config > built-in
+default (40)**:
+
+```yaml
+workflows:
+  search:
+    snippet_radius: 60   # wider context; 0 to suppress snippets
+```
+
+A negative or non-integer value is a loud error (exit 2). Everything
+else about a run - which vault, which config - is reported by
+`pqn-config`.
 
 ## Text output
 
@@ -149,7 +170,8 @@ A **flat list** under `results`, most-relevant first. Each result:
   serves.
 - `match_context` - `{where, snippet}`. `where` is `"title"` or
   `"body"`; `snippet` is the title (title hit) or a whitespace-collapsed
-  window around the first body match.
+  window around the first body match. The window width is set by
+  `--snippet-radius` (`0` yields an empty `snippet`).
 - `incoming_links` - inbound-link count (the Resource ranking signal;
   `0` for non-Resources), surfaced for transparency.
 
@@ -163,7 +185,8 @@ A **flat list** under `results`, most-relevant first. Each result:
     "types": null,
     "quest": null,
     "include_archive": false,
-    "limit": null
+    "limit": null,
+    "snippet_radius": 40
   },
   "summary": {"results": 3},
   "results": [

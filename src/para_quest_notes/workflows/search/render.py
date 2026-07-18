@@ -25,7 +25,8 @@ def _meta(result: SearchResult) -> str:
 def _bullet(result: SearchResult) -> str:
     where = result.match_context.where
     snippet = result.match_context.snippet
-    return f'- {result.path} ({_meta(result)}) - {where}: "{snippet}"'
+    tail = f' - {where}: "{snippet}"' if snippet else f" - {where}"
+    return f"- {result.path} ({_meta(result)}){tail}"
 
 
 def render_text(results: SearchResults) -> str:

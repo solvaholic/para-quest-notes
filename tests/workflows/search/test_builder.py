@@ -144,3 +144,38 @@ def test_scope_echoed_in_results(vault: Path):
     assert results.scope["limit"] == 5
     assert results.scope["title"] is True
     assert results.scope["content"] is True
+
+
+def test_snippet_radius_controls_body_window(vault: Path):
+    wide = search(vault, ["training"], content=True, snippet_radius=80)
+    narrow = search(vault, ["training"], content=True, snippet_radius=15)
+    wide_snip = wide.results[0].match_context.snippet
+    narrow_snip = narrow.results[0].match_context.snippet
+    assert "training" in wide_snip.lower()
+    assert "training" in narrow_snip.lower()
+    assert len(narrow_snip) < len(wide_snip)
+
+
+def test_snippet_radius_zero_suppresses_body_snippet(vault: Path):
+    results = search(vault, ["training"], content=True, snippet_radius=0)
+    hit = results.results[0]
+    assert hit.match_context.where == "body"
+    assert hit.match_context.snippet == ""
+
+
+def test_snippet_radius_zero_suppresses_title_snippet(vault: Path):
+    results = search(vault, ["running"], title=True, snippet_radius=0)
+    shoes = next(r for r in results.results if r.path == "resources/Running Shoes.md")
+    assert shoes.match_context.where == "title"
+    assert shoes.match_context.snippet == ""
+
+
+def test_snippet_radius_negative_clamps_to_zero(vault: Path):
+    results = search(vault, ["training"], content=True, snippet_radius=-10)
+    assert results.results[0].match_context.snippet == ""
+    assert results.scope["snippet_radius"] == 0
+
+
+def test_snippet_radius_echoed_in_scope(vault: Path):
+    results = search(vault, ["running"], snippet_radius=25)
+    assert results.scope["snippet_radius"] == 25

@@ -80,6 +80,80 @@ def test_limit_flag(vault: Path, capsys):
     assert len(data["results"]) == 1
 
 
+def test_snippet_radius_flag(vault: Path, capsys):
+    code = main(["--vault", str(vault), "--snippet-radius", "0", "--format", "json", "running"])
+    out = capsys.readouterr().out
+    assert code == 0
+    data = json.loads(out)
+    assert data["scope"]["snippet_radius"] == 0
+    assert all(r["match_context"]["snippet"] == "" for r in data["results"])
+
+
+def test_snippet_radius_zero_omits_snippet_in_text(vault: Path, capsys):
+    code = main(["--vault", str(vault), "--snippet-radius", "0", "running"])
+    out = capsys.readouterr().out
+    assert code == 0
+    # No quoted snippet, but the match location is still shown.
+    assert '"' not in out.split("\n", 2)[-1]
+    assert "- title" in out
+
+
+def test_snippet_radius_negative_flag_rejected(vault: Path, capsys):
+    with pytest.raises(SystemExit) as exc:
+        main(["--vault", str(vault), "--snippet-radius", "-3", "running"])
+    assert exc.value.code == 2
+    assert "must be >= 0" in capsys.readouterr().err
+
+
+def test_snippet_radius_from_config(vault: Path, tmp_path: Path, capsys):
+    config = tmp_path / "config.yaml"
+    config.write_text("workflows:\n  search:\n    snippet_radius: 0\n", encoding="utf-8")
+    code = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(config),
+            "--format",
+            "json",
+            "running",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert code == 0
+    assert json.loads(out)["scope"]["snippet_radius"] == 0
+
+
+def test_snippet_radius_flag_overrides_config(vault: Path, tmp_path: Path, capsys):
+    config = tmp_path / "config.yaml"
+    config.write_text("workflows:\n  search:\n    snippet_radius: 0\n", encoding="utf-8")
+    code = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(config),
+            "--snippet-radius",
+            "50",
+            "--format",
+            "json",
+            "running",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert code == 0
+    assert json.loads(out)["scope"]["snippet_radius"] == 50
+
+
+def test_bad_config_snippet_radius_exits_two(vault: Path, tmp_path: Path, capsys):
+    config = tmp_path / "config.yaml"
+    config.write_text("workflows:\n  search:\n    snippet_radius: -5\n", encoding="utf-8")
+    code = main(["--vault", str(vault), "--config", str(config), "running"])
+    err = capsys.readouterr().err
+    assert code == 2
+    assert "error:" in err
+
+
 def test_no_matches_exits_zero(vault: Path, capsys):
     code = main(["--vault", str(vault), "zzzznotfound"])
     out = capsys.readouterr().out
