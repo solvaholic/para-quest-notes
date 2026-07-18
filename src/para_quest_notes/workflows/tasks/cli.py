@@ -20,7 +20,7 @@ from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.vault import find_vault
 
-from .contract import BUCKET_ORDER, UNASSIGNED, TaskItem, TasksReport
+from .contract import BUCKET_ORDER, DATE_FIELDS, UNASSIGNED, TaskItem, TasksReport
 from .pipeline import scan_vault_tasks
 
 _BUCKET_LABELS = {
@@ -34,8 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = build_base_parser(
         prog="pqn-tasks",
         description=(
-            "Report open tasks carrying Obsidian Tasks due dates (📅), "
-            "bucketed into overdue / due today / upcoming. Read-only, no LLM."
+            "Report open tasks carrying Obsidian Tasks dates (📅 due, ⏳ "
+            "scheduled, 🛫 start), bucketed into overdue / due today / "
+            "upcoming by their effective date. Read-only, no LLM."
         ),
     )
     p.add_argument(
@@ -55,6 +56,17 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("due", "quest", "area"),
         default="due",
         help="Group output by urgency bucket (default), supported Quest, or Area.",
+    )
+    p.add_argument(
+        "--date-field",
+        action="append",
+        choices=DATE_FIELDS,
+        metavar="{due,scheduled,start}",
+        help="Which Obsidian Tasks date drives bucketing. Repeatable; order "
+        "sets precedence for tasks carrying several dates (first present "
+        "wins). A field you omit is ignored entirely, so '--date-field "
+        "scheduled' reports scheduled-dated tasks only. "
+        "Default: due, then scheduled, then start.",
     )
     p.add_argument(
         "--quest",
@@ -86,6 +98,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         overdue_only=args.overdue,
         quest=args.quest,
         group_by=args.group_by,
+        date_fields=args.date_field,
         include_archive=args.include_archive,
     )
 
@@ -101,9 +114,7 @@ def _wikilink(path: str) -> str:
 
 
 def _render_task(task: TaskItem, *, show_bucket: bool) -> str:
-    parts = [f"due {task.due}"]
-    if task.scheduled:
-        parts.append(f"scheduled {task.scheduled}")
+    parts = [f"{task.date_source} {task.effective_date}"]
     if show_bucket:
         parts.append(_BUCKET_LABELS[task.bucket].lower())
     return f"- {_wikilink(task.path)} {task.description} ({', '.join(parts)})"
@@ -138,9 +149,9 @@ def _grouped(report: TasksReport) -> list[tuple[str, list[TaskItem]]]:
 
 
 def render_markdown(report: TasksReport) -> str:
-    horizon = f"due within {report.due_in} day(s)"
+    horizon = f"within {report.due_in} day(s)"
     if report.due_in == 0:
-        horizon = "due today or overdue"
+        horizon = "today or overdue"
     title = f"# Tasks as of {report.reference_date} ({horizon})"
 
     if not report.tasks:

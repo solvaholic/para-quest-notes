@@ -17,17 +17,30 @@ Bucket = Literal["overdue", "due_today", "upcoming"]
 # Human-facing bucket order (most urgent first).
 BUCKET_ORDER: tuple[Bucket, ...] = ("overdue", "due_today", "upcoming")
 
+# The Obsidian Tasks emoji date fields, in the default precedence used to
+# pick a task's effective (bucketing) date. Due-first matches the
+# ecosystem norm; scheduled-/start-only users are still served because
+# the resolution falls through to the first date a task actually carries.
+DATE_FIELDS: tuple[str, ...] = ("due", "scheduled", "start")
+
 # Marker used when a task's note declares no supporting Quest/Area.
 UNASSIGNED = "unassigned"
 
 
 @dataclass
 class TaskItem:
-    """One reportable task: an open/in-progress task carrying a due date.
+    """One reportable task: an open/in-progress task carrying a tracked date.
 
     ``path`` is vault-relative POSIX. ``line`` is 1-based into the file.
     ``description`` is the task text with trailing Tasks emoji-metadata
     and block id stripped for display; ``raw`` keeps the original text.
+
+    ``due`` / ``scheduled`` / ``start`` are whichever Obsidian Tasks emoji
+    dates the line carried (any may be null). ``effective_date`` is the one
+    that actually drove bucketing — the first present date in the report's
+    configured ``date_fields`` precedence — and ``date_source`` names which
+    field it came from (``"due"``, ``"scheduled"``, or ``"start"``).
+
     ``areas`` / ``quests`` are the grouping keys derived from the note's
     ``supports:`` frontmatter (``quests`` rolls Side Quests up to their
     Main Quest). Either may be empty when the note declares no support.
@@ -39,6 +52,8 @@ class TaskItem:
     raw: str
     state: str
     bucket: Bucket
+    effective_date: str
+    date_source: str
     due: str | None = None
     scheduled: str | None = None
     start: str | None = None
@@ -56,6 +71,7 @@ class TasksReport:
     reference_date: str
     due_in: int
     group_by: str
+    date_fields: list[str]
     include_archive: bool
     files_scanned: int = 0
     tasks: list[TaskItem] = field(default_factory=list)
@@ -81,6 +97,7 @@ class TasksReport:
             "reference_date": self.reference_date,
             "due_in": self.due_in,
             "group_by": self.group_by,
+            "date_fields": list(self.date_fields),
             "include_archive": self.include_archive,
             "files_scanned": self.files_scanned,
             "summary": {
