@@ -87,6 +87,39 @@ def test_render_template_leaves_unknown_vars():
     assert "$unknown_var stays" in result
 
 
+def test_cli_template_quest_kind_and_deprecated_alias(tmp_path: Path, monkeypatch):
+    """Both `$quest_kind` and the deprecated `$quest` expand in templates (#98)."""
+    vault = _seed_vault(tmp_path)
+    (vault / "resources/templates").mkdir(parents=True)
+    (vault / "resources/templates/kind-demo.md").write_text(
+        "# $title\n\nkind=$quest_kind alias=$quest\n"
+    )
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--type",
+            "area",
+            "--title",
+            "Kinded",
+            "--quest-kind",
+            "main",
+            "--template",
+            "kind-demo",
+            "--apply",
+        ]
+    )
+    assert rc == 0
+    written = (vault / "areas/Kinded.md").read_text()
+    # Both variables resolve to the same quest-kind value; neither is left literal.
+    assert "kind=main alias=main" in written
+    assert "$quest" not in written
+
+
 def test_get_template_config_defaults():
     template_dir, defaults = get_template_config({})
     assert template_dir == "resources/templates"
