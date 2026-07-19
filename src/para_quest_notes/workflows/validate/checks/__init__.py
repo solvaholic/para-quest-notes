@@ -10,13 +10,20 @@ The pipeline composes checks; checks do not import each other.
 
 from __future__ import annotations
 
-from . import backmatter_yaml, filename_uniqueness, frontmatter_yaml, metadata_in_backmatter
+from . import (
+    backmatter_yaml,
+    filename_uniqueness,
+    frontmatter_yaml,
+    legacy_quest_key,
+    metadata_in_backmatter,
+)
 
 ALL_CHECKS = (
     filename_uniqueness,
     frontmatter_yaml,
     backmatter_yaml,
     metadata_in_backmatter,
+    legacy_quest_key,
 )
 
 CHECKS_BY_ID = {c.ID: c for c in ALL_CHECKS}

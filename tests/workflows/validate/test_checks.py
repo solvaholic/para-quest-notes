@@ -212,3 +212,40 @@ def test_metadata_in_backmatter_absent_is_ok(vault: Path):
     write(vault / "areas" / "Health.md", "---\ntype: area\nquest-kind: main\n---\nbody\n")
     report = validate_vault(vault, checks=["metadata_in_backmatter"])
     assert report.issues == []
+
+
+# ---------- legacy_quest_key ----------
+
+
+def test_legacy_quest_key_flags_frontmatter(vault: Path):
+    write(vault / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\nbody\n")
+    report = validate_vault(vault, checks=["legacy_quest_key"])
+    assert len(report.issues) == 1
+    issue = report.issues[0]
+    assert issue.check == "legacy_quest_key"
+    assert issue.severity == "warning"
+    assert issue.detail["value"] == "main"
+    assert "--fix" in issue.message
+
+
+def test_legacy_quest_key_canonical_only_is_clean(vault: Path):
+    write(vault / "areas" / "Health.md", "---\ntype: area\nquest-kind: main\n---\nbody\n")
+    report = validate_vault(vault, checks=["legacy_quest_key"])
+    assert report.issues == []
+
+
+def test_legacy_quest_key_ignores_backmatter(vault: Path):
+    # A legacy quest: in *backmatter* is metadata_in_backmatter's job, not ours.
+    text = "---\ntype: area\n---\nbody\n---\nquest: side\n---\n"
+    write(vault / "areas" / "Tail.md", text)
+    report = validate_vault(vault, checks=["legacy_quest_key"])
+    assert report.issues == []
+
+
+def test_legacy_quest_key_flags_any_para_type(vault: Path):
+    # Spec puts quest-kind on projects/resources too, so legacy quest: on a
+    # project is still a finding (not gated to areas).
+    write(vault / "projects" / "Roof.md", "---\ntype: project\nquest: none\n---\nbody\n")
+    report = validate_vault(vault, checks=["legacy_quest_key"])
+    assert len(report.issues) == 1
+    assert report.issues[0].path == "projects/Roof.md"

@@ -94,3 +94,37 @@ def test_check_filter(vault: Path, capsys):
     assert code == 1
     assert payload["checks_run"] == ["filename_uniqueness"]
     assert all(i["check"] == "filename_uniqueness" for i in payload["issues"])
+
+
+def test_fix_dry_run_does_not_write(vault: Path, capsys):
+    p = write(vault / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\nbody\n")
+    code = main(["--vault", str(vault), "--fix", "--format", "text"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "would migrate: 1" in out
+    assert "quest: main" in p.read_text(encoding="utf-8")
+
+
+def test_fix_apply_writes(vault: Path, capsys):
+    p = write(vault / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\nbody\n")
+    code = main(["--vault", str(vault), "--fix", "--apply"])
+    capsys.readouterr()
+    assert code == 0
+    assert "quest-kind: main" in p.read_text(encoding="utf-8")
+
+
+def test_fix_skip_exits_one(vault: Path, capsys):
+    write(vault / "areas" / "W.md", "---\ntype: resource\nquest: banana\n---\nbody\n")
+    code = main(["--vault", str(vault), "--fix", "--apply"])
+    capsys.readouterr()
+    assert code == 1
+
+
+def test_fix_json_output(vault: Path, capsys):
+    write(vault / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\nbody\n")
+    code = main(["--vault", str(vault), "--fix", "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert payload["applied"] is False
+    assert payload["summary"]["migrated"] == 1
+    assert payload["entries"][0]["path"] == "areas/Health.md"

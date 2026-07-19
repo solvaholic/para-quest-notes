@@ -1,11 +1,11 @@
 # pqn-validate
 
 Audit a vault for issues that quietly break wikilinks or note metadata.
-Read-only. No LLM.
+Read-only by default; `--fix` is the one opt-in write path. No LLM.
 
 ## What it does
 
-Four checks:
+Five checks:
 
 1. **`filename_uniqueness`** — flags any basename that appears in more
    than one directory. Wikilinks resolve by basename, so duplicates
@@ -17,11 +17,16 @@ Four checks:
    the *end* of a note (used by the archive workflow for Outcome
    statements). Absence is not an issue.
 4. **`metadata_in_backmatter`** *(warning)* — flags canonical PARA +
-   Quest keys (`type`, `quest`, `supports`, `source_url`, `created`)
-   that appear in tail backmatter. Frontmatter is canonical; write-path
-   workflows migrate backmatter on touch, but tools that only read
-   frontmatter (Obsidian Properties, Dataview, SSGs — and historically
-   `pqn-ingest`'s Quest discovery) miss it until then.
+   Quest keys (`type`, `quest-kind`, `supports`, `source_url`,
+   `created`, and the legacy `quest`) that appear in tail backmatter.
+   Frontmatter is canonical; write-path workflows migrate backmatter on
+   touch, but tools that only read frontmatter (Obsidian Properties,
+   Dataview, SSGs — and historically `pqn-ingest`'s Quest discovery)
+   miss it until then.
+5. **`legacy_quest_key`** *(warning)* — flags a legacy `quest:`
+   classifier key in *frontmatter* (the field was renamed to
+   `quest-kind:` in #98). Tolerated on read, but tools reading only the
+   canonical key miss it. Fixable in bulk with [`--fix`](#fix-migrate-legacy-quest-keys).
 
 By design this workflow does **not** validate wikilink targets, orphan
 detection, PARA placement, or semantic frontmatter content. Those are
@@ -53,6 +58,44 @@ pqn-validate --vault ~/notes --check filename_uniqueness
 pqn-validate --vault ~/notes --strict
 ```
 
+## Fix: migrate legacy `quest:` keys
+
+`--fix` is the one write path in an otherwise read-only workflow, and it
+does exactly one thing: rename legacy `quest:` frontmatter keys to
+canonical `quest-kind:` (the #98 rename). It's the batch counterpart to
+the migrate-on-touch that write-path workflows already do — for static
+notes (Resources, Areas) the tools never happen to write to.
+
+```bash
+# Preview what would change (dry-run — writes nothing).
+pqn-validate --vault ~/notes --fix
+
+# Actually rewrite the notes.
+pqn-validate --vault ~/notes --fix --apply
+
+# Scope the fix to one path.
+pqn-validate --vault ~/notes --fix --apply --path resources/Sourdough.md
+```
+
+Rules:
+
+* Migrates a note only when the legacy value is a valid kind
+  (`main` / `side` / `none`), or when a canonical `quest-kind:` already
+  exists (the redundant legacy key is then dropped). Any other value is
+  **reported and skipped** — `--fix` never guesses.
+* The rename preserves surrounding frontmatter (key order, other values)
+  and the note body and any tail backmatter.
+* **Idempotent** — a second run is a no-op once notes are migrated.
+* Dry-run by default; `--apply` writes. This is the same convention as
+  `pqn-ingest`, `pqn-create`, `pqn-archive`, and `pqn-daily`.
+* Exit code is `1` when any note was skipped (an unresolved legacy value
+  a human must sort out), `0` otherwise.
+
+`--fix` only migrates `quest:`. It does **not** rename files, repair
+malformed YAML, or promote backmatter — those need judgment or an
+unbuilt capability (see [Limitations](#limitations)), so they stay
+report-only.
+
 Vault discovery follows the standard order
 ([`docs/configuration.md`](../configuration.md)): `--vault` →
 `PARA_QUEST_VAULT` → walk up from cwd → `vault:` in `config.yaml`.
@@ -69,7 +112,7 @@ Exit codes:
 {
   "vault": "/path/to/vault",
   "files_scanned": 142,
-  "checks_run": ["filename_uniqueness", "frontmatter_yaml", "backmatter_yaml", "metadata_in_backmatter"],
+  "checks_run": ["filename_uniqueness", "frontmatter_yaml", "backmatter_yaml", "metadata_in_backmatter", "legacy_quest_key"],
   "summary": {
     "total_issues": 2,
     "errors": 2,
