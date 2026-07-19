@@ -69,6 +69,29 @@ Use it for pre-release confidence and after cross-cutting changes.
 For the intended command ordering and dependency map, see
 [`docs/workflows/command-sequence.md`](workflows/command-sequence.md).
 
+## Currency check
+
+`scripts/check-currency.sh` is a coarse, no-LLM guard that CI runs on
+every PR. It reads the `pqn-*` entry points from
+[`pyproject.toml`](../pyproject.toml) and fails if any command is
+missing from a surface that should know about it:
+
+- invoked in `scripts/smoke.sh`
+- documented under `docs/workflows/<name>.md` (or `docs/<name>.md`)
+- mentioned in [`README.md`](../README.md)
+- mentioned in [`AGENTS.md`](../AGENTS.md)
+
+```bash
+./scripts/check-currency.sh
+```
+
+So **adding a `pqn-*` command means updating all four surfaces.** If a
+command genuinely doesn't belong on one (like `pqn-eval`, the eval
+harness, which isn't a vault workflow), add it to the exemption list at
+the top of the script with a one-line justification. The check only
+verifies *presence*, not that the docs *describe* the command
+correctly - that stays a human review job.
+
 ## Adding an eval fixture
 
 Put fixtures under [`eval/fixtures/`](../eval/fixtures/). Start with [`eval/fixtures/README.md`](../eval/fixtures/README.md), then copy a nearby example like:

@@ -40,3 +40,12 @@ jobs:
 
       - name: Tests
         run: uv run pytest
+
+  currency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Coarse currency check (no LLM)
+        run: ./scripts/check-currency.sh
+
