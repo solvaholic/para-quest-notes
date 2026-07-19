@@ -66,7 +66,8 @@ uv tool install --force ./dist/para_quest_notes-*.whl
 
 # 3. Confirm every entry point is on PATH and --help works.
 for cli in pqn-validate pqn-ingest pqn-create pqn-daily \
-           pqn-archive pqn-eval; do
+           pqn-archive pqn-quests pqn-tasks pqn-search \
+           pqn-config pqn-eval; do
   command -v "$cli" >/dev/null && "$cli" --help >/dev/null \
     && echo "OK $cli" || echo "FAIL $cli"
 done

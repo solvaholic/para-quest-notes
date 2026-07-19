@@ -267,6 +267,28 @@ check_fail "ingest --skip-rename (escalations expected on gibberish)" \
   uv run pqn-ingest --vault "$VAULT" --format json --skip-rename
 
 echo ""
+echo "=== pqn-config: report effective config (read-only, no LLM) ==="
+check "config effective" \
+  uv run pqn-config --vault "$VAULT" --format json
+check "config --section models" \
+  uv run pqn-config --vault "$VAULT" --section models --format json
+
+echo ""
+echo "=== pqn-quests: generate the Quest index (read-only, no LLM) ==="
+check "quests index" \
+  uv run pqn-quests --vault "$VAULT" --format json
+
+echo ""
+echo "=== pqn-tasks: report scheduled/due tasks (read-only, no LLM) ==="
+check "tasks report" \
+  uv run pqn-tasks --vault "$VAULT" --format json
+
+echo ""
+echo "=== pqn-search: keyword search over the vault (read-only, no LLM) ==="
+check "search title+body" \
+  uv run pqn-search --vault "$VAULT" --format json sourdough
+
+echo ""
 echo "=== pqn-validate: vault still well-formed after mutations ==="
 if $APPLY; then
   check "validate post-apply" \
