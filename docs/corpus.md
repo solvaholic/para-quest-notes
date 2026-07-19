@@ -61,7 +61,7 @@ to one author and would be meaningless to anyone else.
 |-----------------|------------------------------------------------------|
 | `none`          | No frontmatter                                       |
 | `obsidian_only` | `tags`/`aliases`, no PARA or Quest fields            |
-| `partial_para`  | Has a `type:` field but no `quest:` / `supports:`    |
+| `partial_para`  | Has a `type:` field but no `quest-kind:` / `supports:`    |
 | `full`          | Spec-compliant `type` + `quest` + `supports`         |
 
 Inbox notes lean toward `none`/`obsidian_only`. Daily notes are always

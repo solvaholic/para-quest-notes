@@ -40,15 +40,15 @@ def test_apply_writes_canonical_note(tmp_path: Path):
     dest = vault / "projects" / "Brew Setup.md"
     assert dest.exists()
     text = dest.read_text()
-    # Canonical key order: type, quest, supports, created (source_url omitted)
-    assert text.startswith("---\ntype: project\nquest: none\nsupports:\n- '[[Coffee]]'")
+    # Canonical key order: type, quest-kind, supports, created (source_url omitted)
+    assert text.startswith("---\ntype: project\nquest-kind: none\nsupports:\n- '[[Coffee]]'")
     assert "# Brew Setup" in text
 
 
 def test_collision_escalates_and_does_not_write(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     (vault / "areas" / "Twin.md").write_text(
-        "---\ntype: area\nquest: main\nsupports: ['[[X]]']\n---\n"
+        "---\ntype: area\nquest-kind: main\nsupports: ['[[X]]']\n---\n"
     )
     inputs = CreateInputs(title="Twin", type="project", supports=["[[Coffee]]"])
 
@@ -107,5 +107,5 @@ def test_quest_main_without_supports_files_to_canonical(tmp_path: Path):
     assert dest.exists()
     text = dest.read_text()
     assert "type: area" in text
-    assert "quest: main" in text
+    assert "quest-kind: main" in text
     assert "[[Coffee]]" in text

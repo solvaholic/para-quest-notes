@@ -85,7 +85,7 @@ below:
 ```yaml
 ---
 type: resource
-quest: none
+quest-kind: none
 supports:
   - "[[Health]]"
   - "[[Maintain Home]]"
@@ -126,7 +126,7 @@ to `archive/projects/foo/bar/Project Note.md`. Year sub-dirs (e.g.,
 ## Archive: location, not type
 
 Archive is **where** done/abandoned/expired notes go - not what they
-are. The note keeps its original `type`, `quest`, and `supports:`
+are. The note keeps its original `type`, `quest-kind`, and `supports:`
 values; only its location changes. This preserves provenance ("what
 did I do for Health in 2026?") and keeps the schema simple.
 
@@ -188,60 +188,73 @@ tolerate it on read and migrate it to frontmatter on touch (e.g.
 `pqn-ingest --apply`). New notes should always use frontmatter.
 
 Every note that needs metadata declares two things: its **PARA
-type** and its **Quest type**. Notes that support one or more Quests
+type** and its **Quest kind**. Notes that support one or more Quests
 list those Quests in `supports:`.
 
 ```yaml
 ---
 type: project           # project | area | resource
-quest: none             # main | side | none
+quest-kind: none        # main | side | none
 supports:
   - "[[Health]]"
   - "[[Maintain Home]]"
 ---
 ```
 
+**Terminology.** Two distinct axes share the word "quest"; keep them
+apart:
+
+- **`quest-kind:`** is the note's own *classifier* - an enum
+  (`main` | `side` | `none`) saying whether the note *is* a Main Quest,
+  a Side Quest, or neither.
+- **`supports:`** is the note's *association* - a list of wikilinks to
+  the Quest notes it serves.
+
+(The field was named `quest:` before v0.x; that spelling is still read
+with a warning and rewritten to `quest-kind:` on the next write. See
+issue #98.)
+
 - **`type`** mirrors the note's PARA classification. Archive is a
   *location*, not a type: when a note moves under `archive/`, its
   `type` stays at whatever PARA value it had while active
   (`project`, `area`, `resource`).
-- **`quest`** is `main` for Main Quest notes, `side` for Side Quest
-  notes, and `none` for everything else. Always a string; do not use
-  the YAML boolean `false` - keeping the field a single type avoids
+- **`quest-kind`** is `main` for Main Quest notes, `side` for Side
+  Quest notes, and `none` for everything else. Always a string; do not
+  use the YAML boolean `false` - keeping the field a single type avoids
   parser-round-trip surprises.
 - **`supports`** lists wikilinks to the Quests this note serves:
-  - **Main Quest notes** (`quest: main`) explicitly list themselves
-    in `supports`. This makes implicit self-support visible to
-    tooling.
-  - **Side Quest notes** (`quest: side`) must list one or more Main
-    Quests they serve. A Side Quest may serve multiple Main Quests.
-  - **Areas and Projects** (`quest: none`) with tasks must list one
-    or more Quests (Main or Side) they support. Without tasks,
+  - **Main Quest notes** (`quest-kind: main`) explicitly list
+    themselves in `supports`. This makes implicit self-support visible
+    to tooling.
+  - **Side Quest notes** (`quest-kind: side`) must list one or more
+    Main Quests they serve. A Side Quest may serve multiple Main Quests.
+  - **Areas and Projects** (`quest-kind: none`) with tasks must list
+    one or more Quests (Main or Side) they support. Without tasks,
     `supports` is optional.
-  - **Resources** (`quest: none`) - `supports` is always optional.
+  - **Resources** (`quest-kind: none`) - `supports` is always optional.
 
 Quote wikilinks in YAML - `[` is a flow-sequence character and
 unquoted `[[foo]]` is ambiguous to strict YAML parsers.
 
 ## Mapping table
 
-| PARA type         | `quest` value | Has tasks? | `supports` required?           | Example                                                                       |
-| ----------------- | ------------- | ---------- | ------------------------------ | ----------------------------------------------------------------------------- |
-| Area (Main Quest) | `main`        | Sometimes  | Yes (lists itself)             | `areas/Health.md`                                                             |
-| Area (Side Quest) | `side`        | Sometimes  | Yes (1+ Main Quests)           | `areas/Maintain Home.md`                                                      |
-| Area (other)      | `none`        | Sometimes  | If tasks present, 1+ Quests    | `areas/Garden.md` (supports `[[Maintain Home]]`)                              |
-| Project           | `none`        | Usually    | Yes, 1+ Quests                 | `projects/Replace Water Heater.md`                                            |
-| Resource          | `none`        | No         | Optional                       | `resources/Home/Water Heater Models.md`                                       |
+| PARA type         | `quest-kind` value | Has tasks? | `supports` required?           | Example                                                                       |
+| ----------------- | ------------------ | ---------- | ------------------------------ | ----------------------------------------------------------------------------- |
+| Area (Main Quest) | `main`             | Sometimes  | Yes (lists itself)             | `areas/Health.md`                                                             |
+| Area (Side Quest) | `side`             | Sometimes  | Yes (1+ Main Quests)           | `areas/Maintain Home.md`                                                      |
+| Area (other)      | `none`             | Sometimes  | If tasks present, 1+ Quests    | `areas/Garden.md` (supports `[[Maintain Home]]`)                              |
+| Project           | `none`             | Usually    | Yes, 1+ Quests                 | `projects/Replace Water Heater.md`                                            |
+| Resource          | `none`             | No         | Optional                       | `resources/Home/Water Heater Models.md`                                       |
 
-Archived notes keep their pre-archive `type`, `quest`, and
+Archived notes keep their pre-archive `type`, `quest-kind`, and
 `supports:` values. Archive is a location, not a type.
 
 ## Rules, with examples
 
 1. **Notes with tasks must support one or more Quests.** Areas and
    Projects declare support via `supports:` in frontmatter. Main Quest
-   notes (`quest: main`) with tasks list themselves in `supports`;
-   Side Quest notes (`quest: side`) with tasks must list one or more
+   notes (`quest-kind: main`) with tasks list themselves in `supports`;
+   Side Quest notes (`quest-kind: side`) with tasks must list one or more
    Main Quests. `inbox/` and `resources/daily_notes/` are exempt -
    inbox notes are ephemeral (ingested into Areas/Projects later) and
    daily notes inherit Quest context from the tasks and links they

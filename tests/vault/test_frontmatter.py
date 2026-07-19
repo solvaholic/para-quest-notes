@@ -6,7 +6,9 @@ from para_quest_notes.vault.frontmatter import (
     canonical_frontmatter,
     dump_frontmatter,
     merge,
+    migrate_quest_kind,
     parse,
+    read_quest_kind,
     split_note,
 )
 
@@ -71,25 +73,25 @@ def test_canonical_orders_known_keys_first():
         {
             "supports": ["[[Health]]"],
             "created": "2026-05-12",
-            "quest": "none",
+            "quest-kind": "none",
             "type": "project",
         }
     )
-    assert list(out.keys()) == ["type", "quest", "supports", "created"]
+    assert list(out.keys()) == ["type", "quest-kind", "supports", "created"]
 
 
 def test_canonical_appends_unknown_keys_in_input_order():
     out = canonical_frontmatter(
-        {"capability": True, "type": "area", "tags": ["x"], "quest": "none"}
+        {"capability": True, "type": "area", "tags": ["x"], "quest-kind": "none"}
     )
-    # Known keys (type, quest) lead; then unknown keys in input order.
-    assert list(out.keys()) == ["type", "quest", "capability", "tags"]
+    # Known keys (type, quest-kind) lead; then unknown keys in input order.
+    assert list(out.keys()) == ["type", "quest-kind", "capability", "tags"]
 
 
 def test_canonical_drops_none_values():
-    out = canonical_frontmatter({"type": "resource", "quest": "none", "source_url": None})
+    out = canonical_frontmatter({"type": "resource", "quest-kind": "none", "source_url": None})
     assert "source_url" not in out
-    assert out == {"type": "resource", "quest": "none"}
+    assert out == {"type": "resource", "quest-kind": "none"}
 
 
 def test_canonical_drops_empty_supports():
@@ -106,13 +108,13 @@ def test_canonical_keeps_non_empty_supports():
 
 def test_dump_frontmatter_quotes_wikilinks():
     text = dump_frontmatter(
-        {"type": "project", "quest": "none", "supports": ["[[Health]]", "[[Maintain Home]]"]}
+        {"type": "project", "quest-kind": "none", "supports": ["[[Health]]", "[[Maintain Home]]"]}
     )
     # Round-trip: parsed back, supports stays as wikilink strings.
     parsed = parse(text + "body\n")
     assert parsed.frontmatter["supports"] == ["[[Health]]", "[[Maintain Home]]"]
     # Sanity: emitted with the expected key order and a trailing newline.
-    assert text.startswith("---\ntype: project\nquest: none\nsupports:\n")
+    assert text.startswith("---\ntype: project\nquest-kind: none\nsupports:\n")
     assert text.endswith("---\n")
 
 
@@ -123,8 +125,56 @@ def test_dump_frontmatter_empty_returns_empty_string():
 
 
 def test_dump_frontmatter_omits_empty_supports():
-    text = dump_frontmatter({"type": "resource", "quest": "none", "supports": []})
+    text = dump_frontmatter({"type": "resource", "quest-kind": "none", "supports": []})
     assert "supports" not in text
+
+
+# ---------------------------------------------------------------------------
+# quest-kind rename: read tolerance + migrate-on-touch (issue #98)
+# ---------------------------------------------------------------------------
+
+
+def test_read_quest_kind_prefers_canonical_key():
+    value, used_legacy = read_quest_kind({"quest-kind": "main", "quest": "side"})
+    assert value == "main"
+    assert used_legacy is False
+
+
+def test_read_quest_kind_falls_back_to_legacy():
+    value, used_legacy = read_quest_kind({"quest": "side"})
+    assert value == "side"
+    assert used_legacy is True
+
+
+def test_read_quest_kind_absent():
+    assert read_quest_kind({"type": "area"}) == (None, False)
+
+
+def test_migrate_quest_kind_renames_legacy_in_place():
+    out, had_legacy = migrate_quest_kind({"type": "area", "quest": "main", "created": "x"})
+    assert had_legacy is True
+    assert list(out.keys()) == ["type", "quest-kind", "created"]
+    assert out["quest-kind"] == "main"
+
+
+def test_migrate_quest_kind_canonical_wins_when_both_present():
+    out, had_legacy = migrate_quest_kind({"quest": "side", "quest-kind": "main"})
+    assert had_legacy is True
+    assert out == {"quest-kind": "main"}
+
+
+def test_migrate_quest_kind_noop_without_legacy():
+    data = {"type": "area", "quest-kind": "none"}
+    out, had_legacy = migrate_quest_kind(data)
+    assert had_legacy is False
+    assert out == data
+
+
+def test_canonical_frontmatter_migrates_legacy_quest_on_touch():
+    out = canonical_frontmatter({"type": "project", "quest": "none", "supports": ["[[Health]]"]})
+    assert "quest" not in out
+    assert out["quest-kind"] == "none"
+    assert list(out.keys()) == ["type", "quest-kind", "supports"]
 
 
 def test_split_note_frontmatter_only():

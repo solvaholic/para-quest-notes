@@ -139,7 +139,7 @@ shell script"):
 # Mondays at 09:00: scaffold this week's retro as a Project.
 0 9 * * 1  uv run pqn-create \
              --type project --title "Retro $(date +\%G-W\%V)" \
-             --quest none --supports '[[Work]]' --apply
+             --quest-kind none --supports '[[Work]]' --apply
 ```
 
 ### `pqn-daily` — file yesterday's daily note each morning

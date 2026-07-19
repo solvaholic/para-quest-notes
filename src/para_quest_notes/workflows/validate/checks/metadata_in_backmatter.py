@@ -16,7 +16,7 @@ from pathlib import Path
 
 import yaml
 
-from para_quest_notes.vault.frontmatter import CANONICAL_KEY_ORDER
+from para_quest_notes.vault.frontmatter import CANONICAL_KEY_ORDER, LEGACY_QUEST_KEY
 
 from .._blocks import extract_blocks
 from ..contract import ValidateIssue
@@ -24,7 +24,9 @@ from .frontmatter_yaml import _is_template
 
 ID = "metadata_in_backmatter"
 
-_CANONICAL_KEYS = frozenset(CANONICAL_KEY_ORDER)
+# Canonical keys, plus the legacy ``quest:`` spelling — a legacy classifier key
+# in backmatter is still metadata that belongs in frontmatter (issue #98).
+_CANONICAL_KEYS = frozenset((*CANONICAL_KEY_ORDER, LEGACY_QUEST_KEY))
 
 
 def run(

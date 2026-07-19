@@ -25,7 +25,7 @@ def test_generate_outcome_dry_run_defers_llm_call_and_writes_nothing(tmp_path: P
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "Train for 5K.md"
     src.write_text(
-        "---\ntype: project\nquest: none\nsupports: ['[[Health]]']\n---\n"
+        "---\ntype: project\nquest-kind: none\nsupports: ['[[Health]]']\n---\n"
         "# Train for 5K\n\n"
         "Built a simple schedule and kept notes after each run.\n"
         "- [x] Finished week 8\n"
@@ -55,7 +55,7 @@ def test_generate_outcome_apply_generates_writes_and_records_text(tmp_path: Path
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "Train for 5K.md"
     src.write_text(
-        "---\ntype: project\nquest: none\nsupports: ['[[Health]]']\n---\n"
+        "---\ntype: project\nquest-kind: none\nsupports: ['[[Health]]']\n---\n"
         "# Train for 5K\n\n"
         "Built a simple schedule and kept notes after each run.\n"
         "- [x] Finished week 8\n"
@@ -106,7 +106,7 @@ def test_generate_outcome_apply_generates_writes_and_records_text(tmp_path: Path
 def test_generate_outcome_insufficient_context_escalates_without_writing(tmp_path: Path) -> None:
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "Sparse.md"
-    src.write_text("---\ntype: project\nquest: none\n---\n# Sparse\n")
+    src.write_text("---\ntype: project\nquest-kind: none\n---\n# Sparse\n")
     llm = FakeLLM()
     llm.add_text_response(_generate_prompt_id(), "INSUFFICIENT_CONTEXT")
 
@@ -130,7 +130,7 @@ def test_generate_outcome_empty_response_escalates_without_writing(tmp_path: Pat
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "Empty.md"
     src.write_text(
-        "---\ntype: project\nquest: none\n---\n# Empty\n\n- [x] One concrete thing happened\n"
+        "---\ntype: project\nquest-kind: none\n---\n# Empty\n\n- [x] One concrete thing happened\n"
     )
     llm = FakeLLM()
     llm.add_text_response(_generate_prompt_id(), "   ")
@@ -154,7 +154,7 @@ def test_generate_outcome_empty_response_escalates_without_writing(tmp_path: Pat
 def test_without_generate_flag_behavior_stays_outcome_required(tmp_path: Path) -> None:
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "X.md"
-    src.write_text("---\ntype: project\nquest: none\n---\n# X\n")
+    src.write_text("---\ntype: project\nquest-kind: none\n---\n# X\n")
 
     result = archive_note(
         ArchiveInputs(target="X"),
@@ -173,7 +173,7 @@ def test_without_generate_flag_behavior_stays_outcome_required(tmp_path: Path) -
 def test_generate_outcome_keeps_existing_outcome_and_never_calls_llm(tmp_path: Path) -> None:
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "Done.md"
-    src.write_text("---\ntype: project\nquest: none\n---\n## Outcome\nDone already.\n")
+    src.write_text("---\ntype: project\nquest-kind: none\n---\n## Outcome\nDone already.\n")
     llm = FakeLLM()
 
     result = archive_note(

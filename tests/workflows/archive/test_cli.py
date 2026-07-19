@@ -24,7 +24,7 @@ def _config(tmp_path: Path) -> Path:
 def test_cli_dry_run_text(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
     (vault / "projects" / "X.md").write_text(
-        "---\ntype: project\nquest: none\nsupports: ['[[Q]]']\n---\n## Outcome\ndone\n"
+        "---\ntype: project\nquest-kind: none\nsupports: ['[[Q]]']\n---\n## Outcome\ndone\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
@@ -46,7 +46,7 @@ def test_cli_dry_run_text(tmp_path: Path, capsys, monkeypatch):
 def test_cli_apply_json(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
     (vault / "projects" / "X.md").write_text(
-        "---\ntype: project\nquest: none\nsupports: ['[[Q]]']\n---\n## Outcome\ndone\n"
+        "---\ntype: project\nquest-kind: none\nsupports: ['[[Q]]']\n---\n## Outcome\ndone\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
@@ -72,7 +72,7 @@ def test_cli_apply_json(tmp_path: Path, capsys, monkeypatch):
 def test_cli_escalation_returns_1(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
     (vault / "projects" / "X.md").write_text(
-        "---\ntype: project\nquest: none\nsupports: ['[[Q]]']\n---\n# X\n"
+        "---\ntype: project\nquest-kind: none\nsupports: ['[[Q]]']\n---\n# X\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
@@ -96,7 +96,7 @@ def test_cli_escalation_returns_1(tmp_path: Path, capsys, monkeypatch):
 def test_cli_rejects_generate_outcome_with_outcome(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
     (vault / "projects" / "X.md").write_text(
-        "---\ntype: project\nquest: none\nsupports: ['[[Q]]']\n---\n# X\n"
+        "---\ntype: project\nquest-kind: none\nsupports: ['[[Q]]']\n---\n# X\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)

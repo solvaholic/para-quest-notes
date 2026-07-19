@@ -8,8 +8,8 @@ stateless, no LLM.
 
 Following `docs/notes-system.md` "Quest index":
 
-- **Main / Side Quest notes** (`quest: main` / `quest: side` under
-  `areas/`) define the sections and their order — Main Quests first
+- **Main / Side Quest notes** (`quest-kind: main` / `quest-kind: side`
+  under `areas/`) define the sections and their order — Main Quests first
   (alphabetical), then Side Quests. Main Quest notes list themselves in
   `supports:`, so they appear in their own section.
 - **Areas and Projects** declare the Quest(s) they serve in frontmatter

@@ -138,7 +138,7 @@ Full JSON contract and escalation shape:
 ```bash
 uv run pqn-create --vault /tmp/demo-vault \
     --type project --title "Tidy The Garage" \
-    --quest side --supports '[[Maintain Home]]' --apply
+    --quest-kind side --supports '[[Maintain Home]]' --apply
 ```
 
 Files a new Project at `projects/Tidy The Garage.md` with

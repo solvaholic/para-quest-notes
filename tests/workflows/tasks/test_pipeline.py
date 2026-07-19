@@ -19,15 +19,15 @@ def _vault(tmp_path: Path) -> Path:
     v = tmp_path / "vault"
     _write(
         v / "areas" / "Health.md",
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
     )
     _write(
         v / "areas" / "Maintain Home.md",
-        "---\ntype: area\nquest: side\nsupports:\n- '[[Health]]'\n---\n# Maintain Home\n",
+        "---\ntype: area\nquest-kind: side\nsupports:\n- '[[Health]]'\n---\n# Maintain Home\n",
     )
     _write(
         v / "projects" / "Garden.md",
-        "---\ntype: project\nquest: none\nsupports:\n- '[[Maintain Home]]'\n---\n"
+        "---\ntype: project\nquest-kind: none\nsupports:\n- '[[Maintain Home]]'\n---\n"
         "# Garden\n\n## Tasks\n\n"
         "- [ ] Overdue 📅 2026-07-01\n"
         "- [ ] Today 📅 2026-07-17\n"

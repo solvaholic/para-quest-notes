@@ -14,7 +14,7 @@ def _seed_vault(tmp_path: Path) -> Path:
     for d in ("inbox", "areas", "projects", "resources"):
         (vault / d).mkdir(parents=True)
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports: ['[[Health]]']\n---\n"
+        "---\ntype: area\nquest-kind: main\nsupports: ['[[Health]]']\n---\n"
     )
     return vault
 

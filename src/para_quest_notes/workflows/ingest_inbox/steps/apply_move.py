@@ -134,23 +134,23 @@ def _build_frontmatter(
 ) -> dict[str, Any]:
     """Merge spec keys into existing frontmatter, then canonicalize order.
 
-    The spec keys (``type``, ``quest``, ``supports``) overwrite values
+    The spec keys (``type``, ``quest-kind``, ``supports``) overwrite values
     authoritatively; other existing keys are preserved.
     ``canonical_frontmatter`` is the single source of truth for key order
     and for omitting empty ``supports``.
     """
     if para_type == "resource":
-        updates: dict[str, Any] = {"type": "resource", "quest": "none"}
+        updates: dict[str, Any] = {"type": "resource", "quest-kind": "none"}
         if quests:
             updates["supports"] = [f"[[{q}]]" for q in quests]
     elif para_type == "area":
-        updates = {"type": "area", "quest": "none"}
+        updates = {"type": "area", "quest-kind": "none"}
         if quests:
             updates["supports"] = [f"[[{q}]]" for q in quests]
     else:  # project
         updates = {
             "type": "project",
-            "quest": "none",
+            "quest-kind": "none",
             "supports": [f"[[{q}]]" for q in quests],
         }
     return canonical_frontmatter(merge(existing, updates))

@@ -32,4 +32,4 @@ def test_inbox_fallback_apply(tmp_path: Path):
     text = dest.read_text(encoding="utf-8")
     assert "type: project" in text
     assert "supports:" not in text
-    assert "quest: none" in text
+    assert "quest-kind: none" in text

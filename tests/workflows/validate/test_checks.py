@@ -88,7 +88,7 @@ def test_filename_uniqueness_focus_filters_report(vault: Path):
 
 
 def test_inbox_project_without_supports_is_clean(vault: Path):
-    write(vault / "inbox" / "Draft.md", "---\ntype: project\nquest: none\n---\nbody\n")
+    write(vault / "inbox" / "Draft.md", "---\ntype: project\nquest-kind: none\n---\nbody\n")
     report = validate_vault(vault)
     assert report.issues == []
 
@@ -179,7 +179,8 @@ def test_backmatter_absent_is_ok(vault: Path):
 
 def test_metadata_in_backmatter_warns(vault: Path):
     text = (
-        "# Sustain\n\nBody copy.\n\n---\ntype: area\nquest: main\nsupports:\n- '[[Sustain]]'\n---\n"
+        "# Sustain\n\nBody copy.\n\n---\ntype: area\nquest-kind: main\n"
+        "supports:\n- '[[Sustain]]'\n---\n"
     )
     write(vault / "areas" / "Sustain.md", text)
     report = validate_vault(vault, checks=["metadata_in_backmatter"])
@@ -187,7 +188,16 @@ def test_metadata_in_backmatter_warns(vault: Path):
     issue = report.issues[0]
     assert issue.check == "metadata_in_backmatter"
     assert issue.severity == "warning"
-    assert issue.detail["keys"] == ["quest", "supports", "type"]
+    assert issue.detail["keys"] == ["quest-kind", "supports", "type"]
+
+
+def test_metadata_in_backmatter_flags_legacy_quest_key(vault: Path):
+    """A legacy ``quest:`` classifier in backmatter is still flagged (#98)."""
+    text = "# Sustain\n\nBody.\n\n---\ntype: area\nquest: main\n---\n"
+    write(vault / "areas" / "Sustain.md", text)
+    report = validate_vault(vault, checks=["metadata_in_backmatter"])
+    assert len(report.issues) == 1
+    assert report.issues[0].detail["keys"] == ["quest", "type"]
 
 
 def test_metadata_in_backmatter_non_canonical_ignored(vault: Path):
@@ -199,6 +209,6 @@ def test_metadata_in_backmatter_non_canonical_ignored(vault: Path):
 
 
 def test_metadata_in_backmatter_absent_is_ok(vault: Path):
-    write(vault / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\nbody\n")
+    write(vault / "areas" / "Health.md", "---\ntype: area\nquest-kind: main\n---\nbody\n")
     report = validate_vault(vault, checks=["metadata_in_backmatter"])
     assert report.issues == []

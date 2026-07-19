@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import warnings
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.trace import TraceWriter, new_run_path
 from para_quest_notes.adapter.vault import find_vault
+from para_quest_notes.vault.frontmatter import LegacyQuestKeyWarning
 from para_quest_notes.workflows.create.contract import CreateInputs, CreateResult
 from para_quest_notes.workflows.create.path_inference import (
     InferredInputs,
@@ -20,6 +22,16 @@ from para_quest_notes.workflows.create.path_inference import (
     infer_from_path,
 )
 from para_quest_notes.workflows.create.pipeline import create_note
+
+
+def warn_legacy_quest_flag() -> None:
+    """Warn that ``--quest`` is deprecated in favor of ``--quest-kind`` (#98)."""
+    warnings.warn(
+        "--quest is deprecated; use --quest-kind instead "
+        "(the old flag still works but will be removed at v1.0)",
+        LegacyQuestKeyWarning,
+        stacklevel=2,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -50,10 +62,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Title Case name. Becomes the filename verbatim (with .md).",
     )
     p.add_argument(
-        "--quest",
+        "--quest-kind",
+        dest="quest_kind",
         choices=("main", "side", "none"),
-        default="none",
-        help="Quest type for the new note. Default: none.",
+        default=None,
+        help="Quest classifier for the new note (main | side | none). Default: none.",
+    )
+    p.add_argument(
+        # Deprecated alias for --quest-kind (issue #98). Hidden; still works,
+        # warns on use. Removed at the v1.0 sunset.
+        "--quest",
+        dest="quest_legacy",
+        choices=("main", "side", "none"),
+        default=None,
+        help=argparse.SUPPRESS,
     )
     p.add_argument(
         "--supports",
@@ -118,6 +140,16 @@ def _resolve_inputs(args: argparse.Namespace) -> tuple[CreateInputs, Path | None
     title = args.title if args.title is not None else inferred.title
     sub_path = args.sub_path if args.sub_path is not None else inferred.sub_path
 
+    # Resolve the Quest classifier: canonical --quest-kind wins; the deprecated
+    # --quest alias still works but warns (issue #98). Default: "none".
+    quest_kind = args.quest_kind
+    if args.quest_legacy is not None:
+        warn_legacy_quest_flag()
+        if quest_kind is None:
+            quest_kind = args.quest_legacy
+    if quest_kind is None:
+        quest_kind = "none"
+
     # Validate that we have the required values
     if note_type is None:
         print(
@@ -137,7 +169,7 @@ def _resolve_inputs(args: argparse.Namespace) -> tuple[CreateInputs, Path | None
     inputs = CreateInputs(
         title=title,
         type=note_type,
-        quest=args.quest,
+        quest=quest_kind,
         supports=list(args.supports) if args.supports else None,
         sub_path=sub_path,
         source_url=args.source_url,

@@ -77,7 +77,7 @@ def render_frontmatter(inputs: RenderInputs, faker: Faker, seeds: Seeds) -> str:
         return _yaml_block({"type": inputs.type_})
 
     # FULL — but honor the MISSING_SUPPORTS quirk if set.
-    data: dict[str, Any] = {"type": inputs.type_, "quest": inputs.quest}
+    data: dict[str, Any] = {"type": inputs.type_, "quest-kind": inputs.quest}
     if not inputs.shape.has(Quirk.MISSING_SUPPORTS):
         data["supports"] = [_wikilink(s) for s in inputs.supports]
     return _yaml_block(data)

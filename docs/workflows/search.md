@@ -169,9 +169,9 @@ A **flat list** under `results`, most-relevant first. Each result:
 - `path` - vault-relative POSIX path.
 - `type` - `project` | `area` | `resource` | `null`.
 - `supports` - the note's declared `supports:` list (the Quest(s) it
-  serves). A **list**, and deliberately not called `quest`: `quest:` is
-  the main/side/none classifier, `supports:` is which Quest(s) the note
-  serves.
+  serves). A **list**, and deliberately not the same axis as
+  `quest-kind`: `quest-kind:` is the main/side/none classifier,
+  `supports:` is which Quest(s) the note serves.
 - `match_context` - `{where, snippet}`. `where` is `"title"` or
   `"body"`; `snippet` is the title (title hit) or a whitespace-collapsed
   window around the first body match. The window width is set by

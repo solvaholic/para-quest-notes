@@ -1,6 +1,6 @@
 ---
 type: area
-quest: none
+quest-kind: none
 supports:
 - '[[Stay Sharp]]'
 ---

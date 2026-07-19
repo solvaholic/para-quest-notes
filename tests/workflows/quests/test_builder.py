@@ -34,15 +34,15 @@ def vault(tmp_path: Path) -> Path:
     # Main + Side Quest notes (self-support / serve).
     write(
         tmp_path / "areas" / "Health.md",
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
     )
     write(
         tmp_path / "areas" / "Create.md",
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Create]]'\n---\n# Create\n",
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Create]]'\n---\n# Create\n",
     )
     write(
         tmp_path / "areas" / "Maintain Home.md",
-        "---\ntype: area\nquest: side\nsupports:\n- '[[Health]]'\n- '[[Create]]'\n---\n# MH\n",
+        "---\ntype: area\nquest-kind: side\nsupports:\n- '[[Health]]'\n- '[[Create]]'\n---\n# MH\n",
     )
     # Plain Area supporting a Quest, and linking a Resource.
     write(

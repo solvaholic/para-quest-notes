@@ -1,7 +1,8 @@
 """Discover Main + Side Quests declared in the vault.
 
 The Quest list comes from notes under ``<vault>/areas/`` whose
-frontmatter declares ``quest: main`` or ``quest: side``. See
+frontmatter declares ``quest-kind: main`` or ``quest-kind: side`` (the
+legacy ``quest:`` spelling is tolerated on read with a warning). See
 ``docs/notes-system.md``.
 
 Also provides :func:`resolve_quest_from_path`, a deterministic (no-LLM)
@@ -16,7 +17,11 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-from para_quest_notes.vault.frontmatter import split_note
+from para_quest_notes.vault.frontmatter import (
+    read_quest_kind,
+    split_note,
+    warn_legacy_quest_key,
+)
 
 
 @dataclass(frozen=True)
@@ -42,10 +47,10 @@ def discover_quests(vault: Path) -> list[Quest]:
 
     Returns Main Quests first, then Side Quests, each group sorted by
     name. Frontmatter is the canonical location; legacy notes that
-    declare ``quest:`` in trailing backmatter are still discovered
-    (backmatter is tolerated on read, migrated on touch — see
-    ``docs/PLAN.md`` "Open questions — decided 2026-05-12"). Frontmatter
-    wins when both are present.
+    declare ``quest-kind:`` (or the legacy ``quest:`` spelling) in
+    trailing backmatter are still discovered (backmatter is tolerated on
+    read, migrated on touch — see ``docs/PLAN.md`` "Open questions —
+    decided 2026-05-12"). Frontmatter wins when both are present.
     """
     areas_dir = vault / "areas"
     if not areas_dir.is_dir():
@@ -60,7 +65,9 @@ def discover_quests(vault: Path) -> list[Quest]:
             continue
         split = split_note(text)
         meta: dict[str, object] = {**split.backmatter, **split.frontmatter}
-        kind = meta.get("quest")
+        kind, used_legacy = read_quest_kind(meta)
+        if used_legacy:
+            warn_legacy_quest_key(md)
         if kind not in ("main", "side"):
             continue
         supports_raw = meta.get("supports") or []
@@ -110,7 +117,9 @@ def _read_quest_from_note(path: Path) -> list[str]:
         return []
     split = split_note(text)
     meta: dict[str, object] = {**split.backmatter, **split.frontmatter}
-    quest_kind = meta.get("quest")
+    quest_kind, used_legacy = read_quest_kind(meta)
+    if used_legacy:
+        warn_legacy_quest_key(path)
     if quest_kind not in ("main", "side"):
         return []
     supports_raw = meta.get("supports") or []

@@ -298,7 +298,7 @@ def test_pick_quest_deterministic_area_note_hit(tmp_path: Path):
     vault = _make_vault(tmp_path)
     # Create an area note named "Health" with quest declaration
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
     # Inbox note in a "health" subdirectory - dir name matches the area note
     (vault / "inbox/health").mkdir()
@@ -321,7 +321,7 @@ def test_pick_quest_deterministic_miss_falls_through_to_llm(tmp_path: Path):
     """When no subdirectory matches an area note, fall through to the LLM."""
     vault = _make_vault(tmp_path)
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
     # Inbox note directly in inbox/ (no subdirectory signal)
     src = vault / "inbox/Random.md"
@@ -342,7 +342,7 @@ def test_pick_quest_deterministic_walk_up_dirs(tmp_path: Path):
     """Walk up parent dirs: most specific match wins."""
     vault = _make_vault(tmp_path)
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n"
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n"
     )
     # Deep nesting: inbox/health/running/5ks/Note.md
     (vault / "inbox/health/running/5ks").mkdir(parents=True)
@@ -362,7 +362,7 @@ def test_pick_quest_deterministic_normalized_dir_name(tmp_path: Path):
     """Subdirectory names are snake_case normalized before matching."""
     vault = _make_vault(tmp_path)
     (vault / "areas/Maintain Home.md").write_text(
-        "---\ntype: area\nquest: side\nsupports:\n- '[[Health]]'\n---\n"
+        "---\ntype: area\nquest-kind: side\nsupports:\n- '[[Health]]'\n---\n"
     )
     # Dir name with underscores matches "Maintain Home" area note
     (vault / "inbox/maintain_home").mkdir()
@@ -667,7 +667,7 @@ def test_apply_move_dry_run_does_not_touch_disk(tmp_path: Path):
     vault = _make_vault(tmp_path)
     src = vault / "inbox/raw.md"
     src.write_text("# raw\nbody\n")
-    (vault / "areas/Health.md").write_text("---\ntype: area\nquest: main\n---\n[[raw]] link\n")
+    (vault / "areas/Health.md").write_text("---\ntype: area\nquest-kind: main\n---\n[[raw]] link\n")
     ctx = _ctx(vault)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
@@ -685,7 +685,7 @@ def test_apply_move_dry_run_same_stem_reports_no_wikilink_rewrites(tmp_path: Pat
     vault = _make_vault(tmp_path)
     src = vault / "inbox/Foo.md"
     src.write_text("# Foo\nbody\n")
-    (vault / "areas/Health.md").write_text("---\ntype: area\nquest: main\n---\n[[Foo]] link\n")
+    (vault / "areas/Health.md").write_text("---\ntype: area\nquest-kind: main\n---\n[[Foo]] link\n")
     ctx = _ctx(vault)
     ScanNote(source=src).run(ctx)
     ctx.scratchpad["para_type"] = "project"
@@ -706,7 +706,7 @@ def test_apply_move_writes_files_and_rewrites_links(tmp_path: Path):
     src.write_text("# raw\nbody\n")
     (vault / "inbox/raw attachment.txt").write_text("att")
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\n---\n"
+        "---\ntype: area\nquest-kind: main\n---\n"
         "see [[raw]] and [[raw|the raw note]] and [[raw#section|alias]] and [[unrelated]]\n"
     )
     (vault / "archive/projects/Old.md").write_text("[[raw]] should NOT be rewritten\n")
@@ -752,7 +752,7 @@ def test_apply_move_same_stem_reports_no_wikilink_rewrites(tmp_path: Path):
     src = vault / "inbox/Foo.md"
     src.write_text("# Foo\nbody\n")
     link_note = vault / "areas/Health.md"
-    original = "---\ntype: area\nquest: main\n---\nSee [[Foo]] for details.\n"
+    original = "---\ntype: area\nquest-kind: main\n---\nSee [[Foo]] for details.\n"
     link_note.write_text(original)
 
     ctx = _ctx(vault)

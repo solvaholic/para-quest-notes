@@ -89,7 +89,7 @@ def _body_for(inputs: CreateInputs, title: str) -> str:
 def _frontmatter_for(inputs: CreateInputs, *, today: str) -> dict[str, Any]:
     fm: dict[str, Any] = {
         "type": inputs.type,
-        "quest": inputs.quest,
+        "quest-kind": inputs.quest,
         "supports": list(inputs.supports) if inputs.supports else None,
         "source_url": inputs.source_url,
         "created": today,
