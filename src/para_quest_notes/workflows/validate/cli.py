@@ -16,6 +16,7 @@ from para_quest_notes.adapter.vault import find_vault
 from .api import validate_paths, validate_vault
 from .checks import CHECKS_BY_ID
 from .contract import ValidateReport
+from .fix import FixReport, fix_vault
 
 _SEVERITY_CHOICES = ("error", "warning", "info")
 
@@ -55,6 +56,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Treat warnings as errors when computing the exit code.",
     )
     p.add_argument(
+        "--fix",
+        action="store_true",
+        help=(
+            "Migrate legacy 'quest:' frontmatter keys to canonical 'quest-kind:'. "
+            "Dry-run unless combined with --apply. Ignores other --check selections."
+        ),
+    )
+    p.add_argument(
+        "--apply",
+        action="store_true",
+        help="With --fix, write changes to disk. Without it, --fix is a dry-run.",
+    )
+    p.add_argument(
         "--include-archive",
         action="store_true",
         help="Include notes under archive/ (excluded by default).",
@@ -71,6 +85,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     except VaultError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+
+    if args.fix:
+        fix_report = fix_vault(
+            vault,
+            paths=args.path,
+            include_archive=args.include_archive,
+            apply=args.apply,
+        )
+        if args.format == "json":
+            print(json.dumps(fix_report.to_dict(), indent=2))
+        else:
+            _print_fix_text(fix_report)
+        # A skip means a note we refused to guess about — surface it as an error.
+        return 1 if fix_report.skipped else 0
 
     if args.path:
         report = validate_paths(
@@ -116,6 +144,22 @@ def _print_text(report: ValidateReport) -> None:
         if i.related:
             for r in i.related:
                 print(f"               related: {r}")
+
+
+def _print_fix_text(report: FixReport) -> None:
+    mode = "apply" if report.applied else "dry-run"
+    print(f"pqn-validate --fix vault={report.vault} mode={mode}")
+    if not report.entries:
+        print("no legacy 'quest:' keys found.")
+        return
+    verb = "migrated" if report.applied else "would migrate"
+    print(f"{verb}: {len(report.migrated)}, skipped: {len(report.skipped)}")
+    for e in report.migrated:
+        print(f"  [{verb}] {e.path}  quest: {e.value!r} -> quest-kind")
+    for e in report.skipped:
+        print(f"  [skipped] {e.path}  {e.reason}")
+    if not report.applied and report.migrated:
+        print("re-run with --apply to write these changes.")
 
 
 if __name__ == "__main__":  # pragma: no cover
