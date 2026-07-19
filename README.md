@@ -67,6 +67,9 @@ The workflows preserve that reasoning, locally.
 - [x] `pqn-search` — read-only, PARA + Quest-aware keyword search over
       the vault (title + content; ranks Resources by inbound links).
       See [`docs/workflows/search.md`](docs/workflows/search.md).
+- [x] `pqn-config` — read-only inspector for the effective config with
+      per-value provenance (v0.5; no LLM). See
+      [`docs/workflows/config.md`](docs/workflows/config.md).
 - [ ] Phase 7: grow eval fixtures toward ~30; revisit
       `generate_outcome` judge
 - [ ] Phase 8 (deferred): agent SKILL.md wrappers
@@ -75,9 +78,7 @@ The workflows preserve that reasoning, locally.
 
 A small (~30-note) sample vault lives at
 [`samples/vault/`](samples/vault/). The walkthrough below exercises
-A small (~30-note) sample vault lives at
-[`samples/vault/`](samples/vault/). The walkthrough below exercises
-the seven core workflow `pqn-*` CLIs against a throwaway copy of it, so
+the eight core workflow `pqn-*` CLIs against a throwaway copy of it, so
 you can see the whole toolchain on first read without risking real
 notes. (The read-only `pqn-tasks` reporter isn't shown here — the
 sample vault carries no due-dated tasks — but see
@@ -287,7 +288,7 @@ pipx install git+https://github.com/solvaholic/para-quest-notes@v0.4.1
 ```
 
 Either command installs all `pqn-*` commands onto your `PATH`
-(the eight workflow CLIs plus the `pqn-eval` harness).
+(the nine workflow CLIs plus the `pqn-eval` harness).
 PyPI publishing is deferred to a later release; track the
 [releases page](https://github.com/solvaholic/para-quest-notes/releases)
 for new tags.
