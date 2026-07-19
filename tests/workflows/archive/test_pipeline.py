@@ -19,7 +19,7 @@ def test_dry_run_plans_without_writing(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "Brew Setup.md"
     src.write_text(
-        "---\ntype: project\nquest: none\nsupports:\n- '[[Coffee]]'\n---\n"
+        "---\ntype: project\nquest-kind: none\nsupports:\n- '[[Coffee]]'\n---\n"
         "# Brew Setup\n\n## Outcome\nShipped it.\n"
     )
     inputs = ArchiveInputs(target="Brew Setup")
@@ -39,7 +39,7 @@ def test_apply_moves_and_cancels_tasks(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "Brew Setup.md"
     src.write_text(
-        "---\ntype: project\nquest: none\nsupports:\n- '[[Coffee]]'\n---\n"
+        "---\ntype: project\nquest-kind: none\nsupports:\n- '[[Coffee]]'\n---\n"
         "# Brew Setup\n\n- [ ] grind\n- [/] pour\n- [x] taste\n"
     )
     inputs = ArchiveInputs(
@@ -68,7 +68,7 @@ def test_open_tasks_without_flag_escalates(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "X.md"
     src.write_text(
-        "---\ntype: project\nquest: none\nsupports:\n- '[[Q]]'\n---\n"
+        "---\ntype: project\nquest-kind: none\nsupports:\n- '[[Q]]'\n---\n"
         "## Outcome\ndone\n\n- [ ] still open\n"
     )
     inputs = ArchiveInputs(target="X")
@@ -82,7 +82,7 @@ def test_open_tasks_without_flag_escalates(tmp_path: Path):
 def test_missing_outcome_escalates(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "X.md"
-    src.write_text("---\ntype: project\nquest: none\nsupports:\n- '[[Q]]'\n---\n# X\n")
+    src.write_text("---\ntype: project\nquest-kind: none\nsupports:\n- '[[Q]]'\n---\n# X\n")
     inputs = ArchiveInputs(target="X")
     result = archive_note(inputs, vault=vault, apply=True, today="2026-05-12")
     assert not result.ok
@@ -105,7 +105,7 @@ def test_legacy_backmatter_migrated(tmp_path: Path):
     src = vault / "projects" / "Old.md"
     src.write_text(
         "# Old\n\nbody\n\n## Outcome\ndone\n\n"
-        "---\ntype: project\nquest: none\nsupports: ['[[Coffee]]']\n---\n"
+        "---\ntype: project\nquest-kind: none\nsupports: ['[[Coffee]]']\n---\n"
     )
     inputs = ArchiveInputs(target="Old")
     result = archive_note(inputs, vault=vault, apply=True, today="2026-05-12")
@@ -121,7 +121,9 @@ def test_legacy_backmatter_migrated(tmp_path: Path):
 def test_destination_exists_escalates(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "Dup.md"
-    src.write_text("---\ntype: project\nquest: none\nsupports: ['[[Q]]']\n---\n## Outcome\ndone\n")
+    src.write_text(
+        "---\ntype: project\nquest-kind: none\nsupports: ['[[Q]]']\n---\n## Outcome\ndone\n"
+    )
     existing = vault / "archive" / "projects" / "Dup.md"
     existing.parent.mkdir(parents=True, exist_ok=True)
     existing.write_text("preexisting")

@@ -8,14 +8,16 @@ No moves, no rewrites - just one new file.
 
 Seven steps, all pure (`--apply` only gates the actual disk write):
 
-1. **`validate_inputs`** - checks `--type`, `--quest`, `--title`
+1. **`validate_inputs`** - checks `--type`, `--quest-kind`, `--title`
    (Title Case, allowed character set, no spaceless camelCase/PascalCase),
    `--supports` wikilink format, `--sub-path` shape, and resource
-   constraints (`--quest none` for resources). When `--quest main` and
+   constraints (`--quest-kind none` for resources). When `--quest-kind main` and
    no `--supports` is given, infers `--supports "[[<title>]]"` (a main
    quest area supports itself). For other project/area notes without
    `--supports`, it records an inbox-fallback note in the plan instead
-   of escalating.
+   of escalating. (`--quest-kind` was `--quest` before v0.x; the old
+   flag is a deprecated alias - it still works but warns, and is slated
+   for removal at v1.0. See issue #98.)
 2. **`resolve_quest`** - when `--supports` is omitted for a
    project/area, tries to resolve the Quest deterministically from the
    destination path (same-named Area note from the filename stem or
@@ -72,7 +74,7 @@ pqn-create --vault ~/notes \
 # Resource note with sub-path and source URL.
 pqn-create --vault ~/notes \
   --type resource --title "Pour Over Guide" \
-  --quest none --sub-path coffee \
+  --quest-kind none --sub-path coffee \
   --source-url https://example.com/guide --apply
 
 # Area supporting multiple Quests, JSON output for an agent wrapper.
@@ -82,7 +84,7 @@ pqn-create --vault ~/notes --format json \
 
 # Create a new main quest (--supports inferred as "[[Coffee]]").
 pqn-create --vault ~/notes \
-  --type area --quest main --title "Coffee" --apply
+  --type area --quest-kind main --title "Coffee" --apply
 
 # Pipe body content from stdin (replaces the default skeleton).
 echo "# Meeting Notes\n\nDecided to use React." | \
@@ -130,7 +132,7 @@ also accepted). Examples:
 `--type area` and a path like `projects/Foo.md`, the explicit `--type area`
 wins.
 
-`--supports` is optional. When `--quest main` is given without
+`--supports` is optional. When `--quest-kind main` is given without
 `--supports`, `pqn-create` infers `--supports "[[<title>]]"` and files
 to the canonical `areas/` path (a main quest area supports itself).
 For other projects or areas without `--supports`, `pqn-create` files the
@@ -161,7 +163,7 @@ Canonical destination example:
     "destination_mode": "canonical",
     "frontmatter": {
       "type": "project",
-      "quest": "none",
+      "quest-kind": "none",
       "supports": ["[[Coffee]]"],
       "created": "2026-05-12"
     },
@@ -177,7 +179,7 @@ Canonical destination example:
 ### Inbox fallback
 
 When `--supports` is omitted for a `project` or `area` that is *not*
-`--quest main`, the plan reports that choice explicitly:
+`--quest-kind main`, the plan reports that choice explicitly:
 
 ```json
 {
@@ -190,7 +192,7 @@ When `--supports` is omitted for a `project` or `area` that is *not*
     "destination_mode": "inbox",
     "frontmatter": {
       "type": "project",
-      "quest": "none",
+      "quest-kind": "none",
       "created": "2026-05-12"
     },
     "notes": [

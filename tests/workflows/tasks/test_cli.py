@@ -21,11 +21,11 @@ def _vault(tmp_path: Path) -> Path:
     v = tmp_path / "vault"
     _write(
         v / "areas" / "Health.md",
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
     )
     _write(
         v / "projects" / "Garden.md",
-        "---\ntype: project\nquest: none\nsupports:\n- '[[Health]]'\n---\n"
+        "---\ntype: project\nquest-kind: none\nsupports:\n- '[[Health]]'\n---\n"
         f"# Garden\n\n- [ ] Pay taxes 📅 {_PAST}\n",
     )
     return v
@@ -61,7 +61,7 @@ def test_group_by_quest_headers(tmp_path: Path, capsys):
 
 def test_scheduled_source_labeled_in_output(tmp_path: Path, capsys):
     v = tmp_path / "sched"
-    _write(v / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\n# Health\n")
+    _write(v / "areas" / "Health.md", "---\ntype: area\nquest-kind: main\n---\n# Health\n")
     _write(v / "projects" / "P.md", f"# P\n- [ ] Water plants ⏳ {_PAST}\n")
     rc = main(["--vault", str(v), "--overdue"])
     out = capsys.readouterr().out
@@ -71,7 +71,7 @@ def test_scheduled_source_labeled_in_output(tmp_path: Path, capsys):
 
 def test_date_field_flag_filters(tmp_path: Path, capsys):
     v = tmp_path / "mix"
-    _write(v / "areas" / "Health.md", "---\ntype: area\nquest: main\n---\n# Health\n")
+    _write(v / "areas" / "Health.md", "---\ntype: area\nquest-kind: main\n---\n# Health\n")
     _write(v / "projects" / "D.md", f"# D\n- [ ] Deadline task 📅 {_PAST}\n")
     _write(v / "projects" / "S.md", f"# S\n- [ ] Do-date task ⏳ {_PAST}\n")
     rc = main(["--vault", str(v), "--overdue", "--date-field", "scheduled"])

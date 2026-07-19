@@ -37,10 +37,10 @@ def _seed_vault(tmp_path: Path) -> Path:
     (vault / "projects").mkdir()
     (vault / "resources").mkdir()
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports: ['[[Health]]']\n---\n"
+        "---\ntype: area\nquest-kind: main\nsupports: ['[[Health]]']\n---\n"
     )
     (vault / "areas/Connect.md").write_text(
-        "---\ntype: area\nquest: main\nsupports: ['[[Connect]]']\n---\n"
+        "---\ntype: area\nquest-kind: main\nsupports: ['[[Connect]]']\n---\n"
     )
     return vault
 
@@ -74,6 +74,33 @@ def test_ingest_one_dry_run(tmp_path: Path):
     assert fr.applied is False
     assert src.exists()
     assert any(h["file"] == "areas/Health.md" for h in fr.change.wikilinks_rewritten)
+
+
+def test_apply_migrates_legacy_quest_key(tmp_path: Path):
+    """An inbox note with a legacy ``quest:`` key is migrated to ``quest-kind:``
+    on apply (migrate-on-touch, issue #98)."""
+    vault = _seed_vault(tmp_path)
+    src = vault / "inbox/legacy note.md"
+    src.write_text("---\ntype: project\nquest: side\n---\n# Legacy\nplan a 5k\n")
+
+    llm = FakeLLM(
+        responder=_build_responder(
+            {
+                "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
+                "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
+                "propose_filename": {
+                    "choice": "generate",
+                    "filename": "Legacy Note.md",
+                    "reason": "test name",
+                },
+            }
+        )
+    )
+    fr = ingest_one(src, vault=vault, llm=llm, apply=True)
+    assert fr.ok, fr.escalation or fr.error
+    text = (vault / "projects/Legacy Note.md").read_text(encoding="utf-8")
+    assert "quest-kind: none" in text
+    assert "\nquest:" not in text and not text.startswith("quest:")
 
 
 def test_ingest_one_keeps_identifier_filename(tmp_path: Path):

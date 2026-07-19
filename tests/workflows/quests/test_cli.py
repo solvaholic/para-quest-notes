@@ -20,7 +20,7 @@ def write(path: Path, text: str) -> Path:
 def vault(tmp_path: Path) -> Path:
     write(
         tmp_path / "areas" / "Health.md",
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n",
     )
     write(
         tmp_path / "projects" / "Run a 5K.md",

@@ -84,7 +84,7 @@ def test_resolve_target_rejects_non_projects(tmp_path: Path):
 def test_verify_project_happy(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "X.md"
-    src.write_text("---\ntype: project\nquest: none\n---\nbody\n")
+    src.write_text("---\ntype: project\nquest-kind: none\n---\nbody\n")
     ctx = _ctx(vault)
     ctx.scratchpad.update(source_abs=src, source_rel="projects/X.md")
     VerifyProject().run(ctx)
@@ -105,7 +105,7 @@ def test_verify_project_rejects_area(tmp_path: Path):
 def test_verify_project_accepts_legacy_backmatter(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     src = vault / "projects" / "X.md"
-    src.write_text("# X\nbody\n\n---\ntype: project\nquest: none\n---\n")
+    src.write_text("# X\nbody\n\n---\ntype: project\nquest-kind: none\n---\n")
     ctx = _ctx(vault)
     ctx.scratchpad.update(source_abs=src, source_rel="projects/X.md")
     VerifyProject().run(ctx)
@@ -238,7 +238,7 @@ def _compose_ctx(tmp_path: Path, source_text: str, **overrides):
 def test_compose_archive_basic(tmp_path: Path):
     ctx, _ = _compose_ctx(
         tmp_path,
-        "---\ntype: project\nquest: none\n---\n# X\n\n## Outcome\ndone\n",
+        "---\ntype: project\nquest-kind: none\n---\n# X\n\n## Outcome\ndone\n",
     )
     ComposeArchive(today="2026-05-12").run(ctx)
     content = ctx.scratchpad["content"]
@@ -252,7 +252,7 @@ def test_compose_archive_basic(tmp_path: Path):
 def test_compose_archive_cancels_tasks(tmp_path: Path):
     ctx, _ = _compose_ctx(
         tmp_path,
-        "---\ntype: project\nquest: none\n---\nintro\n- [ ] one\n- [/] two\n",
+        "---\ntype: project\nquest-kind: none\n---\nintro\n- [ ] one\n- [/] two\n",
         will_cancel_tasks=True,
         outcome_action="provided",
         outcome_text="Shipped it",
@@ -269,7 +269,7 @@ def test_compose_archive_cancels_tasks(tmp_path: Path):
 def test_compose_archive_preserves_block_id(tmp_path: Path):
     ctx, _ = _compose_ctx(
         tmp_path,
-        "---\ntype: project\nquest: none\n---\n- [ ] do thing ^abc123\n",
+        "---\ntype: project\nquest-kind: none\n---\n- [ ] do thing ^abc123\n",
         will_cancel_tasks=True,
         outcome_action="kept",
     )
@@ -282,7 +282,7 @@ def test_compose_archive_preserves_block_id(tmp_path: Path):
 def test_compose_archive_escalates_on_tasks_metadata(tmp_path: Path):
     ctx, _ = _compose_ctx(
         tmp_path,
-        "---\ntype: project\nquest: none\n---\n- [ ] do thing 📅 2026-06-01\n",
+        "---\ntype: project\nquest-kind: none\n---\n- [ ] do thing 📅 2026-06-01\n",
         will_cancel_tasks=True,
         outcome_action="kept",
     )
@@ -294,7 +294,7 @@ def test_compose_archive_escalates_on_tasks_metadata(tmp_path: Path):
 def test_compose_archive_migrates_backmatter(tmp_path: Path):
     ctx, _ = _compose_ctx(
         tmp_path,
-        "# X\n\nbody\n\n---\ntype: project\nquest: none\n---\n",
+        "# X\n\nbody\n\n---\ntype: project\nquest-kind: none\n---\n",
         outcome_action="provided",
         outcome_text="done",
     )
@@ -309,7 +309,7 @@ def test_compose_archive_mirrors_subpath(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     (vault / "projects" / "foo" / "bar").mkdir(parents=True)
     src = vault / "projects" / "foo" / "bar" / "X.md"
-    src.write_text("---\ntype: project\nquest: none\n---\n## Outcome\nx\n")
+    src.write_text("---\ntype: project\nquest-kind: none\n---\n## Outcome\nx\n")
     ctx = _ctx(vault)
     ctx.scratchpad.update(
         source_abs=src,

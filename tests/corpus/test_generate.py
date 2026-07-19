@@ -146,4 +146,4 @@ def test_full_frontmatter_notes_have_quest_field(tmp_path: Path) -> None:
         end = body.index("\n---\n", 4)
         front = body[4:end]
         assert "type:" in front
-        assert "quest:" in front
+        assert "quest-kind:" in front

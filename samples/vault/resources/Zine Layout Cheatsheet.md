@@ -1,6 +1,6 @@
 ---
 type: resource
-quest: none
+quest-kind: none
 supports: []
 ---
 # Zine Layout Cheatsheet

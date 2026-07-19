@@ -32,7 +32,7 @@ def _seed(tmp_path: Path) -> Path:
     (vault / "projects").mkdir()
     (vault / "resources").mkdir()
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports: ['[[Health]]']\n---\n"
+        "---\ntype: area\nquest-kind: main\nsupports: ['[[Health]]']\n---\n"
     )
     return vault
 
@@ -42,7 +42,7 @@ def test_collision_detected_via_validate_library_call(tmp_path: Path):
     at ``propose_filename``, surfacing validate's diagnosis."""
     vault = _seed(tmp_path)
     (vault / "resources" / "Run A 5K.md").write_text(
-        "---\ntype: resource\nquest: none\n---\n# Existing\n"
+        "---\ntype: resource\nquest-kind: none\n---\n# Existing\n"
     )
     src = vault / "inbox" / "train plan.md"
     src.write_text("# Train Plan\nrun a 5k\n")
@@ -76,7 +76,7 @@ def test_collision_detected_via_validate_library_call(tmp_path: Path):
 
 def test_collision_blocks_apply(tmp_path: Path):
     vault = _seed(tmp_path)
-    (vault / "resources" / "Dup.md").write_text("---\ntype: resource\nquest: none\n---\n")
+    (vault / "resources" / "Dup.md").write_text("---\ntype: resource\nquest-kind: none\n---\n")
     src = vault / "inbox" / "source.md"
     src.write_text("# Source\nbody\n")
 
@@ -104,7 +104,7 @@ def test_archive_collisions_are_ignored(tmp_path: Path):
     vault = _seed(tmp_path)
     (vault / "archive" / "projects").mkdir(parents=True)
     (vault / "archive" / "projects" / "Old Name.md").write_text(
-        "---\ntype: project\nquest: none\n---\n"
+        "---\ntype: project\nquest-kind: none\n---\n"
     )
     src = vault / "inbox" / "source.md"
     src.write_text("# Source\nbody\n")

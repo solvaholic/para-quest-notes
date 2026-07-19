@@ -45,8 +45,8 @@ class ValidateInputs:
         if i.quest not in _QUEST_KINDS:
             raise EscalateToUser(
                 step=self.name,
-                reason=f"--quest must be one of {_QUEST_KINDS}, got {i.quest!r}",
-                options=[{"quest": q} for q in _QUEST_KINDS],
+                reason=f"--quest-kind must be one of {_QUEST_KINDS}, got {i.quest!r}",
+                options=[{"quest-kind": q} for q in _QUEST_KINDS],
                 context={},
             )
 
@@ -89,9 +89,9 @@ class ValidateInputs:
         if i.type == "resource" and i.quest != "none":
             raise EscalateToUser(
                 step=self.name,
-                reason="resources should have quest=none (set --quest none)",
+                reason="resources should have quest-kind=none (set --quest-kind none)",
                 options=[],
-                context={"quest": i.quest},
+                context={"quest-kind": i.quest},
             )
 
         if i.sub_path is not None:

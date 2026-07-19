@@ -11,7 +11,8 @@ Build the final content for the destination:
   ``docs/notes-system.md`` says daily notes inherit Quest context from
   their tasks and links, not from frontmatter. We preserve whatever
   frontmatter is there as-is (without forcing canonical key order),
-  but we *do* drop the tail fence if the user had backmatter.
+  but we *do* drop the tail fence if the user had backmatter, and we
+  migrate a legacy ``quest:`` classifier key to ``quest-kind:``.
 * Prepend ``# YYYY-MM-DD\\n\\n`` to the body when the first non-blank
   line isn't already an ``# H1`` matching the filename's date.
 
@@ -26,6 +27,7 @@ from para_quest_notes.adapter.step import StepContext, StepResult
 from para_quest_notes.vault.frontmatter import (
     ParsedNote,
     merge,
+    migrate_quest_kind,
     split_note,
 )
 
@@ -51,6 +53,12 @@ class ComposeNote:
         else:
             merged_fm = split.frontmatter
             frontmatter_migrated = False
+
+        # Migrate a legacy ``quest:`` classifier to ``quest-kind:`` on touch,
+        # even though daily otherwise preserves the user's frontmatter shape.
+        merged_fm, quest_key_migrated = migrate_quest_kind(merged_fm)
+        if quest_key_migrated:
+            frontmatter_migrated = True
 
         body, h1_inserted = _ensure_h1(split.body, date_iso)
 

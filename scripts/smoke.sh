@@ -88,13 +88,13 @@ echo "=== pqn-create: scaffold a new project ==="
 check "create dry-run" \
   uv run pqn-create --vault "$VAULT" --format json \
     --type project --title "Smoke Test Project" \
-    --quest main --supports "[[Health]]"
+    --quest-kind main --supports "[[Health]]"
 
 if $APPLY; then
   check "create --apply" \
     uv run pqn-create --vault "$VAULT" --format json --apply \
       --type project --title "Smoke Test Project" \
-      --quest main --supports "[[Health]]"
+      --quest-kind main --supports "[[Health]]"
   check "created file exists" \
     test -f "$VAULT/projects/Smoke Test Project.md"
 fi
@@ -104,14 +104,14 @@ echo "=== pqn-create: template feature ==="
 check "create --template dry-run" \
   uv run pqn-create --vault "$VAULT" --format json \
     --type project --title "Project from Template" \
-    --quest main --supports "[[Health]]" \
+    --quest-kind main --supports "[[Health]]" \
     --template "smoke-template"
 
 if $APPLY; then
   check "create --template --apply" \
     uv run pqn-create --vault "$VAULT" --format json --apply \
       --type project --title "Project from Template" \
-      --quest main --supports "[[Health]]" \
+      --quest-kind main --supports "[[Health]]" \
       --template "smoke-template"
   check "created file from template exists" \
     test -f "$VAULT/projects/Project from Template.md"
@@ -122,7 +122,7 @@ fi
 echo ""
 echo "=== pqn-create: body-stdin feature ==="
 create_from_stdin() {
-  echo "Custom body from stdin." | uv run pqn-create --vault "$VAULT" --format json --type project --title "Project from Stdin" --quest main --supports "[[Health]]" --body-stdin "$@"
+  echo "Custom body from stdin." | uv run pqn-create --vault "$VAULT" --format json --type project --title "Project from Stdin" --quest-kind main --supports "[[Health]]" --body-stdin "$@"
 }
 check "create --body-stdin dry-run" create_from_stdin
 
@@ -196,7 +196,7 @@ if [ ! -d "$VAULT/projects" ]; then
   cat > "$VAULT/projects/Smoke Test Project.md" << 'EOF'
 ---
 type: project
-quest: main
+quest-kind: main
 supports:
 - '[[Health]]'
 created: '2026-07-05'
@@ -240,15 +240,15 @@ check_fail "archive escalates when no projects/ dir" \
     --outcome "N/A" "Nonexistent"
 
 echo ""
-echo "=== pqn-create: --quest main infers --supports ==="
-check "create --quest main infers supports" \
+echo "=== pqn-create: --quest-kind main infers --supports ==="
+check "create --quest-kind main infers supports" \
   uv run pqn-create --vault "$VAULT" --format json \
-    --type area --quest main --title "Inferred Area"
+    --type area --quest-kind main --title "Inferred Area"
 
 if $APPLY; then
-  check "create --quest main --apply" \
+  check "create --quest-kind main --apply" \
     uv run pqn-create --vault "$VAULT" --format json --apply \
-      --type area --quest main --title "Inferred Area"
+      --type area --quest-kind main --title "Inferred Area"
   check "inferred area filed to areas/" \
     test -f "$VAULT/areas/Inferred Area.md"
 fi

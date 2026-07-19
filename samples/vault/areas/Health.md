@@ -1,6 +1,6 @@
 ---
 type: area
-quest: main
+quest-kind: main
 supports:
 - '[[Health]]'
 ---

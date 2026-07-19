@@ -1,6 +1,6 @@
 ---
 type: project
-quest: none
+quest-kind: none
 supports:
 - '[[Connect]]'
 ---

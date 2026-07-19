@@ -15,6 +15,7 @@ and eventually ``pqn-archive``). See :func:`canonical_frontmatter` and
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -23,16 +24,76 @@ import yaml
 
 DELIM = "---"
 
+# The Quest classifier frontmatter field. ``quest-kind:`` is canonical; the
+# legacy ``quest:`` spelling is tolerated on read (with a warning) and migrated
+# to ``quest-kind:`` on any write. See issue #98 and docs/notes-system.md.
+QUEST_KIND_KEY = "quest-kind"
+LEGACY_QUEST_KEY = "quest"
+
 # Canonical key order for the PARA + Quest schema. Keys outside this set
 # (legacy keys, user-added keys) follow in their original order. Driven by
 # docs/notes-system.md "Metadata schema (frontmatter)".
 CANONICAL_KEY_ORDER: tuple[str, ...] = (
     "type",
-    "quest",
+    QUEST_KIND_KEY,
     "supports",
     "source_url",
     "created",
 )
+
+
+class LegacyQuestKeyWarning(UserWarning):
+    """Emitted when a legacy ``quest:`` classifier key is read or supplied.
+
+    Distinct category so callers (and tests) can filter or assert on it via
+    :func:`warnings.catch_warnings` / :func:`pytest.warns`.
+    """
+
+
+def read_quest_kind(meta: dict[str, Any]) -> tuple[Any, bool]:
+    """Read the Quest classifier from ``meta``, tolerating the legacy key.
+
+    Returns ``(value, used_legacy)``. Prefers canonical ``quest-kind:``; falls
+    back to legacy ``quest:`` when only that is present. ``used_legacy`` is True
+    only when the value came from the legacy key, so callers can warn once.
+    Returns ``(None, False)`` when neither key is present.
+    """
+    if QUEST_KIND_KEY in meta:
+        return meta.get(QUEST_KIND_KEY), False
+    if LEGACY_QUEST_KEY in meta:
+        return meta.get(LEGACY_QUEST_KEY), True
+    return None, False
+
+
+def warn_legacy_quest_key(path: object | None = None) -> None:
+    """Emit a :class:`LegacyQuestKeyWarning` naming ``path`` when available."""
+    where = f" in {path}" if path is not None else ""
+    warnings.warn(
+        f"legacy 'quest:' classifier key found{where}; rename it to "
+        f"'{QUEST_KIND_KEY}:' (write-path workflows migrate this on touch)",
+        LegacyQuestKeyWarning,
+        stacklevel=2,
+    )
+
+
+def migrate_quest_kind(data: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    """Rename a legacy ``quest:`` key to ``quest-kind:`` preserving order.
+
+    Returns ``(new_data, had_legacy)``. When both keys are present the
+    canonical ``quest-kind:`` value wins and the legacy key is dropped. When
+    no legacy key is present, ``data`` is returned unchanged.
+    """
+    if LEGACY_QUEST_KEY not in data:
+        return data, False
+    out: dict[str, Any] = {}
+    for key, value in data.items():
+        if key == LEGACY_QUEST_KEY:
+            if QUEST_KIND_KEY not in data and QUEST_KIND_KEY not in out:
+                out[QUEST_KIND_KEY] = value
+            # else: canonical key already carries the value; drop the legacy one.
+            continue
+        out[key] = value
+    return out, True
 
 
 @dataclass
@@ -143,7 +204,12 @@ def canonical_frontmatter(
       says omit the key rather than emit ``supports: []``.
 
     Doesn't validate values — schema enforcement is the workflow's job.
+
+    Migrates a legacy ``quest:`` key to canonical ``quest-kind:`` as part of
+    canonicalization, so any write-path workflow that routes frontmatter
+    through here rewrites the note on touch (see issue #98).
     """
+    data, _ = migrate_quest_kind(data)
     out: dict[str, Any] = {}
     for key in key_order:
         if key not in data:

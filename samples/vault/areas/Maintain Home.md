@@ -1,6 +1,6 @@
 ---
 type: area
-quest: side
+quest-kind: side
 supports:
 - '[[Health]]'
 - '[[Create]]'

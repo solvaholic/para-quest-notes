@@ -26,7 +26,7 @@ def test_resolve_quest_from_sub_path(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
     # Create an area note that declares a quest
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
@@ -58,7 +58,7 @@ def test_resolve_quest_deterministic_miss_falls_to_inbox(tmp_path: Path, capsys,
     vault = _seed_vault(tmp_path)
     # Area note exists but doesn't match the sub-path
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
@@ -87,7 +87,7 @@ def test_resolve_quest_full_path_inference(tmp_path: Path, capsys, monkeypatch):
     """Full path like 'projects/health/Improve PQN' resolves Quest."""
     vault = _seed_vault(tmp_path)
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
@@ -137,7 +137,7 @@ def test_resolve_quest_skipped_when_supports_provided(tmp_path: Path, capsys, mo
     """When --supports is explicit, resolve_quest is skipped."""
     vault = _seed_vault(tmp_path)
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
@@ -167,7 +167,7 @@ def test_resolve_quest_plan_notes_updated(tmp_path: Path, capsys, monkeypatch):
     """On resolution, plan notes reflect the quest source."""
     vault = _seed_vault(tmp_path)
     (vault / "areas/Health.md").write_text(
-        "---\ntype: area\nquest: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
+        "---\ntype: area\nquest-kind: main\nsupports:\n- '[[Health]]'\n---\n# Health\n"
     )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
