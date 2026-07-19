@@ -2,8 +2,9 @@
 
 Templates live in the vault at ``<vault>/resources/templates/<name>.md``
 (configurable via ``create.template_dir`` in config.yaml). They use a
-safe set of variables: ``$title``, ``$type``, ``$quest``, ``$supports``,
-``$source_url``, ``$created``.
+safe set of variables: ``$title``, ``$type``, ``$quest_kind``,
+``$supports``, ``$source_url``, ``$created``. ``$quest`` is a deprecated
+alias for ``$quest_kind`` (kept so pre-#98 templates keep rendering).
 
 Resolution order:
 1. Explicit ``--template`` flag (by name or path)
@@ -19,8 +20,9 @@ from typing import Any
 
 DEFAULT_TEMPLATE_DIR = "resources/templates"
 
-# Safe variables available in templates
-TEMPLATE_VARS = ("title", "type", "quest", "supports", "source_url", "created")
+# Safe variables available in templates. ``quest`` is a deprecated alias
+# for ``quest_kind`` (kept for pre-#98 templates); see render docstring.
+TEMPLATE_VARS = ("title", "type", "quest_kind", "supports", "source_url", "created", "quest")
 
 
 class TemplateNotFoundError(Exception):

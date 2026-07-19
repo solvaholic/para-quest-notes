@@ -162,6 +162,11 @@ class ComposeNote:
         return {
             "title": title,
             "type": inputs.type,
+            # `quest_kind` is the documented variable; `quest` is kept as a
+            # deprecated alias so pre-#98 templates keep rendering. Because
+            # rendering uses safe_substitute (no error on unknown names), a
+            # stale `$quest` would otherwise emit literally into the note.
+            "quest_kind": inputs.quest,
             "quest": inputs.quest,
             "supports": supports_str,
             "source_url": inputs.source_url or "",

@@ -104,7 +104,8 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Body template name or vault-relative path. Looked up in "
             "<vault>/resources/templates/ (or the configured template_dir). "
-            "Variables: $title, $type, $quest, $supports, $source_url, $created."
+            "Variables: $title, $type, $quest_kind, $supports, $source_url, "
+            "$created ($quest is a deprecated alias for $quest_kind)."
         ),
     )
     p.add_argument(

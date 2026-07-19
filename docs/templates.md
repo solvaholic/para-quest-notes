@@ -39,10 +39,17 @@ Templates use `$variable` syntax. Available variables:
 |----------|-------|
 | `$title` | The note title (from `--title` or path inference) |
 | `$type` | PARA type: `project`, `area`, or `resource` |
-| `$quest` | Quest kind: `main`, `side`, or `none` |
+| `$quest_kind` | Quest kind: `main`, `side`, or `none` |
 | `$supports` | Comma-separated supports list (e.g., `[[Health]], [[Work]]`) |
 | `$source_url` | Source URL if provided, empty string otherwise |
 | `$created` | ISO date (e.g., `2026-07-09`) |
+
+`$quest` is a deprecated alias for `$quest_kind`, kept so templates
+written before the [#98](https://github.com/solvaholic/para-quest-notes/issues/98)
+rename keep working. Prefer `$quest_kind` in new templates; `$quest` is
+slated for removal at v1.0. (The variable can't be named `$quest-kind`:
+`string.Template` names allow only letters, digits, and underscores, so a
+hyphen would be read as `$quest` followed by literal `-kind`.)
 
 ### Escaping
 
