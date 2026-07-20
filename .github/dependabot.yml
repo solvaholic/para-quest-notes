@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Python deps: pyproject.toml + uv.lock (runtime and dev groups).
+  # Dependabot has native uv support and updates the lockfile.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "deps"
+    # Batch minor/patch bumps into one PR to keep review volume low;
+    # majors still open their own PR so breaking changes get scrutiny.
+    groups:
+      python-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions used by .github/workflows/*.yml. Keeps SHA pins fresh
+  # (and maintains the "# vX.Y.Z" comment when one is present).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
