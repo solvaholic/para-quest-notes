@@ -4,7 +4,7 @@ Local, scripted workflows for managing markdown notes organized by
 **PARA + Quest**, powered by small LLMs running locally via
 [Ollama](https://ollama.com/).
 
-> **Status:** v0.4 shipped. CLI surface and JSON contracts are
+> **Status:** v0.5 shipped. CLI surface and JSON contracts are
 > stable. See the [releases page](https://github.com/solvaholic/para-quest-notes/releases)
 > for what's new.
 
@@ -282,9 +282,9 @@ See [`docs/corpus.md`](docs/corpus.md) for the full shape taxonomy.
 Install the released CLIs straight from this repo's git tag:
 
 ```bash
-uv tool install git+https://github.com/solvaholic/para-quest-notes@v0.4.1
+uv tool install git+https://github.com/solvaholic/para-quest-notes@v0.5.0
 # or
-pipx install git+https://github.com/solvaholic/para-quest-notes@v0.4.1
+pipx install git+https://github.com/solvaholic/para-quest-notes@v0.5.0
 ```
 
 Either command installs all `pqn-*` commands onto your `PATH`
