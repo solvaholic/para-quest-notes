@@ -78,6 +78,22 @@ because that's what enables project/activity prioritization.
   `--supports "[[<title>]]"` and files to `areas/` (canonical path).
   The inbox fallback still applies to projects/areas with a non-main
   quest when `--supports` is omitted.
+- **The CLI + `--format json` contract is the integration seam
+  (decided 2026-08-08, #114):** external front-ends integrate by
+  invoking `pqn-*` CLIs and parsing `--format json`, not by importing
+  the Python packages, and not through a cache, index, or long-running
+  daemon. The `api.py` modules (`search`, `quests`, `validate`) stay a
+  convenience for in-tree callers and other workflows; they are not a
+  supported external API. Rationale: the CLI + JSON contract is the
+  part most likely to survive a re-implementation in another language
+  (see "Open questions"), so binding front-ends to it keeps them
+  working across one. It also makes those front-ends the first serious
+  non-human consumers of the JSON output, which is the pressure that
+  finds gaps in it. Accepted cost: repeated invocations re-walk the
+  vault, so interactive callers see ~160-320 ms per command on a
+  ~1,700-note vault. We instrument rather than optimize (#114) and
+  revisit the plumbing only as part of a re-implementation, or if
+  measured p50 latency crosses the point where the wait is a felt tax.
 
 ## Architecture sketch
 
@@ -573,6 +589,20 @@ let them creep into the v1 release.
   GitHub repo, `pyproject.toml` (`name`, `[project.scripts]`),
   `src/<pkg>/` directory, `~/.config/<name>/` config path,
   `PARA_QUEST_VAULT` env var, and `pqn-*` CLI prefix. All mechanical.
+- **Re-implementation in another language?** Genuinely open. The
+  intent has been to get features mostly steady in Python, then
+  consider a rewrite - Go is the leading candidate, but TypeScript or
+  a Python re-architecture are live options. Nothing is committed.
+  What this open question *does* decide today is what we don't build
+  in the meantime: no cache, index, or daemon, because the dominant
+  cost in the read-only workflows is the vault walk (~70-90% of a
+  `pqn-search` invocation; ~111 ms for ~1,700 notes), and a concurrent
+  walk in a compiled language plausibly erases most of it. Building
+  Python-side state now risks solving a problem the rewrite deletes
+  for free. Revisit when features settle, or when instrumentation
+  (#114) shows the current latency actually hurts. Related: the CLI +
+  `--format json` seam decision above exists precisely so front-ends
+  survive whatever this resolves to.
 - Prompt template language: Jinja2 vs stdlib `string.Template` -
   decide when writing the first prompt.
 - Should escalation payloads ever round-trip back into a workflow
