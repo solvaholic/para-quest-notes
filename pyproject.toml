@@ -52,7 +52,7 @@ packages = ["src/para_quest_notes"]
 [dependency-groups]
 dev = [
     "pytest>=8.0",
-    "ruff>=0.16.1",
+    "ruff>=0.16.3",
     "mypy>=1.10",
 ]
 
