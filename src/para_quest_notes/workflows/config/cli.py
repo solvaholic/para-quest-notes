@@ -13,6 +13,7 @@ import sys
 from collections.abc import Sequence
 
 from para_quest_notes.adapter.cli import build_base_parser
+from para_quest_notes.adapter.completion import enable_completion
 from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import ConfigError
 
@@ -46,7 +47,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    enable_completion(parser)
+    args = parser.parse_args(argv)
 
     try:
         config = load_config(args.config)

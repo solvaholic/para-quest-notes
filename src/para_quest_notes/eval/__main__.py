@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from para_quest_notes.adapter.completion import enable_completion
 from para_quest_notes.adapter.fake_llm import FakeLLM
 from para_quest_notes.adapter.llm import LLMResponse
 from para_quest_notes.eval.fixtures import load_fixtures
@@ -218,7 +219,9 @@ def _build_models(args: argparse.Namespace, fixtures: list[Any]) -> list[ModelSp
 
 def main(argv: Iterable[str] | None = None) -> int:
     register_defaults()
-    args = _build_parser().parse_args(list(argv) if argv is not None else None)
+    parser = _build_parser()
+    enable_completion(parser)
+    args = parser.parse_args(list(argv) if argv is not None else None)
     fixtures = load_fixtures(args.fixtures)
     if not fixtures:
         print(f"no fixtures found under {args.fixtures}", file=sys.stderr)

@@ -70,6 +70,8 @@ The workflows preserve that reasoning, locally.
 - [x] `pqn-config` — read-only inspector for the effective config with
       per-value provenance (v0.5; no LLM). See
       [`docs/workflows/config.md`](docs/workflows/config.md).
+- [x] Shell completion for every `pqn-*` command (Bash + Zsh, opt-in,
+      argparse-driven). See [`docs/completion.md`](docs/completion.md).
 - [ ] Phase 7: grow eval fixtures toward ~30; revisit
       `generate_outcome` judge
 - [ ] Phase 8 (deferred): agent SKILL.md wrappers
@@ -292,6 +294,19 @@ Either command installs all `pqn-*` commands onto your `PATH`
 PyPI publishing is deferred to a later release; track the
 [releases page](https://github.com/solvaholic/para-quest-notes/releases)
 for new tags.
+
+### Shell completion (optional)
+
+Bash and Zsh can complete every `pqn-*` option, its fixed values, and
+vault-derived values like Quest names, templates, and archive targets.
+Add one line per command to your shell config:
+
+```bash
+eval "$(register-python-argcomplete pqn-create)"
+```
+
+See [`docs/completion.md`](docs/completion.md) for the full snippet,
+what completes where, and troubleshooting.
 
 ### From a clone (for development)
 

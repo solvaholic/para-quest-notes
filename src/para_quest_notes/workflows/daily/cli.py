@@ -9,6 +9,11 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from para_quest_notes.adapter.cli import build_base_parser
+from para_quest_notes.adapter.completion import (
+    complete_daily_targets,
+    enable_completion,
+    set_completer,
+)
 from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.trace import TraceWriter, new_run_path
@@ -23,11 +28,14 @@ def build_parser() -> argparse.ArgumentParser:
         description="File a single YYYY-MM-DD.md note into "
         "resources/daily_notes/YYYY/MM/. Filing only; no authoring.",
     )
-    p.add_argument(
-        "target",
-        help="Vault-relative path to the daily note, or just its basename "
-        "(with or without .md). Basename search covers vault root, inbox/, "
-        "and resources/daily_notes/.",
+    set_completer(
+        p.add_argument(
+            "target",
+            help="Vault-relative path to the daily note, or just its basename "
+            "(with or without .md). Basename search covers vault root, inbox/, "
+            "and resources/daily_notes/.",
+        ),
+        complete_daily_targets,
     )
     p.add_argument(
         "--apply",
@@ -38,7 +46,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    enable_completion(parser)
+    args = parser.parse_args(argv)
 
     config = load_config(args.config)
     try:

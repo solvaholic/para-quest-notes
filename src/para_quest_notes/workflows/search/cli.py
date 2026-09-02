@@ -8,6 +8,11 @@ import sys
 from collections.abc import Sequence
 
 from para_quest_notes.adapter.cli import build_base_parser
+from para_quest_notes.adapter.completion import (
+    complete_quests,
+    enable_completion,
+    set_completer,
+)
 from para_quest_notes.adapter.config import Config, load_config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.vault import find_vault
@@ -66,10 +71,15 @@ def build_parser() -> argparse.ArgumentParser:
             "Default: all types."
         ),
     )
-    p.add_argument(
-        "--quest",
-        default=None,
-        help=("Restrict to notes whose 'supports:' includes this Quest (wikilink or bare name)."),
+    set_completer(
+        p.add_argument(
+            "--quest",
+            default=None,
+            help=(
+                "Restrict to notes whose 'supports:' includes this Quest (wikilink or bare name)."
+            ),
+        ),
+        complete_quests,
     )
     p.add_argument(
         "--limit",
@@ -118,7 +128,9 @@ def _resolve_snippet_radius(cli_value: int | None, config: Config) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    enable_completion(parser)
+    args = parser.parse_args(argv)
 
     config = load_config(args.config)
     try:
