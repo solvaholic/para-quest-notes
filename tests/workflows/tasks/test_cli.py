@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from para_quest_notes.workflows.tasks.cli import main
 
 # A due date far in the past is always overdue regardless of the real
@@ -79,6 +81,95 @@ def test_date_field_flag_filters(tmp_path: Path, capsys):
     assert rc == 0
     assert "Do-date task" in out
     assert "Deadline task" not in out
+
+
+def test_date_fields_config_filters_when_flag_omitted(tmp_path: Path, capsys):
+    v = tmp_path / "mix"
+    _write(v / "areas" / "Health.md", "---\ntype: area\nquest-kind: main\n---\n# Health\n")
+    _write(v / "projects" / "D.md", f"# D\n- [ ] Deadline task 📅 {_PAST}\n")
+    _write(v / "projects" / "S.md", f"# S\n- [ ] Do-date task ⏳ {_PAST}\n")
+    config = tmp_path / "config.yaml"
+    _write(config, "workflows:\n  tasks:\n    date_fields: [scheduled]\n")
+
+    rc = main(["--vault", str(v), "--overdue", "--config", str(config), "--format", "json"])
+
+    assert rc == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["date_fields"] == ["scheduled"]
+    assert [task["description"] for task in data["tasks"]] == ["Do-date task"]
+
+
+def test_date_field_flag_overrides_config(tmp_path: Path, capsys):
+    config = tmp_path / "config.yaml"
+    _write(config, "workflows:\n  tasks:\n    date_fields: [scheduled]\n")
+
+    rc = main(
+        [
+            "--vault",
+            str(_vault(tmp_path)),
+            "--overdue",
+            "--config",
+            str(config),
+            "--date-field",
+            "due",
+            "--format",
+            "json",
+        ]
+    )
+
+    assert rc == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["date_fields"] == ["due"]
+    assert [task["description"] for task in data["tasks"]] == ["Pay taxes"]
+
+
+@pytest.mark.parametrize(
+    "date_fields",
+    [
+        "scheduled",
+        "null",
+        "[]",
+        "[scheduled, deadline]",
+        "[scheduled, 3]",
+    ],
+)
+def test_invalid_date_fields_config_exits_two(tmp_path: Path, capsys, date_fields: str):
+    config = tmp_path / "config.yaml"
+    _write(config, f"workflows:\n  tasks:\n    date_fields: {date_fields}\n")
+
+    rc = main(["--vault", str(_vault(tmp_path)), "--config", str(config)])
+
+    assert rc == 2
+    assert "workflows.tasks.date_fields" in capsys.readouterr().err
+
+
+def test_null_tasks_config_exits_two(tmp_path: Path, capsys):
+    config = tmp_path / "config.yaml"
+    _write(config, "workflows:\n  tasks: null\n")
+
+    rc = main(["--vault", str(_vault(tmp_path)), "--config", str(config)])
+
+    assert rc == 2
+    assert "workflows.tasks must be a mapping" in capsys.readouterr().err
+
+
+def test_date_field_flag_does_not_mask_invalid_config(tmp_path: Path, capsys):
+    config = tmp_path / "config.yaml"
+    _write(config, "workflows:\n  tasks:\n    date_fields: [deadline]\n")
+
+    rc = main(
+        [
+            "--vault",
+            str(_vault(tmp_path)),
+            "--config",
+            str(config),
+            "--date-field",
+            "due",
+        ]
+    )
+
+    assert rc == 2
+    assert "workflows.tasks.date_fields" in capsys.readouterr().err
 
 
 def test_empty_vault_reports_nothing(tmp_path: Path, capsys):

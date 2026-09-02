@@ -18,7 +18,7 @@ Source = Literal["default", "config", "env", "flag", "cwd"]
 
 # The sections a caller can isolate with ``--section``. Omitting the flag
 # reports every section.
-SECTIONS = ("vault", "models", "ollama", "templates", "paths")
+SECTIONS = ("vault", "models", "ollama", "tasks", "templates", "paths")
 
 
 @dataclass
@@ -30,6 +30,16 @@ class Setting:
 
     def to_dict(self) -> dict[str, Any]:
         return {"value": self.value, "source": self.source}
+
+
+@dataclass
+class HonoredSetting(Setting):
+    """A workflow setting plus whether that workflow consumes it."""
+
+    honored: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return {**super().to_dict(), "honored": self.honored}
 
 
 @dataclass
@@ -99,6 +109,14 @@ class OllamaInfo:
 
 
 @dataclass
+class TasksInfo:
+    date_fields: HonoredSetting
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"date_fields": self.date_fields.to_dict()}
+
+
+@dataclass
 class TemplatesInfo:
     """Template dir, per-type defaults, and (when the vault resolves) the
     template files found on disk. ``files`` is ``None`` when the vault is
@@ -142,6 +160,7 @@ class ConfigReport:
     vault: VaultInfo
     models: ModelsInfo
     ollama: OllamaInfo
+    tasks: TasksInfo
     templates: TemplatesInfo
     paths: PathsInfo
 
@@ -150,6 +169,7 @@ class ConfigReport:
             "vault": self.vault.to_dict(),
             "models": self.models.to_dict(),
             "ollama": self.ollama.to_dict(),
+            "tasks": self.tasks.to_dict(),
             "templates": self.templates.to_dict(),
             "paths": self.paths.to_dict(),
         }

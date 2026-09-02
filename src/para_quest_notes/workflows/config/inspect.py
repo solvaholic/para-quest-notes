@@ -21,15 +21,18 @@ from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.trace import default_state_dir
 from para_quest_notes.adapter.vault import resolve_vault
 from para_quest_notes.workflows.create.templates import get_template_config
+from para_quest_notes.workflows.tasks.settings import resolve_date_fields
 
 from .contract import (
     ConfigReport,
+    HonoredSetting,
     ModelOverride,
     ModelsInfo,
     OllamaInfo,
     PathsInfo,
     Setting,
     Source,
+    TasksInfo,
     TemplatesInfo,
     VaultInfo,
 )
@@ -89,6 +92,7 @@ def inspect_config(
         vault=vault_info,
         models=_inspect_models(config, raw),
         ollama=_inspect_ollama(config, raw),
+        tasks=_inspect_tasks(config, raw),
         templates=_inspect_templates(config, raw, template_dir, defaults, vault_path),
         paths=_inspect_paths(config, raw),
     )
@@ -136,6 +140,16 @@ def _inspect_ollama(config: Config, raw: Mapping[str, Any]) -> OllamaInfo:
             value=config.ollama.request_timeout_seconds,
             source=_source(raw, "ollama", "request_timeout_seconds"),
         ),
+    )
+
+
+def _inspect_tasks(config: Config, raw: Mapping[str, Any]) -> TasksInfo:
+    return TasksInfo(
+        date_fields=HonoredSetting(
+            value=resolve_date_fields(None, config.workflows),
+            source=_source(raw, "workflows", "tasks", "date_fields"),
+            honored=True,
+        )
     )
 
 

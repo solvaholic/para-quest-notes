@@ -47,6 +47,16 @@ pqn-tasks --vault ~/notes --date-field scheduled
 A field you omit from `--date-field` is ignored, so the second form is
 both a precedence *and* a filter.
 
+Set a persistent default in `config.yaml` when the same date model applies to every run:
+
+```yaml
+workflows:
+  tasks:
+    date_fields: [scheduled, due, start]
+```
+
+Precedence is `--date-field` flags, then `workflows.tasks.date_fields`, then the built-in `[due, scheduled, start]` default. The configured value must be a non-empty list containing only `due`, `scheduled`, and `start`; invalid values fail loudly with exit code `2`.
+
 ### Scan scope
 
 The whole vault **except `archive/`** is scanned by default —
@@ -168,9 +178,6 @@ will not be renamed.
   `pqn-archive --cancel-open-tasks`).
 - **Emoji syntax only.** Dataview inline fields (`[due:: 2026-05-15]`)
   and plain `- [ ]` checkboxes without emoji dates are not parsed.
-- **`date_fields` is CLI-only for now.** Set the precedence per run with
-  `--date-field`; a persistent `config.yaml` default is a planned
-  follow-up.
 - **Fixed `-` bullet rendering.** Configurable task-state
   representation is deferred.
 - No recurrence generation — this reports tasks that already exist.

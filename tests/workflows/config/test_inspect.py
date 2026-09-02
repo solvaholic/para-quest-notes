@@ -84,6 +84,31 @@ def test_per_workflow_model_override_flagged_not_honored(tmp_path: Path) -> None
     assert all(o.honored is False for o in report.models.overrides)
 
 
+def test_tasks_date_fields_reports_config_provenance_and_honored(tmp_path: Path) -> None:
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text(
+        "workflows:\n  tasks:\n    date_fields: [scheduled, due]\n",
+        encoding="utf-8",
+    )
+    config = load_config(cfg_file)
+
+    report = inspect_config(config=config, env={}, start_dir=tmp_path)
+
+    assert report.tasks.date_fields.value == ["scheduled", "due"]
+    assert report.tasks.date_fields.source == "config"
+    assert report.tasks.date_fields.honored is True
+
+
+def test_tasks_date_fields_reports_default(tmp_path: Path) -> None:
+    config = Config(source_path=tmp_path / "absent.yaml")
+
+    report = inspect_config(config=config, env={}, start_dir=tmp_path)
+
+    assert report.tasks.date_fields.value == ["due", "scheduled", "start"]
+    assert report.tasks.date_fields.source == "default"
+    assert report.tasks.date_fields.honored is True
+
+
 def test_template_files_listed_when_dir_exists(tmp_path: Path) -> None:
     vault = _mk_vault(tmp_path / "v")
     tdir = vault / "resources" / "templates"
