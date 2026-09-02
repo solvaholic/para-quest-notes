@@ -31,7 +31,7 @@ def test_full_json_has_all_sections(vault: Path, tmp_path: Path, capsys) -> None
     code = main(["--vault", str(vault), "--config", _absent_config(tmp_path), "--format", "json"])
     assert code == 0
     data = json.loads(capsys.readouterr().out)
-    assert set(data) == {"vault", "models", "ollama", "templates", "paths"}
+    assert set(data) == {"vault", "models", "ollama", "tasks", "templates", "paths"}
     assert data["vault"]["resolved"] is True
     assert data["vault"]["source"] == "flag"
 
@@ -110,3 +110,27 @@ def test_config_provenance_end_to_end(vault: Path, tmp_path: Path, capsys) -> No
     assert code == 0
     data = json.loads(capsys.readouterr().out)
     assert data["models"]["default_model"] == {"value": "from-file:1", "source": "config"}
+
+
+def test_tasks_section_reports_honored_date_fields(vault: Path, tmp_path: Path, capsys) -> None:
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        "workflows:\n  tasks:\n    date_fields: [start, scheduled]\n",
+        encoding="utf-8",
+    )
+
+    code = main(
+        ["--vault", str(vault), "--config", str(cfg), "--section", "tasks", "--format", "json"]
+    )
+
+    assert code == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data == {
+        "tasks": {
+            "date_fields": {
+                "value": ["start", "scheduled"],
+                "source": "config",
+                "honored": True,
+            }
+        }
+    }

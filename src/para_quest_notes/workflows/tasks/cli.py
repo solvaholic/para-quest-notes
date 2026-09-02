@@ -17,11 +17,12 @@ from pathlib import PurePosixPath
 
 from para_quest_notes.adapter.cli import build_base_parser
 from para_quest_notes.adapter.config import load_config
-from para_quest_notes.adapter.errors import VaultError
+from para_quest_notes.adapter.errors import ConfigError, VaultError
 from para_quest_notes.adapter.vault import find_vault
 
 from .contract import BUCKET_ORDER, DATE_FIELDS, UNASSIGNED, TaskItem, TasksReport
 from .pipeline import scan_vault_tasks
+from .settings import resolve_date_fields
 
 _BUCKET_LABELS = {
     "overdue": "Overdue",
@@ -66,7 +67,8 @@ def build_parser() -> argparse.ArgumentParser:
         "sets precedence for tasks carrying several dates (first present "
         "wins). A field you omit is ignored entirely, so '--date-field "
         "scheduled' reports scheduled-dated tasks only. "
-        "Default: due, then scheduled, then start.",
+        "Default: workflows.tasks.date_fields from config, then due, "
+        "scheduled, start.",
     )
     p.add_argument(
         "--quest",
@@ -87,7 +89,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
-    config = load_config(args.config)
+    try:
+        config = load_config(args.config)
+        date_fields = resolve_date_fields(args.date_field, config.workflows)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     try:
         vault = find_vault(arg=args.vault, config=config)
     except VaultError as exc:
@@ -100,7 +108,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         overdue_only=args.overdue,
         quest=args.quest,
         group_by=args.group_by,
-        date_fields=args.date_field,
+        date_fields=date_fields,
         include_archive=args.include_archive,
     )
 

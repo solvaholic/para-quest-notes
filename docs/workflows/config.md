@@ -22,6 +22,7 @@ It reports:
   `workflows.<name>.model` overrides, each flagged with whether it's
   actually **honored** (see the drift note below).
 - **ollama** — `base_url` and `request_timeout_seconds`.
+- **tasks** — the effective `date_fields` precedence, its provenance, and whether `pqn-tasks` honors it.
 - **templates** — the template dir (`create.template_dir`), the per-type
   defaults (`create.defaults.<type>`), and the template files found in the
   vault.
@@ -40,6 +41,7 @@ pqn-config --vault /tmp/demo-vault
 
 # One section at a time.
 pqn-config --vault /tmp/demo-vault --section models
+pqn-config --vault /tmp/demo-vault --section tasks
 pqn-config --vault /tmp/demo-vault --section templates
 pqn-config --vault /tmp/demo-vault --section vault
 
@@ -47,9 +49,7 @@ pqn-config --vault /tmp/demo-vault --section vault
 pqn-config --vault /tmp/demo-vault --format json | jq
 ```
 
-`--section` accepts `vault`, `models`, `ollama`, `templates`, or `paths`.
-Omit it to report everything. There is deliberately **no** `set`
-counterpart — configuration is edited by hand in `config.yaml`.
+`--section` accepts `vault`, `models`, `ollama`, `tasks`, `templates`, or `paths`. Omit it to report everything. There is deliberately **no** `set` counterpart — configuration is edited by hand in `config.yaml`.
 
 Vault discovery follows the standard order
 ([`docs/configuration.md`](../configuration.md)): `--vault` →
@@ -72,6 +72,8 @@ Each reported value carries a `source`:
 The `config` vs `default` distinction is exact: `pqn-config` re-reads the
 raw `config.yaml` to see which keys were actually present, rather than
 guessing from whether a value happens to equal its default.
+
+Workflow settings also carry an `honored` flag. `tasks.date_fields` is `true` because `pqn-tasks` consumes it; documented-but-unwired model overrides remain `false`.
 
 ## The per-workflow model drift it surfaces
 
@@ -105,6 +107,13 @@ If a workflow is later wired to honor its override, add its name to
   "ollama": {
     "base_url": {"value": "http://localhost:11434", "source": "default"},
     "request_timeout_seconds": {"value": 120, "source": "default"}
+  },
+  "tasks": {
+    "date_fields": {
+      "value": ["scheduled", "due", "start"],
+      "source": "config",
+      "honored": true
+    }
   },
   "templates": {
     "template_dir": {"value": "resources/templates", "source": "default"},

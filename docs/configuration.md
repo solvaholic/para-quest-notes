@@ -28,10 +28,15 @@ workflows:
     model: qwen3:30b
     temperature: 0.2
     dry_run: true   # require --apply to actually move files
+  tasks:
+    # Effective-date precedence; omitted fields are ignored.
+    date_fields: [scheduled, due, start]
 
 # Where run traces go.
 run_log_dir: ~/.local/state/para-quest-notes/runs
 ```
+
+`pqn-tasks` resolves its date fields as `--date-field` flags, then `workflows.tasks.date_fields`, then the built-in `[due, scheduled, start]` default. The configured value must be a non-empty list containing only `due`, `scheduled`, and `start`.
 
 ## Vault content (in your vault)
 

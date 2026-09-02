@@ -22,6 +22,7 @@ from .contract import (
     ModelsInfo,
     OllamaInfo,
     PathsInfo,
+    TasksInfo,
     TemplatesInfo,
     VaultInfo,
 )
@@ -50,11 +51,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         config = load_config(args.config)
+        report = inspect_config(config=config, vault_arg=args.vault)
     except ConfigError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-
-    report = inspect_config(config=config, vault_arg=args.vault)
 
     if args.format == "json":
         print(json.dumps(report.to_dict(args.section), indent=2))
@@ -68,6 +68,7 @@ def _print_text(report: ConfigReport, section: str | None) -> None:
         "vault": lambda: _render_vault(report.vault),
         "models": lambda: _render_models(report.models),
         "ollama": lambda: _render_ollama(report.ollama),
+        "tasks": lambda: _render_tasks(report.tasks),
         "templates": lambda: _render_templates(report.templates),
         "paths": lambda: _render_paths(report.paths),
     }
@@ -111,6 +112,13 @@ def _render_ollama(ollama: OllamaInfo) -> None:
     print(f"- base_url: {ollama.base_url.value}{_prov(ollama.base_url.source)}")
     t = ollama.request_timeout_seconds
     print(f"- request_timeout_seconds: {t.value}{_prov(t.source)}")
+
+
+def _render_tasks(tasks: TasksInfo) -> None:
+    print("## tasks")
+    date_fields = tasks.date_fields
+    honored = "honored" if date_fields.honored else "not honored"
+    print(f"- date_fields: {', '.join(date_fields.value)}{_prov(date_fields.source)} ({honored})")
 
 
 def _render_templates(templates: TemplatesInfo) -> None:
