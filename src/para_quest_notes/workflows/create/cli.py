@@ -10,6 +10,13 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from para_quest_notes.adapter.cli import build_base_parser
+from para_quest_notes.adapter.completion import (
+    complete_quest_wikilinks,
+    complete_sub_paths,
+    complete_templates,
+    enable_completion,
+    set_completer,
+)
 from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.trace import TraceWriter, new_run_path
@@ -77,20 +84,26 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=argparse.SUPPRESS,
     )
-    p.add_argument(
-        "--supports",
-        action="append",
-        default=None,
-        help=(
-            "Wikilink to a Quest this note supports, e.g. '[[Health]]'. Repeatable. "
-            "Optional for project and area notes: omit it to file into inbox/."
+    set_completer(
+        p.add_argument(
+            "--supports",
+            action="append",
+            default=None,
+            help=(
+                "Wikilink to a Quest this note supports, e.g. '[[Health]]'. Repeatable. "
+                "Optional for project and area notes: omit it to file into inbox/."
+            ),
         ),
+        complete_quest_wikilinks,
     )
-    p.add_argument(
-        "--sub-path",
-        dest="sub_path",
-        default=None,
-        help="Sub-directory under the PARA top-level (e.g. '2026/' or 'Home/Water').",
+    set_completer(
+        p.add_argument(
+            "--sub-path",
+            dest="sub_path",
+            default=None,
+            help="Sub-directory under the PARA top-level (e.g. '2026/' or 'Home/Water').",
+        ),
+        complete_sub_paths,
     )
     p.add_argument(
         "--source-url",
@@ -98,15 +111,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Source URL for a Resource note (stored in frontmatter and surfaced in the body).",
     )
-    p.add_argument(
-        "--template",
-        default=None,
-        help=(
-            "Body template name or vault-relative path. Looked up in "
-            "<vault>/resources/templates/ (or the configured template_dir). "
-            "Variables: $title, $type, $quest_kind, $supports, $source_url, "
-            "$created ($quest is a deprecated alias for $quest_kind)."
+    set_completer(
+        p.add_argument(
+            "--template",
+            default=None,
+            help=(
+                "Body template name or vault-relative path. Looked up in "
+                "<vault>/resources/templates/ (or the configured template_dir). "
+                "Variables: $title, $type, $quest_kind, $supports, $source_url, "
+                "$created ($quest is a deprecated alias for $quest_kind)."
+            ),
         ),
+        complete_templates,
     )
     p.add_argument(
         "--body-stdin",
@@ -181,7 +197,9 @@ def _resolve_inputs(args: argparse.Namespace) -> tuple[CreateInputs, Path | None
 
 
 def main(argv: Sequence[str] | None = None, *, stdin: str | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    enable_completion(parser)
+    args = parser.parse_args(argv)
 
     config = load_config(args.config)
 

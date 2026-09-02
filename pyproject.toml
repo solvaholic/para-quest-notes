@@ -20,6 +20,7 @@ classifiers = [
     "Topic :: Office/Business",
 ]
 dependencies = [
+    "argcomplete>=3.5",
     "faker>=40.36.0",
     "pyyaml>=6.0",
 ]

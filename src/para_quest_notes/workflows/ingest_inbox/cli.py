@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from para_quest_notes.adapter.cli import add_llm_args, build_base_parser
+from para_quest_notes.adapter.completion import enable_completion
 from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.llm import OllamaClient
@@ -44,7 +45,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    enable_completion(parser)
+    args = parser.parse_args(argv)
 
     config = load_config(args.config)
     try:
