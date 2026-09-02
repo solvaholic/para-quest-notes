@@ -25,6 +25,7 @@ class AppliedChange:
     attachments_moved: list[tuple[str, str]] = field(default_factory=list)
     wikilinks_rewritten: list[dict[str, Any]] = field(default_factory=list)
     frontmatter_updated: bool = False
+    frontmatter_migrated: bool = False
 
 
 @dataclass

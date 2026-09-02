@@ -61,6 +61,23 @@ def test_scan_note_uses_frontmatter_title(tmp_path: Path):
     assert ctx.scratchpad["scan"].title == "Real Title"
 
 
+def test_scan_note_splits_legacy_backmatter(tmp_path: Path):
+    """Issue #106: tail backmatter leaves the body and lands in `backmatter`."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# Real Title\nbody\n\n---\ntype: resource\nsource_url: http://x\n---\n")
+    ctx = _ctx(vault)
+    result = ScanNote(source=src).run(ctx)
+
+    scan = ctx.scratchpad["scan"]
+    assert scan.had_backmatter is True
+    assert scan.backmatter == {"type": "resource", "source_url": "http://x"}
+    assert "---" not in scan.parsed.body
+    # H1 title detection still works off the backmatter-free body.
+    assert scan.title == "Real Title"
+    assert result.meta["had_backmatter"] is True
+
+
 # ---- classify_para ------------------------------------------------------
 
 
@@ -745,6 +762,68 @@ def test_apply_move_writes_files_and_rewrites_links(tmp_path: Path):
 
     # Reported.
     assert any(h["file"] == "areas/Health.md" for h in out.output.wikilinks_rewritten)
+
+
+def test_apply_move_migrates_backmatter_into_frontmatter(tmp_path: Path):
+    """Issue #106: legacy tail backmatter is folded in, fence dropped."""
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text(
+        "---\nsource_url: http://front\n---\n"
+        "# raw\nbody\n\n"
+        "---\nsource_url: http://back\ncreated: 2026-01-02\n---\n"
+    )
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    ctx.scratchpad["quests"] = ["Health"]
+    ctx.scratchpad["filename"] = "Run a 5K.md"
+    PlanDestination().run(ctx)
+    out = ApplyMove(apply=True).run(ctx)
+
+    moved = vault / "projects/Run a 5K.md"
+    text = moved.read_text(encoding="utf-8")
+    # Exactly one fence pair: the canonical frontmatter block.
+    assert text.count("\n---\n") == 1
+    assert text.startswith("---\n")
+    assert "type: project" in text
+    # Frontmatter beats backmatter on conflict; non-conflicting keys survive.
+    assert "http://front" in text
+    assert "http://back" not in text
+    assert "created: 2026-01-02" in text
+    assert out.output.frontmatter_migrated is True
+
+
+def test_apply_move_dry_run_reports_backmatter_migration(tmp_path: Path):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# raw\nbody\n\n---\ncreated: 2026-01-02\n---\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    ctx.scratchpad["quests"] = ["Health"]
+    ctx.scratchpad["filename"] = "Run a 5K.md"
+    PlanDestination().run(ctx)
+    out = ApplyMove(apply=False).run(ctx)
+
+    assert out.output.frontmatter_migrated is True
+    assert src.exists()  # dry run touched nothing
+
+
+def test_apply_move_without_backmatter_reports_no_migration(tmp_path: Path):
+    vault = _make_vault(tmp_path)
+    src = vault / "inbox/raw.md"
+    src.write_text("# raw\nbody\n")
+    ctx = _ctx(vault)
+    ScanNote(source=src).run(ctx)
+    ctx.scratchpad["para_type"] = "project"
+    ctx.scratchpad["quests"] = ["Health"]
+    ctx.scratchpad["filename"] = "Run a 5K.md"
+    PlanDestination().run(ctx)
+    out = ApplyMove(apply=True).run(ctx)
+
+    assert out.output.frontmatter_migrated is False
+    assert (vault / "projects/Run a 5K.md").read_text(encoding="utf-8").endswith("# raw\nbody\n")
 
 
 def test_apply_move_same_stem_reports_no_wikilink_rewrites(tmp_path: Path):

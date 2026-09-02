@@ -117,6 +117,9 @@ def _print_text(result: IngestResult, trace_path: Path) -> None:
             print(
                 f"        {verb} {n} wikilink(s) across {len(f.change.wikilinks_rewritten)} file(s)"
             )
+        if f.change and f.change.frontmatter_migrated:
+            verb = "migrated" if result.apply else "would migrate"
+            print(f"        {verb} legacy backmatter into frontmatter")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -8,7 +8,9 @@ Dry-run by default. With ``apply=True``:
   name.
 * Merge spec frontmatter (``type``, ``quest``, ``supports``) into the
   moved file. Existing frontmatter is preserved; the three keys above
-  are overwritten authoritatively.
+  are overwritten authoritatively. Legacy tail backmatter is folded
+  into frontmatter (frontmatter wins on conflict) and its fence is
+  dropped from the body — frontmatter is canonical (issue #106).
 * Rewrite incoming wikilinks across the vault, excluding ``archive/``,
   for the renamed note. ``[[old]]`` -> ``[[New]]``;
   ``[[old|alias]]`` -> ``[[New|alias]]``.
@@ -57,7 +59,7 @@ class ApplyMove:
         # so by the time we get here the destination basename is known
         # to be unique vault-wide.
 
-        new_fm = _build_frontmatter(scan.parsed.frontmatter, para_type, quests)
+        new_fm = _build_frontmatter(scan.parsed.frontmatter, scan.backmatter, para_type, quests)
         old_stem = scan.source.stem
         new_stem = dest.stem
 
@@ -68,6 +70,7 @@ class ApplyMove:
 
         if not self.apply:
             change.frontmatter_updated = new_fm != scan.parsed.frontmatter
+            change.frontmatter_migrated = scan.had_backmatter
             # Surface what *would* move/rewrite without touching disk.
             change.attachments_moved = [
                 (
@@ -96,11 +99,17 @@ class ApplyMove:
             )
 
         # Write merged content first (to a temp path), then move atomically.
-        merged = ParsedNote(frontmatter=new_fm, body=scan.parsed.body, had_frontmatter=True)
+        # `scan.parsed.body` already excludes any legacy backmatter fence;
+        # normalize the tail so dropping it doesn't leave stray blank lines.
+        body = scan.parsed.body
+        if scan.had_backmatter:
+            body = body.rstrip("\n") + "\n"
+        merged = ParsedNote(frontmatter=new_fm, body=body, had_frontmatter=True)
         rendered = merged.render()
         scan.source.write_text(rendered, encoding="utf-8")
         scan.source.replace(dest)
         change.frontmatter_updated = True
+        change.frontmatter_migrated = scan.had_backmatter
 
         for att in scan.attachments:
             new_name = _rename_attachment(att.name, old_stem, new_stem)
@@ -130,15 +139,20 @@ class ApplyMove:
 
 
 def _build_frontmatter(
-    existing: dict[str, Any], para_type: str, quests: list[str]
+    existing: dict[str, Any],
+    backmatter: dict[str, Any],
+    para_type: str,
+    quests: list[str],
 ) -> dict[str, Any]:
-    """Merge spec keys into existing frontmatter, then canonicalize order.
+    """Merge spec keys into existing metadata, then canonicalize order.
 
-    The spec keys (``type``, ``quest-kind``, ``supports``) overwrite values
-    authoritatively; other existing keys are preserved.
-    ``canonical_frontmatter`` is the single source of truth for key order
-    and for omitting empty ``supports``.
+    Precedence, weakest first: legacy tail backmatter, existing
+    frontmatter, then the spec keys (``type``, ``quest-kind``,
+    ``supports``) which overwrite authoritatively. Other keys are
+    preserved. ``canonical_frontmatter`` is the single source of truth
+    for key order and for omitting empty ``supports``.
     """
+    base = merge(backmatter, existing) if backmatter else existing
     if para_type == "resource":
         updates: dict[str, Any] = {"type": "resource", "quest-kind": "none"}
         if quests:
@@ -153,7 +167,7 @@ def _build_frontmatter(
             "quest-kind": "none",
             "supports": [f"[[{q}]]" for q in quests],
         }
-    return canonical_frontmatter(merge(existing, updates))
+    return canonical_frontmatter(merge(base, updates))
 
 
 def _rename_attachment(name: str, old_stem: str, new_stem: str) -> str:
