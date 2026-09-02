@@ -7,8 +7,8 @@ Triage notes from `<vault>/inbox/` into PARA + Quest locations.
 For each `.md` file under `<vault>/inbox/`, the workflow runs six
 steps in order:
 
-1. **scan_note** (pure) — read frontmatter + body, detect sibling
-   attachments.
+1. **scan_note** (pure) — read frontmatter + body, split off any legacy
+   tail backmatter, detect sibling attachments.
 2. **classify_para** (LLM) — pick one of `project | area | resource`.
 3. **pick_quest** (deterministic + LLM fallback) — pick one or more
    Quests from the vault's declared Main + Side Quests. Skipped for
@@ -27,8 +27,10 @@ steps in order:
    (`projects/`, `areas/`, `resources/`).
 6. **apply_move** (pure, atomic) — dry-run by default. With `--apply`,
    moves the file + sibling attachments, merges spec frontmatter
-   (`type`, `quest`, `supports`), and rewrites incoming wikilinks
-   across the vault excluding `archive/`.
+   (`type`, `quest`, `supports`), migrates any legacy tail backmatter
+   into frontmatter (frontmatter wins on conflict, fence dropped from
+   the body), and rewrites incoming wikilinks across the vault
+   excluding `archive/`.
 
 When a step decides the rules don't fit, it raises `EscalateToUser`
 and the workflow stops with a structured payload. The CLI surfaces
@@ -97,7 +99,8 @@ Each `FileResult`:
     "wikilinks_rewritten": [
       {"file": "areas/Health.md", "occurrences": 1}
     ],
-    "frontmatter_updated": false
+    "frontmatter_updated": false,
+    "frontmatter_migrated": false
   },
   "escalation": null,
   "error": null,
@@ -108,6 +111,12 @@ Each `FileResult`:
 `change` is populated for both dry-run and apply modes — in dry-run
 it describes what *would* happen, in apply mode it describes what
 did. `applied` distinguishes the two.
+
+`frontmatter_migrated` is `true` when the note carried a deprecated
+trailing `---...---` backmatter block: its keys are folded into
+frontmatter (existing frontmatter wins on conflict, spec keys win over
+both) and the fence is dropped from the body. Frontmatter is canonical
+— see `docs/notes-system.md`.
 
 When a step escalates, `ok` is `false`, `change` is `null`, and
 `escalation` carries:

@@ -10,6 +10,7 @@ from pathlib import Path
 from para_quest_notes.adapter.fake_llm import FakeLLM, RecordedCall
 from para_quest_notes.workflows.ingest_inbox.contract import IngestResult
 from para_quest_notes.workflows.ingest_inbox.pipeline import ingest_inbox, ingest_one
+from para_quest_notes.workflows.validate.api import validate_vault
 
 
 def _build_responder(plans: dict[str, dict]):
@@ -415,3 +416,42 @@ def test_skip_rename_still_checks_collisions(tmp_path: Path):
     assert fr.escalation is not None
     assert fr.escalation["step"] == "propose_filename"
     assert "collides" in fr.escalation["reason"]
+
+
+def test_apply_migrates_backmatter_and_passes_validate(tmp_path: Path):
+    """#106: an ingested note must not trip `metadata_in_backmatter`.
+
+    Before the fix, --apply wrote canonical frontmatter but left the
+    legacy tail backmatter block in the body, so pqn-validate flagged
+    the note the moment ingest finished.
+    """
+    vault = _seed_vault(tmp_path)
+    src = vault / "inbox/train plan.md"
+    src.write_text("# Train Plan\nrun a 5k\n\n---\ntype: project\ncreated: 2026-01-02\n---\n")
+
+    llm = FakeLLM(
+        responder=_build_responder(
+            {
+                "classify_para": {"type": "project", "confidence": 0.9, "reason": "ok"},
+                "pick_quest": {"quests": ["Health"], "confidence": 0.9, "reason": "ok"},
+                "propose_filename": {
+                    "choice": "generate",
+                    "filename": "Run A 5K.md",
+                    "reason": "concise",
+                },
+            }
+        )
+    )
+    fr = ingest_one(src, vault=vault, llm=llm, apply=True)
+    assert fr.ok, fr.escalation or fr.error
+    assert fr.change is not None
+    assert fr.change.frontmatter_migrated is True
+
+    moved = vault / "projects/Run A 5K.md"
+    text = moved.read_text(encoding="utf-8")
+    assert "created: 2026-01-02" in text
+    assert text.count("\n---\n") == 1
+
+    report = validate_vault(vault)
+    offenders = [i for i in report.issues if i.check == "metadata_in_backmatter"]
+    assert offenders == []
