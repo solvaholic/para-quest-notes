@@ -299,11 +299,15 @@ for new tags.
 
 Bash and Zsh can complete every `pqn-*` option, its fixed values, and
 vault-derived values like Quest names, templates, and archive targets.
-Add one line per command to your shell config:
+Register one command in your shell config to try it:
 
 ```bash
-eval "$(register-python-argcomplete pqn-create)"
+PQN_BIN="$(dirname "$(readlink -f "$(command -v pqn-create)")")"
+eval "$("$PQN_BIN/register-python-argcomplete" pqn-create)"
 ```
+
+The `PQN_BIN` lookup is needed because `uv tool install` and `pipx` don't
+put argcomplete's `register-python-argcomplete` script on your `PATH`.
 
 See [`docs/completion.md`](docs/completion.md) for the full snippet,
 what completes where, and troubleshooting.

@@ -12,19 +12,27 @@ argparse definitions the commands themselves parse with.
 
 ## Activate it
 
-Add this to `~/.bashrc` (Bash) or `~/.zshrc` (Zsh):
+Registration is done by `register-python-argcomplete`, a small script that
+ships with argcomplete. **Whether that script is on your `PATH` depends on how
+you installed `para-quest-notes`:**
+
+| Install method | `register-python-argcomplete` on `PATH`? |
+| --- | --- |
+| `uv tool install` / `pipx install` | **No** - it stays inside the tool's private venv |
+| `pip install` / `uv pip install` into an active venv | Yes |
+
+`uv tool` and `pipx` deliberately expose only the entry points of the package
+you named. The `pqn-*` commands get linked into `~/.local/bin`; argcomplete's
+own script does not, even though argcomplete is installed.
+
+The snippet below covers both cases by resolving the script next to the real
+`pqn-create`. Add it to `~/.bashrc` (Bash) or `~/.zshrc` (Zsh):
 
 ```bash
-eval "$(register-python-argcomplete pqn-ingest)"
-eval "$(register-python-argcomplete pqn-validate)"
-eval "$(register-python-argcomplete pqn-create)"
-eval "$(register-python-argcomplete pqn-archive)"
-eval "$(register-python-argcomplete pqn-daily)"
-eval "$(register-python-argcomplete pqn-quests)"
-eval "$(register-python-argcomplete pqn-tasks)"
-eval "$(register-python-argcomplete pqn-search)"
-eval "$(register-python-argcomplete pqn-config)"
-eval "$(register-python-argcomplete pqn-eval)"
+PQN_BIN="$(dirname "$(readlink -f "$(command -v pqn-create)")")"
+for cmd in ingest validate create archive daily quests tasks search config eval; do
+  eval "$("$PQN_BIN/register-python-argcomplete" "pqn-$cmd")"
+done
 ```
 
 Then restart your shell, or source the file you just edited:
@@ -37,13 +45,18 @@ To try it in the current shell only, without editing any dotfile, register a
 single command:
 
 ```bash
-eval "$(register-python-argcomplete pqn-create)"
+eval "$("$(dirname "$(readlink -f "$(command -v pqn-create)")")/register-python-argcomplete" pqn-create)"
 ```
 
-`register-python-argcomplete` ships with argcomplete, which installs
-alongside the `pqn-*` commands. If your shell can't find it, the command is
-in the same `bin/` directory as `pqn-create` (for a `uv tool install`, that's
-usually `~/.local/bin`).
+If you'd rather keep the snippet short, install argcomplete as a tool in its
+own right so its script lands on your `PATH` too:
+
+```bash
+uv tool install argcomplete   # or: pipx install argcomplete
+```
+
+With that in place, plain `eval "$(register-python-argcomplete pqn-create)"`
+works and you can drop the `PQN_BIN` lookup.
 
 Global argcomplete activation (`activate-global-python-argcomplete`) is not
 required. Per-command registration keeps the change scoped to these commands.
@@ -152,9 +165,31 @@ Check that the registration actually ran: `complete -p pqn-create` (Bash) or
 probably haven't restarted or sourced your shell config since editing it.
 
 **`register-python-argcomplete: command not found`.**
-It lives beside the `pqn-*` commands. Confirm with
-`ls "$(dirname "$(command -v pqn-create)")" | grep argcomplete` and add that
-directory to your `PATH` if it's missing.
+Expected after a `uv tool install` or `pipx install` - those don't put
+argcomplete's script on your `PATH`. Use the `PQN_BIN` form from
+[Activate it](#activate-it), or install argcomplete as its own tool. To see
+where the script actually is:
+
+```bash
+ls "$(dirname "$(readlink -f "$(command -v pqn-create)")")" | grep argcomplete
+```
+
+**`readlink: illegal option -- f`.**
+Only on macOS older than 12.3, whose `readlink` predates `-f`. Find the
+directory without it - `ls -l "$(command -v pqn-create)"` prints the symlink
+target - then use that directory literally in place of `$PQN_BIN`. For a `uv
+tool install` it's `~/.local/share/uv/tools/para-quest-notes/bin`.
+
+**Neither `register-python-argcomplete` nor argcomplete is anywhere in the
+tool venv.**
+Your installed version predates shell completion, so argcomplete was never
+pulled in as a dependency. Check what you have with
+`uv tool list | grep para-quest-notes` (or `pipx list`), and reinstall from a
+revision that includes it:
+
+```bash
+uv tool install --force git+https://github.com/solvaholic/para-quest-notes@main
+```
 
 **Options complete but vault values don't.**
 The vault isn't resolving. Run `pqn-config --section vault` from the same
