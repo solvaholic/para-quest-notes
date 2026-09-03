@@ -24,6 +24,7 @@ from para_quest_notes.adapter.completion import (
 from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import ConfigError, VaultError
 from para_quest_notes.adapter.vault import find_vault
+from para_quest_notes.vault.scope import PARA_TYPES
 
 from .contract import BUCKET_ORDER, DATE_FIELDS, UNASSIGNED, TaskItem, TasksReport
 from .pipeline import scan_vault_tasks
@@ -75,6 +76,17 @@ def build_parser() -> argparse.ArgumentParser:
         "Default: workflows.tasks.date_fields from config, then due, "
         "scheduled, start.",
     )
+    p.add_argument(
+        "--type",
+        dest="types",
+        action="append",
+        choices=PARA_TYPES,
+        help=(
+            "Include only this PARA type. Repeatable and include-only: pass "
+            "'--type area --type project' to include those and drop the rest, "
+            "including untyped notes. Default: all types."
+        ),
+    )
     set_completer(
         p.add_argument(
             "--quest",
@@ -116,6 +128,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         vault,
         due_in=args.due_in,
         overdue_only=args.overdue,
+        types=args.types,
         quest=args.quest,
         group_by=args.group_by,
         date_fields=date_fields,

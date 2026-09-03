@@ -91,6 +91,19 @@ def test_quest_filter_is_case_insensitive(tmp_path: Path):
     assert all(t.path.startswith("projects/") for t in report.tasks)
 
 
+def test_type_filter_is_repeatable_include_only_and_drops_untyped(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(v / "projects" / "P.md", "# P\n- [ ] Project task 📅 2026-07-01\n")
+    _write(v / "areas" / "A.md", "# A\n- [ ] Area task 📅 2026-07-01\n")
+    _write(v / "resources" / "R.md", "# R\n- [ ] Resource task 📅 2026-07-01\n")
+    _write(v / "inbox" / "I.md", "# I\n- [ ] Untyped task 📅 2026-07-01\n")
+
+    report = scan_vault_tasks(v, today=TODAY, types=["project", "area"])
+
+    assert {task.description for task in report.tasks} == {"Project task", "Area task"}
+    assert report.types == ["area", "project"]
+
+
 def test_scheduled_only_is_reported(tmp_path: Path):
     # A task with only a scheduled ("do") date must be reported — the
     # effective-date resolution falls through to it. No config needed.

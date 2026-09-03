@@ -25,7 +25,7 @@ from pathlib import Path
 
 from para_quest_notes.vault.frontmatter import parse
 from para_quest_notes.vault.quests import Quest, discover_quests
-from para_quest_notes.vault.scope import Scope, note_supports
+from para_quest_notes.vault.scope import Scope, note_supports, para_type_of
 from para_quest_notes.vault.tasks import ScannedTask, scan_tasks
 
 from .contract import DATE_FIELDS, Bucket, TaskItem, TasksReport
@@ -98,6 +98,7 @@ def scan_vault_tasks(
     today: date | None = None,
     due_in: int = 7,
     overdue_only: bool = False,
+    types: Sequence[str] | None = None,
     quest: str | None = None,
     group_by: str = "due",
     date_fields: Sequence[str] | None = None,
@@ -107,9 +108,10 @@ def scan_vault_tasks(
 
     ``today`` defaults to the system date (injectable for tests).
     ``due_in`` sets the upcoming horizon in days. ``overdue_only`` keeps
-    only tasks whose effective date is in the past. ``quest`` filters to
-    notes whose ``supports:`` includes that Quest (wikilink or bare name,
-    matched case-insensitively — identical semantics to ``pqn-quests``).
+    only tasks whose effective date is in the past. ``types`` is an
+    include-only PARA-type allow-list; ``quest`` filters to notes whose
+    ``supports:`` includes that Quest (wikilink or bare name, matched
+    case-insensitively — identical semantics to ``pqn-quests``).
     ``date_fields`` is the ordered precedence over
     ``("due", "scheduled", "start")`` used to pick each task's effective
     (bucketing) date; a field omitted from the list is ignored entirely,
@@ -117,7 +119,7 @@ def scan_vault_tasks(
     """
     ref = today or date.today()
     horizon = ref + timedelta(days=due_in)
-    scope = Scope.from_args(quest=quest)
+    scope = Scope.from_args(types=types, quest=quest)
     fields = list(date_fields) if date_fields else list(DATE_FIELDS)
 
     by_name = {q.name: q for q in discover_quests(vault)}
@@ -133,8 +135,9 @@ def scan_vault_tasks(
         rel = path.relative_to(vault)
         parsed = parse(text)
         supports = note_supports(parsed.frontmatter)
+        para_type = para_type_of(vault, path, parsed.frontmatter)
 
-        if not scope.matches_quest(supports):
+        if not scope.matches(para_type=para_type, supports=supports):
             continue
 
         is_area_note = bool(rel.parts) and rel.parts[0] == "areas"
@@ -186,6 +189,8 @@ def scan_vault_tasks(
         group_by=group_by,
         date_fields=fields,
         include_archive=include_archive,
+        types=sorted(scope.types) if scope.types is not None else None,
+        quest=scope.quest,
         files_scanned=len(files),
         tasks=items,
     )

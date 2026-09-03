@@ -51,6 +51,37 @@ def test_json_output_contract(tmp_path: Path, capsys):
     assert data["summary"]["overdue"] == 1
     assert data["tasks"][0]["description"] == "Pay taxes"
     assert data["tasks"][0]["quests"] == ["Health"]
+    assert data["types"] is None
+    assert data["quest"] is None
+
+
+def test_type_filter_repeats_and_composes_with_quest(tmp_path: Path, capsys):
+    v = _vault(tmp_path)
+    _write(v / "areas" / "Garden Area.md", f"# Garden Area\n- [ ] Weed beds 📅 {_PAST}\n")
+    _write(v / "resources" / "Garden Notes.md", f"# Garden Notes\n- [ ] Review notes 📅 {_PAST}\n")
+    _write(v / "inbox" / "Garden Capture.md", f"# Garden Capture\n- [ ] Sort capture 📅 {_PAST}\n")
+
+    rc = main(
+        [
+            "--vault",
+            str(v),
+            "--overdue",
+            "--type",
+            "area",
+            "--type",
+            "project",
+            "--quest",
+            "health",
+            "--format",
+            "json",
+        ]
+    )
+
+    assert rc == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["types"] == ["area", "project"]
+    assert data["quest"] == "health"
+    assert [task["description"] for task in data["tasks"]] == ["Pay taxes"]
 
 
 def test_group_by_quest_headers(tmp_path: Path, capsys):
