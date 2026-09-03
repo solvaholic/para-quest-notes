@@ -67,6 +67,18 @@ daily notes. `archive/` is excluded because its tasks are
 completed/stale (`pqn-archive` rewrites open tasks to cancelled on
 archive). Pass `--include-archive` to include it.
 
+Use repeatable, include-only `--type` flags to restrict the report to PARA types:
+
+```bash
+# Projects only.
+pqn-tasks --vault ~/notes --type project
+
+# Projects and Areas, excluding Resources.
+pqn-tasks --vault ~/notes --type project --type area
+```
+
+The filter matches `pqn-search` semantics: once any `--type` is active, notes with no resolvable PARA type are excluded. This includes untyped notes outside `projects/`, `areas/`, and `resources/`, such as captures under `inbox/`. Daily notes remain `resource` by path, even without frontmatter, so `--type resource` includes them.
+
 ### Grouping
 
 `--group-by` controls how the markdown output is organized:
@@ -102,6 +114,9 @@ pqn-tasks --vault ~/notes --group-by quest
 # matched case-insensitively — same as pqn-quests --quest).
 pqn-tasks --vault ~/notes --quest "[[Health]]"
 
+# Compose repeatable PARA-type and Quest filters.
+pqn-tasks --vault ~/notes --type project --quest "[[Health]]"
+
 # Bucket on your "do date" (scheduled) instead of deadlines.
 pqn-tasks --vault ~/notes --date-field scheduled
 
@@ -133,6 +148,8 @@ empty report is a valid result.
   "group_by": "due",
   "date_fields": ["due", "scheduled", "start"],
   "include_archive": false,
+  "types": ["project"],
+  "quest": "health",
   "files_scanned": 142,
   "summary": {
     "total": 3,
@@ -171,6 +188,8 @@ regroup on the per-task `bucket`, `quests`, and `areas` fields. Field
 names are stable across releases; new fields may be added, existing ones
 will not be renamed.
 
+`types` is the sorted include-only PARA-type filter, or `null` when unfiltered. `quest` is the normalized, lower-case Quest basename, or `null` when unfiltered. These fields describe the active report scope; they do not change the flat task item shape.
+
 ## Scope / non-goals (v1)
 
 - **Read-only.** No task mutation. Batch-complete or reschedule are
@@ -191,6 +210,7 @@ will not be renamed.
 - **`--date-field` is both precedence and filter.** Listing a subset
   (e.g. `--date-field scheduled`) drops tasks that carry none of the
   listed dates.
+- **`--type` drops untyped notes.** Once a type filter is active, notes with neither recognized `type:` frontmatter nor a PARA directory are excluded. Daily notes still resolve to `resource` from their path.
 - **`--due-in 0`** reports only what is overdue or due today.
 - **Grouped counts can exceed the total** when a note supports multiple
   Quests/Areas — the same task is listed under each.

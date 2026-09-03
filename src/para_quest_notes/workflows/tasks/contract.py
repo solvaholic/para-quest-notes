@@ -73,6 +73,8 @@ class TasksReport:
     group_by: str
     date_fields: list[str]
     include_archive: bool
+    types: list[str] | None
+    quest: str | None
     files_scanned: int = 0
     tasks: list[TaskItem] = field(default_factory=list)
 
@@ -99,6 +101,8 @@ class TasksReport:
             "group_by": self.group_by,
             "date_fields": list(self.date_fields),
             "include_archive": self.include_archive,
+            "types": list(self.types) if self.types is not None else None,
+            "quest": self.quest,
             "files_scanned": self.files_scanned,
             "summary": {
                 "total": len(self.tasks),
