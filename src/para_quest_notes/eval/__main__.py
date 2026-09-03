@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from para_quest_notes.adapter.cli import add_version_arg
 from para_quest_notes.adapter.completion import enable_completion
 from para_quest_notes.adapter.fake_llm import FakeLLM
 from para_quest_notes.adapter.llm import LLMResponse
@@ -128,6 +129,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="python -m para_quest_notes.eval",
         description="Run the per-step eval harness for registered workflows.",
     )
+    add_version_arg(p)
     p.add_argument(
         "--fixtures",
         type=Path,

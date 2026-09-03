@@ -24,7 +24,8 @@ deferred; users install with
       | grep -v '^http' | while read l; do [ -e "${l%%#*}" ] ||
       echo MISS $l; done`).
 - [ ] `pyproject.toml` `version` reflects the version you're
-      about to tag.
+      about to tag, with no `.devN` suffix left over from the
+      dev cycle (`grep '^version' pyproject.toml`).
 - [ ] `pyproject.toml` `Development Status` classifier still
       matches reality (3-Alpha through v0.x; bump to 4-Beta when
       we have a real second user driving fixes, 5-Production
@@ -113,6 +114,9 @@ Pick the right SemVer bump:
 # 1. Bump version in pyproject.toml, commit on a branch, open a
 #    PR titled "Release vX.Y.Z" that updates pyproject.toml plus
 #    any README/PLAN checkboxes that change at release time.
+#    Between releases main carries a .devN version (see
+#    "Open the next dev cycle" below), so this step drops the
+#    .devN suffix: 0.6.0.dev0 -> 0.6.0.
 #    Merge that PR before continuing. PRs rebase-and-merge (no
 #    merge commit) - see docs/CONTRIBUTING.md "Branch flow".
 
@@ -154,6 +158,39 @@ uv tool uninstall para-quest-notes
 
 - [ ] Update `docs/PLAN.md` to tick boxes that closed at this
       release; move follow-ups to the next phase.
+
+### Open the next dev cycle
+
+Do this **immediately after publishing**, not when you start the
+next release. Until it's done, `main` claims to be the version you
+just tagged, so `pqn-create --version` can't tell a released build
+from a `main` build - and neither can a bug report.
+
+Bump `pyproject.toml` to the next planned version with a `.dev0`
+suffix and merge it as its own small PR:
+
+```toml
+# just tagged v0.5.0, next release is expected to be v0.6.0
+version = "0.6.0.dev0"
+```
+
+`.dev0` sorts above the tag you just cut and below every other
+form of the next release, which is exactly what "main, heading
+for 0.6.0, not there yet" means:
+
+```
+0.5.0  <  0.6.0.dev0  <  0.6.0a1  <  0.6.0rc1  <  0.6.0
+```
+
+Guess the next number rather than agonizing over it. If the cycle
+turns out to be a patch or a major instead, just change it in the
+release PR - the `.devN` version is never tagged or installed by
+anyone following the README, so a wrong guess costs nothing.
+
+Avoid spelling it `0.6.pre`: PEP 440 normalizes `pre` to `rc`, so
+it silently becomes `0.6rc0` and claims release-candidate quality
+on day one of the cycle. It also sorts *above* `0.6.0a1`, so you
+could no longer publish an alpha.
 
 The issue-to-release mapping is already covered without extra
 bookkeeping: each closed issue's timeline shows the PR that closed

@@ -10,6 +10,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from para_quest_notes import __version__
+
 
 def build_base_parser(
     *,
@@ -25,8 +27,10 @@ def build_base_parser(
                             default when omitted.
         ``--format``        Output format, ``json`` or ``text``. Default
                             ``text``.
+        ``--version``       Print the installed version and exit.
     """
     parser = argparse.ArgumentParser(prog=prog, description=description)
+    add_version_arg(parser)
     parser.add_argument(
         "--vault",
         type=Path,
@@ -46,6 +50,21 @@ def build_base_parser(
         help="Output format. Default: text.",
     )
     return parser
+
+
+def add_version_arg(parser: argparse.ArgumentParser) -> None:
+    """Add ``--version`` to ``parser``.
+
+    Exposed separately from :func:`build_base_parser` so entry points that
+    build their own parser (like ``pqn-eval``) report the same version
+    string in the same format.
+    """
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Print the installed version and exit.",
+    )
 
 
 def add_llm_args(parser: argparse.ArgumentParser) -> None:
