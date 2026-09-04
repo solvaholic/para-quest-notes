@@ -170,6 +170,7 @@ Canonical destination example:
       "supports": ["[[Coffee]]"],
       "created": "2026-05-12"
     },
+    "body_source": "skeleton",
     "notes": []
   },
   "written": true,
@@ -198,6 +199,7 @@ When `--supports` is omitted for a `project` or `area` that is *not*
       "quest-kind": "none",
       "created": "2026-05-12"
     },
+    "body_source": "skeleton",
     "notes": [
       "filed to inbox because no --supports was provided for type=project"
     ]

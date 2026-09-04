@@ -169,6 +169,8 @@ def test_cli_explicit_template(tmp_path: Path, capsys, monkeypatch):
             str(vault),
             "--config",
             str(cfg),
+            "--format",
+            "json",
             "--type",
             "project",
             "--title",
@@ -180,7 +182,9 @@ def test_cli_explicit_template(tmp_path: Path, capsys, monkeypatch):
             "--apply",
         ]
     )
+    payload = json.loads(capsys.readouterr().out)
     assert rc == 0
+    assert payload["plan"]["body_source"] == "template:weekly-review"
     written = (vault / "projects/Weekly Review.md").read_text()
     assert "# Weekly Review" in written
     assert "Week of 20" in written  # $created substituted
@@ -206,6 +210,8 @@ def test_cli_config_default_template(tmp_path: Path, capsys, monkeypatch):
             str(vault),
             "--config",
             str(cfg),
+            "--format",
+            "json",
             "--type",
             "project",
             "--title",
@@ -215,7 +221,9 @@ def test_cli_config_default_template(tmp_path: Path, capsys, monkeypatch):
             "--apply",
         ]
     )
+    payload = json.loads(capsys.readouterr().out)
     assert rc == 0
+    assert payload["plan"]["body_source"] == "template:project-default"
     written = (vault / "projects/Auto Template.md").read_text()
     assert "status: draft" in written
     assert "review_cycle: weekly" in written
@@ -234,6 +242,8 @@ def test_cli_template_not_found_falls_to_skeleton(tmp_path: Path, capsys, monkey
             str(vault),
             "--config",
             str(cfg),
+            "--format",
+            "json",
             "--type",
             "project",
             "--title",
@@ -245,7 +255,9 @@ def test_cli_template_not_found_falls_to_skeleton(tmp_path: Path, capsys, monkey
             "--apply",
         ]
     )
+    payload = json.loads(capsys.readouterr().out)
     assert rc == 0
+    assert payload["plan"]["body_source"] == "skeleton (template not found)"
     written = (vault / "projects/Fallback.md").read_text()
     # Falls back to skeleton
     assert "<one-sentence purpose>" in written
@@ -266,6 +278,8 @@ def test_cli_stdin_overrides_template(tmp_path: Path, capsys, monkeypatch):
             str(vault),
             "--config",
             str(cfg),
+            "--format",
+            "json",
             "--type",
             "project",
             "--title",
@@ -279,7 +293,9 @@ def test_cli_stdin_overrides_template(tmp_path: Path, capsys, monkeypatch):
         ],
         stdin="# Stdin Wins\n\nCustom body from stdin.\n",
     )
+    payload = json.loads(capsys.readouterr().out)
     assert rc == 0
+    assert payload["plan"]["body_source"] == "stdin"
     written = (vault / "projects/Stdin Wins.md").read_text()
     assert "Custom body from stdin." in written
     assert "TEMPLATE BODY" not in written
@@ -312,6 +328,32 @@ def test_cli_json_output_shows_body_source(tmp_path: Path, capsys, monkeypatch):
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["ok"] is True
+    assert payload["plan"]["body_source"] == "template:simple"
+
+
+def test_cli_json_output_reports_skeleton_body_source(tmp_path: Path, capsys, monkeypatch):
+    vault = _seed_vault(tmp_path)
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--format",
+            "json",
+            "--type",
+            "resource",
+            "--title",
+            "Skeleton Source",
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["plan"]["body_source"] == "skeleton"
 
 
 # ---- Whole-note template integration (#75) -------------------------------
