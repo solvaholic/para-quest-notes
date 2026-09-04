@@ -401,6 +401,7 @@ def test_missing_editor_fails_clearly(tmp_path: Path, capsys, monkeypatch):
     ("failure", "message"),
     [
         (FileNotFoundError("editor-not-found"), "editor executable not found"),
+        (PermissionError("permission denied"), "could not launch editor"),
         (subprocess.CalledProcessError(7, ["editor"]), "exit code 7"),
     ],
 )

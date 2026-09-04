@@ -152,6 +152,10 @@ def _open_note(result: DailyResult, *, vault: Path, settings: DailySettings) -> 
             "(configured by workflows.daily.editor)"
         )
         return
+    except OSError as exc:
+        result.ok = False
+        result.open_error = f"could not launch editor {settings.editor[0]!r}: {exc}"
+        return
     except subprocess.CalledProcessError as exc:
         result.ok = False
         result.open_error = f"editor exited with exit code {exc.returncode}: {settings.editor[0]!r}"
