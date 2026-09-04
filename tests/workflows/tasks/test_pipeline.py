@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from datetime import date
 from pathlib import Path
 
@@ -124,10 +125,78 @@ def test_start_only_is_reported(tmp_path: Path):
     assert task.bucket == "overdue"
 
 
-def test_untracked_task_excluded(tmp_path: Path):
+def test_untracked_task_excluded_by_default(tmp_path: Path):
     v = tmp_path / "v"
     _write(v / "projects" / "P.md", "# P\n- [ ] no dates at all\n")
     assert scan_vault_tasks(v, today=TODAY, due_in=7).tasks == []
+
+
+def test_unscheduled_show_uses_active_date_fields_and_preserves_raw_dates(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(
+        v / "projects" / "P.md",
+        "# P\n"
+        "- [ ] scheduled task ⏳ 2026-07-18\n"
+        "- [ ] due still needs scheduling 📅 2026-07-20\n"
+        "- [ ] truly undated\n",
+    )
+
+    report = scan_vault_tasks(
+        v,
+        today=TODAY,
+        due_in=7,
+        date_fields=["scheduled"],
+        unscheduled="show",
+    )
+
+    by_description = {task.description: task for task in report.tasks}
+    assert by_description["scheduled task"].bucket == "upcoming"
+    due_only = by_description["due still needs scheduling"]
+    assert due_only.bucket == "unscheduled"
+    assert due_only.effective_date is None
+    assert due_only.date_source is None
+    assert due_only.due == "2026-07-20"
+    assert by_description["truly undated"].bucket == "unscheduled"
+    assert report.to_dict()["summary"] == {
+        "total": 3,
+        "overdue": 0,
+        "due_today": 0,
+        "upcoming": 1,
+        "unscheduled": 2,
+    }
+
+
+def test_unscheduled_only_excludes_every_task_with_an_active_date(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(
+        v / "projects" / "P.md",
+        "# P\n- [ ] past 📅 2026-07-01\n- [ ] beyond horizon 📅 2027-07-01\n- [ ] no date\n",
+    )
+
+    report = scan_vault_tasks(v, today=TODAY, due_in=0, unscheduled="only")
+
+    assert [task.description for task in report.tasks] == ["no date"]
+    assert report.tasks[0].bucket == "unscheduled"
+
+
+def test_overdue_show_includes_overdue_and_unscheduled(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(
+        v / "projects" / "P.md",
+        "# P\n- [ ] old 📅 2026-07-01\n- [ ] today 📅 2026-07-17\n- [ ] no date\n",
+    )
+
+    report = scan_vault_tasks(
+        v,
+        today=TODAY,
+        overdue_only=True,
+        unscheduled="show",
+    )
+
+    assert [(task.description, task.bucket) for task in report.tasks] == [
+        ("old", "overdue"),
+        ("no date", "unscheduled"),
+    ]
 
 
 def test_default_precedence_prefers_due(tmp_path: Path):
@@ -188,3 +257,40 @@ def test_sorted_by_effective_date(tmp_path: Path):
     report = scan_vault_tasks(_vault(tmp_path), today=TODAY, due_in=3650)
     dates = [t.effective_date for t in report.tasks]
     assert dates == sorted(dates)
+
+
+def test_unscheduled_sort_after_dated_by_path_and_line(tmp_path: Path):
+    v = tmp_path / "v"
+    _write(v / "projects" / "B.md", "# B\n- [ ] B second\n- [ ] B third\n")
+    _write(v / "projects" / "A.md", "# A\n- [ ] A undated\n- [ ] A dated 📅 2026-07-17\n")
+
+    report = scan_vault_tasks(v, today=TODAY, unscheduled="show")
+
+    assert [task.description for task in report.tasks] == [
+        "A dated",
+        "A undated",
+        "B second",
+        "B third",
+    ]
+
+
+def test_unscheduled_only_smokes_copied_sample_vault(tmp_path: Path):
+    sample = Path(__file__).resolve().parents[3] / "samples" / "vault"
+    vault = tmp_path / "vault"
+    shutil.copytree(sample, vault)
+
+    report = scan_vault_tasks(vault, today=TODAY, unscheduled="only")
+
+    assert len(report.tasks) == 34
+    assert report.to_dict()["summary"] == {
+        "total": 34,
+        "overdue": 0,
+        "due_today": 0,
+        "upcoming": 0,
+        "unscheduled": 34,
+    }
+    assert all(task.bucket == "unscheduled" for task in report.tasks)
+    assert all(task.effective_date is None and task.date_source is None for task in report.tasks)
+    assert [(task.path, task.line) for task in report.tasks] == sorted(
+        (task.path, task.line) for task in report.tasks
+    )

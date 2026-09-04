@@ -1,22 +1,17 @@
 # pqn-tasks
 
-Report open tasks that carry Obsidian Tasks dates, bucketed into
-overdue / due today / due soon. Read-only. No LLM.
+Report dated open tasks by urgency and, when requested, open tasks with no tracked date. Read-only. No LLM.
 
 ## What it does
 
-Walks the vault, scans every note for task lines outside fenced code
-blocks, and reports the **open** (`- [ ]`) and **in-progress**
-(`- [/]`) tasks that carry a tracked date. Each task is bucketed by its
-**effective date** relative to a reference date (today):
+Walks the vault, scans every note for task lines outside fenced code blocks, and reports **open** (`- [ ]`) and **in-progress** (`- [/]`) tasks. By default, a task must carry a tracked date and is bucketed by its **effective date** relative to a reference date (today):
 
 - **overdue** — effective date before today
 - **due today** — effective date is today
 - **upcoming** — effective date within `--due-in N` days (default 7)
+- **unscheduled** — no date from the active `--date-field` set (opt-in)
 
-Tasks whose effective date is beyond the horizon, tasks with no tracked
-date, and completed (`- [x]`) / cancelled (`- [-]`) tasks are not
-reported.
+Tasks whose effective date is beyond the horizon and completed (`- [x]`) / cancelled (`- [-]`) tasks are not reported. Unscheduled tasks are also omitted by default; use `--unscheduled show` to append them to the dated report or `--unscheduled only` for an unscheduled-only review.
 
 ### Which date buckets a task
 
@@ -46,6 +41,8 @@ pqn-tasks --vault ~/notes --date-field scheduled
 
 A field you omit from `--date-field` is ignored, so the second form is
 both a precedence *and* a filter.
+
+The same active field set defines "unscheduled." With `--date-field scheduled --unscheduled only`, a due-only task is unscheduled because it still lacks the scheduled date this report counts. Its raw due date remains in JSON and appears as an `untracked:` hint in markdown, so it is distinguishable from a task carrying no date at all.
 
 Set a persistent default in `config.yaml` when the same date model applies to every run:
 
@@ -107,6 +104,12 @@ pqn-tasks --vault ~/notes --due-in 14
 # Only what's already overdue.
 pqn-tasks --vault ~/notes --overdue
 
+# Include undated tasks after the dated urgency buckets.
+pqn-tasks --vault ~/notes --unscheduled show
+
+# Review only tasks that have none of the active date fields.
+pqn-tasks --vault ~/notes --unscheduled only
+
 # Group by Main Quest.
 pqn-tasks --vault ~/notes --group-by quest
 
@@ -119,6 +122,9 @@ pqn-tasks --vault ~/notes --type project --quest "[[Health]]"
 
 # Bucket on your "do date" (scheduled) instead of deadlines.
 pqn-tasks --vault ~/notes --date-field scheduled
+
+# Find tasks that still need a do date, including due-only tasks.
+pqn-tasks --vault ~/notes --date-field scheduled --unscheduled only
 
 # Structured output for agents / other tools.
 pqn-tasks --vault ~/notes --format json
@@ -134,11 +140,15 @@ daily note without re-parsing as live, duplicate tasks. Output is
 stdout only; wiring a roundup into a daily note is a later `pqn-daily`
 concern, not part of this command.
 
-Exit code is `0` on success, `2` on an invocation problem (vault not
-found). The reporter never fails on the *contents* of the vault — an
-empty report is a valid result.
+`--unscheduled only` uses `# Unscheduled tasks as of YYYY-MM-DD` as its title and reports `No open unscheduled tasks.` when nothing matches. Other modes preserve the existing dated-report title and empty state.
+
+`--overdue` composes with `--unscheduled show`: the result contains overdue and unscheduled tasks. It conflicts with `--unscheduled only`, which argparse rejects with exit code `2` because a task cannot be both date-filtered as overdue and unscheduled.
+
+Exit code is `0` on success, `2` on an invocation problem (for example, a missing vault or conflicting arguments). The reporter never fails on the *contents* of the vault — an empty report is a valid result.
 
 ## JSON contract
+
+This example shows a `--unscheduled show` report:
 
 ```json
 {
@@ -152,10 +162,11 @@ empty report is a valid result.
   "quest": "health",
   "files_scanned": 142,
   "summary": {
-    "total": 3,
+    "total": 2,
     "overdue": 1,
-    "due_today": 1,
-    "upcoming": 1
+    "due_today": 0,
+    "upcoming": 0,
+    "unscheduled": 1
   },
   "tasks": [
     {
@@ -174,19 +185,31 @@ empty report is a valid result.
       "supports": ["Maintain Home"],
       "areas": ["Maintain Home"],
       "quests": ["Health"]
+    },
+    {
+      "path": "projects/Build Raised Beds.md",
+      "line": 16,
+      "description": "Call the supplier",
+      "raw": "Call the supplier",
+      "state": " ",
+      "bucket": "unscheduled",
+      "effective_date": null,
+      "date_source": null,
+      "due": null,
+      "scheduled": null,
+      "start": null,
+      "block_id": null,
+      "supports": ["Maintain Home"],
+      "areas": ["Maintain Home"],
+      "quests": ["Health"]
     }
   ]
 }
 ```
 
-`effective_date` is the date that drove the bucket; `date_source` names
-which field it came from (`due`, `scheduled`, or `start`) under the
-report's `date_fields` precedence. The three raw date fields are always
-surfaced so consumers can regroup. The `tasks` list is flat (grouping is
-a presentation concern applied to the markdown output only) so consumers
-regroup on the per-task `bucket`, `quests`, and `areas` fields. Field
-names are stable across releases; new fields may be added, existing ones
-will not be renamed.
+`effective_date` is the date that drove the bucket; `date_source` names which field it came from (`due`, `scheduled`, or `start`) under the report's `date_fields` precedence. Both are `null` for an `unscheduled` task. The three raw date fields are always surfaced so consumers can distinguish truly undated tasks from tasks carrying only omitted date fields. `summary.unscheduled` is always present and is `0` when unscheduled tasks were not requested or none matched.
+
+The `tasks` list is flat (grouping is a presentation concern applied to the markdown output only) so consumers regroup on the per-task `bucket`, `quests`, and `areas` fields. Field names are stable across releases; new fields may be added, existing ones will not be renamed.
 
 `types` is the sorted include-only PARA-type filter, or `null` when unfiltered. `quest` is the normalized, lower-case Quest basename, or `null` when unfiltered. These fields describe the active report scope; they do not change the flat task item shape.
 
@@ -195,8 +218,7 @@ will not be renamed.
 - **Read-only.** No task mutation. Batch-complete or reschedule are
   separate concerns that feed existing write workflows (e.g.
   `pqn-archive --cancel-open-tasks`).
-- **Emoji syntax only.** Dataview inline fields (`[due:: 2026-05-15]`)
-  and plain `- [ ]` checkboxes without emoji dates are not parsed.
+- **Emoji date syntax only.** Dataview inline fields (`[due:: 2026-05-15]`) are not parsed. Plain undated checkboxes are reportable only through `--unscheduled`.
 - **Fixed `-` bullet rendering.** Configurable task-state
   representation is deferred.
 - No recurrence generation — this reports tasks that already exist.
@@ -204,12 +226,12 @@ will not be renamed.
 
 ## Gotchas
 
-- **A task needs at least one *tracked* date to be reported.** With the
-  default precedence that means any of `📅` / `⏳` / `🛫`; under a
-  narrowed `--date-field` set, only the listed fields count.
+- **A task needs at least one tracked date by default.** `--unscheduled show` or `only` opts into tasks carrying none of the active date fields.
 - **`--date-field` is both precedence and filter.** Listing a subset
   (e.g. `--date-field scheduled`) drops tasks that carry none of the
-  listed dates.
+  listed dates by default. With `--unscheduled`, those tasks instead enter the unscheduled bucket, even when an omitted raw date is present.
+- **`--due-in` does not limit unscheduled tasks.** They have no effective date or horizon; requesting them includes every matching unscheduled task.
+- **`--overdue` conflicts only with `--unscheduled only`.** Use `--overdue --unscheduled show` to report overdue and unscheduled tasks together.
 - **`--type` drops untyped notes.** Once a type filter is active, notes with neither recognized `type:` frontmatter nor a PARA directory are excluded. Daily notes still resolve to `resource` from their path.
 - **`--due-in 0`** reports only what is overdue or due today.
 - **Grouped counts can exceed the total** when a note supports multiple

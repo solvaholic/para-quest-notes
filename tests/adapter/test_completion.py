@@ -185,6 +185,11 @@ def test_static_choices_come_from_argparse(monkeypatch: pytest.MonkeyPatch) -> N
             ["project", "area", "resource"],
         ),
         (
+            "para_quest_notes.workflows.tasks.cli",
+            "pqn-tasks --unscheduled ",
+            ["show", "only"],
+        ),
+        (
             "para_quest_notes.workflows.search.cli",
             "pqn-search --type ",
             ["project", "area", "resource"],

@@ -94,7 +94,7 @@ See `docs/PLAN.md` for the full breakdown.
 - [x] **Phase 6** - polish + v0.1 release
 - [x] **Post-v0.1 workflows** (shipped, targeting v0.5)
   - [x] `pqn-quests` - generated Quest index (read-only, no LLM)
-  - [x] `pqn-tasks` - read-only reporter for scheduled/due tasks
+  - [x] `pqn-tasks` - read-only reporter for dated and unscheduled tasks
   - [x] `pqn-search` - PARA + Quest-aware keyword search (read-only)
   - [x] `pqn-config` - effective-config inspector with provenance
     (read-only)
