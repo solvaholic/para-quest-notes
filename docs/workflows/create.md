@@ -1,8 +1,8 @@
 # pqn-create
 
 Author a single new note into its PARA home, with canonical frontmatter
-and a type-appropriate body skeleton. No LLM. One note per invocation.
-No moves, no rewrites - just one new file.
+and either a note template or a type-appropriate body skeleton. No LLM.
+One note per invocation. No moves, no rewrites - just one new file.
 
 ## What it does
 
@@ -31,10 +31,12 @@ Seven steps, all pure (`--apply` only gates the actual disk write):
    delegates to `validate.api.check_basename_available` so a duplicate
    basename anywhere in the vault is also caught. Wikilinks resolve by
    basename.
-5. **`compose_note`** - emits canonical frontmatter via
-   `vault.frontmatter.dump_frontmatter` (single source of truth) plus a
-   type-appropriate body skeleton. Empty `supports` is dropped from
-   frontmatter.
+5. **`compose_note`** - emits canonical frontmatter via the shared
+   `split_note`, `merge`, `canonical_frontmatter`, and `dump_frontmatter`
+   helpers (single source of truth), plus a selected template body or a
+   type-appropriate skeleton. Template metadata merges under generated
+   values. Empty generated `supports` and `source_url` values remain
+   authoritative and are dropped from frontmatter.
 6. **`write_note`** - `--apply` only. Creates the parent directory if
    needed and writes atomically (sibling temp + `os.replace`). A
    defensive re-check guards the TOCTOU window between collision check
@@ -95,22 +97,23 @@ echo "# Meeting Notes\n\nDecided to use React." | \
 cat draft.md | pqn-create --vault ~/notes \
   --type project --title "Research Summary" --body-stdin --apply
 
-# Use a named body template (from <vault>/resources/templates/).
+# Use a named note template (from <vault>/resources/templates/).
 pqn-create --vault ~/notes --type project --title "Weekly Review" \
   --supports "[[Work]]" --template weekly-review --apply
 ```
 
-### Body templates
+### Note templates
 
-`pqn-create` supports user-defined body templates stored in the vault.
+`pqn-create` supports user-defined whole-note templates stored in the vault.
 See [`docs/templates.md`](../templates.md) for the full reference
-(template location, variables, escaping, config defaults, fallback
-behavior).
+(template location, frontmatter precedence, variables, escaping, config
+defaults, parser policy, and fallback behavior).
 
 Quick version: `--template weekly-review` loads
-`<vault>/resources/templates/weekly-review.md` and substitutes
-`$title`, `$type`, `$created`, etc. Priority: stdin > template >
-config default > built-in skeleton.
+`<vault>/resources/templates/weekly-review.md`, merges any supplemental
+frontmatter beneath generated metadata, and substitutes `$title`, `$type`,
+`$created`, etc. in the body. Priority: stdin > template > config default >
+built-in skeleton.
 
 ### Positional path inference
 

@@ -1,11 +1,16 @@
-"""Tests for pqn-create body templates (#42)."""
+"""Tests for pqn-create note templates (#42, #75)."""
 
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
+import pytest
+
 from para_quest_notes.workflows.create.cli import main
+from para_quest_notes.workflows.create.contract import CreateInputs
+from para_quest_notes.workflows.create.pipeline import create_note
 from para_quest_notes.workflows.create.templates import (
     TemplateNotFoundError,
     get_template_config,
@@ -13,6 +18,7 @@ from para_quest_notes.workflows.create.templates import (
     render_template,
     resolve_template_path,
 )
+from para_quest_notes.workflows.validate.api import validate_paths
 
 
 def _seed_vault(tmp_path: Path) -> Path:
@@ -66,7 +72,6 @@ def test_resolve_template_not_found(tmp_path: Path):
 def test_load_template_raises_on_not_found(tmp_path: Path):
     vault = tmp_path / "vault"
     (vault / "resources/templates").mkdir(parents=True)
-    import pytest
 
     with pytest.raises(TemplateNotFoundError):
         load_template("nonexistent", vault=vault)
@@ -188,7 +193,7 @@ def test_cli_config_default_template(tmp_path: Path, capsys, monkeypatch):
     vault = _seed_vault(tmp_path)
     (vault / "resources/templates").mkdir(parents=True)
     (vault / "resources/templates/project-default.md").write_text(
-        "# $title\n\n## Objective\n\n<fill in>\n"
+        "---\nstatus: draft\nreview_cycle: weekly\n---\n# $title\n\n## Objective\n\n<fill in>\n"
     )
     cfg = _config(
         tmp_path,
@@ -212,6 +217,8 @@ def test_cli_config_default_template(tmp_path: Path, capsys, monkeypatch):
     )
     assert rc == 0
     written = (vault / "projects/Auto Template.md").read_text()
+    assert "status: draft" in written
+    assert "review_cycle: weekly" in written
     assert "## Objective" in written
     assert "<one-sentence purpose>" not in written
 
@@ -248,7 +255,9 @@ def test_cli_stdin_overrides_template(tmp_path: Path, capsys, monkeypatch):
     """stdin body takes priority over --template."""
     vault = _seed_vault(tmp_path)
     (vault / "resources/templates").mkdir(parents=True)
-    (vault / "resources/templates/ignored.md").write_text("TEMPLATE BODY\n")
+    (vault / "resources/templates/ignored.md").write_text(
+        "---\nstatus: from-template\n---\nTEMPLATE BODY\n"
+    )
     cfg = _config(tmp_path)
     monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
     rc = main(
@@ -274,6 +283,7 @@ def test_cli_stdin_overrides_template(tmp_path: Path, capsys, monkeypatch):
     written = (vault / "projects/Stdin Wins.md").read_text()
     assert "Custom body from stdin." in written
     assert "TEMPLATE BODY" not in written
+    assert "status:" not in written
 
 
 def test_cli_json_output_shows_body_source(tmp_path: Path, capsys, monkeypatch):
@@ -302,3 +312,338 @@ def test_cli_json_output_shows_body_source(tmp_path: Path, capsys, monkeypatch):
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["ok"] is True
+
+
+# ---- Whole-note template integration (#75) -------------------------------
+
+
+def test_whole_note_template_merges_supplemental_metadata_under_generated_values(
+    tmp_path: Path,
+):
+    vault = _seed_vault(tmp_path)
+    (vault / "resources/templates").mkdir(parents=True)
+    (vault / "resources/templates/whole-note.md").write_text(
+        "---\n"
+        "type: area\n"
+        "quest-kind: side\n"
+        "supports:\n"
+        "- '[[Template Quest]]'\n"
+        "source_url: https://template.example/source\n"
+        "created: '2000-01-01'\n"
+        "status: draft\n"
+        "review_cycle: weekly\n"
+        "tags:\n"
+        "- review\n"
+        "priority: 2\n"
+        "published: false\n"
+        "empty_value:\n"
+        "---\n"
+        "# $title\n\n"
+        "Kind: $quest_kind\n"
+        "Supports: $supports\n"
+        "Source: $source_url\n"
+        "Created: $created\n"
+    )
+
+    result = create_note(
+        CreateInputs(
+            title="Weekly Review",
+            type="project",
+            quest="none",
+            supports=["[[Work]]"],
+            source_url="https://cli.example/source",
+            template="whole-note",
+        ),
+        vault=vault,
+        apply=True,
+        today="2026-09-04",
+    )
+
+    expected_frontmatter = {
+        "type": "project",
+        "quest-kind": "none",
+        "supports": ["[[Work]]"],
+        "source_url": "https://cli.example/source",
+        "created": "2026-09-04",
+        "status": "draft",
+        "review_cycle": "weekly",
+        "tags": ["review"],
+        "priority": 2,
+        "published": False,
+    }
+    assert result.ok is True
+    assert result.written is True
+    assert result.plan.frontmatter == expected_frontmatter
+    assert (vault / "projects/Weekly Review.md").read_text() == (
+        "---\n"
+        "type: project\n"
+        "quest-kind: none\n"
+        "supports:\n"
+        "- '[[Work]]'\n"
+        "source_url: https://cli.example/source\n"
+        "created: '2026-09-04'\n"
+        "status: draft\n"
+        "review_cycle: weekly\n"
+        "tags:\n"
+        "- review\n"
+        "priority: 2\n"
+        "published: false\n"
+        "---\n"
+        "# Weekly Review\n\n"
+        "Kind: none\n"
+        "Supports: [[Work]]\n"
+        "Source: https://cli.example/source\n"
+        "Created: 2026-09-04\n"
+    )
+
+
+def test_body_only_template_output_is_unchanged(tmp_path: Path):
+    vault = _seed_vault(tmp_path)
+    (vault / "resources/templates").mkdir(parents=True)
+    (vault / "resources/templates/body-only.md").write_text(
+        "# $title\n\nDollar: $$title\nUnknown: $PATH\n"
+    )
+
+    result = create_note(
+        CreateInputs(
+            title="Body Only",
+            type="project",
+            supports=["[[Work]]"],
+            template="body-only",
+        ),
+        vault=vault,
+        apply=True,
+        today="2026-09-04",
+    )
+
+    assert result.ok is True
+    assert (vault / "projects/Body Only.md").read_text() == (
+        "---\n"
+        "type: project\n"
+        "quest-kind: none\n"
+        "supports:\n"
+        "- '[[Work]]'\n"
+        "created: '2026-09-04'\n"
+        "---\n"
+        "# Body Only\n\n"
+        "Dollar: $title\n"
+        "Unknown: $PATH\n"
+    )
+
+
+def test_legacy_backmatter_is_migrated_beneath_frontmatter_and_generated_values(
+    tmp_path: Path,
+):
+    vault = _seed_vault(tmp_path)
+    (vault / "resources/templates").mkdir(parents=True)
+    (vault / "resources/templates/legacy.md").write_text(
+        "---\n"
+        "status: front\n"
+        "quest: side\n"
+        "---\n"
+        "# $title\n\n"
+        "Body.\n\n"
+        "---\n"
+        "status: back\n"
+        "review_cycle: monthly\n"
+        "type: area\n"
+        "---\n"
+    )
+
+    result = create_note(
+        CreateInputs(
+            title="Legacy Template",
+            type="project",
+            supports=["[[Work]]"],
+            template="legacy",
+        ),
+        vault=vault,
+        apply=True,
+        today="2026-09-04",
+    )
+
+    assert result.plan.frontmatter == {
+        "type": "project",
+        "quest-kind": "none",
+        "supports": ["[[Work]]"],
+        "created": "2026-09-04",
+        "status": "front",
+        "review_cycle": "monthly",
+    }
+    written = (vault / "projects/Legacy Template.md").read_text()
+    assert written.endswith("# Legacy Template\n\nBody.\n\n")
+    assert written.count("---\n") == 2
+    assert "quest:" not in written
+
+
+@pytest.mark.parametrize(
+    "template_text",
+    [
+        "---\nstatus: [\n---\n# $title\n",
+        "---\n- status\n- draft\n---\n# $title\n",
+        "# $title\n\n---\nstatus: [\n---\n",
+    ],
+)
+def test_malformed_or_non_mapping_metadata_is_preserved_as_body(
+    tmp_path: Path,
+    template_text: str,
+):
+    vault = _seed_vault(tmp_path)
+    (vault / "resources/templates").mkdir(parents=True)
+    (vault / "resources/templates/malformed.md").write_text(template_text)
+
+    result = create_note(
+        CreateInputs(
+            title="Malformed Template",
+            type="resource",
+            template="malformed",
+        ),
+        vault=vault,
+        apply=True,
+        today="2026-09-04",
+    )
+
+    assert result.ok is True
+    assert result.plan.frontmatter == {
+        "type": "resource",
+        "quest-kind": "none",
+        "created": "2026-09-04",
+    }
+    rendered_body = render_template(template_text, {"title": "Malformed Template"})
+    assert (vault / "resources/Malformed Template.md").read_text().endswith(rendered_body)
+
+
+def test_cli_dry_run_json_reports_merged_frontmatter_without_writing(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+):
+    vault = _seed_vault(tmp_path)
+    (vault / "resources/templates").mkdir(parents=True)
+    (vault / "resources/templates/dry-run.md").write_text(
+        "---\nstatus: draft\ntags: [review, weekly]\n---\n# $title\n"
+    )
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--format",
+            "json",
+            "--type",
+            "project",
+            "--title",
+            "Dry Run",
+            "--supports",
+            "[[Work]]",
+            "--template",
+            "dry-run",
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert payload["written"] is False
+    assert payload["plan"]["frontmatter"]["status"] == "draft"
+    assert payload["plan"]["frontmatter"]["tags"] == ["review", "weekly"]
+    assert not (vault / "projects/Dry Run.md").exists()
+
+
+def test_inbox_fallback_keeps_supplemental_metadata_but_generated_omissions_win(
+    tmp_path: Path,
+):
+    vault = _seed_vault(tmp_path)
+    (vault / "resources/templates").mkdir(parents=True)
+    (vault / "resources/templates/inbox.md").write_text(
+        "---\n"
+        "supports: ['[[Template Quest]]']\n"
+        "source_url: https://template.example/source\n"
+        "status: needs-triage\n"
+        "---\n"
+        "# $title\n"
+    )
+
+    result = create_note(
+        CreateInputs(title="Inbox Template", type="project", template="inbox"),
+        vault=vault,
+        apply=True,
+        today="2026-09-04",
+    )
+
+    assert result.plan.destination == "inbox/Inbox Template.md"
+    assert result.plan.destination_mode == "inbox"
+    assert result.plan.frontmatter == {
+        "type": "project",
+        "quest-kind": "none",
+        "created": "2026-09-04",
+        "status": "needs-triage",
+    }
+    written = (vault / "inbox/Inbox Template.md").read_text()
+    assert "supports:" not in written
+    assert "source_url:" not in written
+    assert "status: needs-triage" in written
+
+
+def test_whole_note_template_does_not_overwrite_existing_note(tmp_path: Path):
+    vault = _seed_vault(tmp_path)
+    destination = vault / "projects" / "Existing Note.md"
+    destination.write_text("# Existing Note\n\nKeep me.\n")
+    (vault / "resources/templates").mkdir(parents=True)
+    (vault / "resources/templates/whole-note.md").write_text(
+        "---\nstatus: replacement\n---\n# $title\n"
+    )
+
+    result = create_note(
+        CreateInputs(
+            title="Existing Note",
+            type="project",
+            supports=["[[Work]]"],
+            template="whole-note",
+        ),
+        vault=vault,
+        apply=True,
+        today="2026-09-04",
+    )
+
+    assert result.ok is False
+    assert result.written is False
+    assert result.escalation is not None
+    assert result.escalation["step"] == "check_collision"
+    assert destination.read_text() == "# Existing Note\n\nKeep me.\n"
+
+
+def test_whole_note_template_apply_smokes_copied_sample_vault(tmp_path: Path):
+    sample = Path(__file__).resolve().parents[3] / "samples" / "vault"
+    vault = tmp_path / "vault"
+    shutil.copytree(sample, vault)
+    template_dir = vault / "resources" / "templates"
+    template_dir.mkdir(parents=True, exist_ok=True)
+    (template_dir / "whole-note-smoke.md").write_text(
+        "---\nstatus: draft\nreviewers: [owner]\n---\n# $title\n\nCreated $created.\n"
+    )
+
+    result = create_note(
+        CreateInputs(
+            title="Whole Note Template Smoke",
+            type="project",
+            supports=["[[Health]]"],
+            template="whole-note-smoke",
+        ),
+        vault=vault,
+        apply=True,
+        today="2026-09-04",
+    )
+
+    payload = result.to_dict()
+    destination = vault / "projects" / "Whole Note Template Smoke.md"
+    assert payload["ok"] is True
+    assert payload["written"] is True
+    assert payload["plan"]["destination"] == "projects/Whole Note Template Smoke.md"
+    assert payload["plan"]["frontmatter"]["status"] == "draft"
+    assert payload["plan"]["frontmatter"]["reviewers"] == ["owner"]
+    assert destination.read_text().endswith("# Whole Note Template Smoke\n\nCreated 2026-09-04.\n")
+    assert validate_paths(vault, [destination]).issues == []

@@ -116,8 +116,9 @@ def build_parser() -> argparse.ArgumentParser:
             "--template",
             default=None,
             help=(
-                "Body template name or vault-relative path. Looked up in "
+                "Note template name or vault-relative path. Looked up in "
                 "<vault>/resources/templates/ (or the configured template_dir). "
+                "Supplemental frontmatter merges under generated metadata. "
                 "Variables: $title, $type, $quest_kind, $supports, $source_url, "
                 "$created ($quest is a deprecated alias for $quest_kind)."
             ),

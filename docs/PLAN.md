@@ -488,14 +488,14 @@ let them creep into the v1 release.
     directly and also matched by a glob, or nested under a directory
     arg)? Pick once the feature gets scheduled, not before.
 
-- **Whole-note templates (#75).** Extend `pqn-create` templates from
-  body-only to whole-note: templates can include frontmatter that
-  merges under the generated values (generated wins on conflict,
-  template provides supplemental keys like `status: draft`). The
-  current body-only design (#42) is friendly to this evolution -
-  `split_note()` + `canonical_frontmatter()` merge handles it. Also:
-  exclude `resources/templates/` from `pqn-validate` since templates
-  aren't PARA notes.
+- **Whole-note templates (#75) - delivered in Wave 6.** `pqn-create`
+  templates can include frontmatter that merges under generated values
+  (generated wins on conflict; templates provide supplemental keys like
+  `status: draft`). The implementation reuses `split_note()` and
+  `canonical_frontmatter()` so legacy backmatter tolerance, malformed
+  metadata handling, migration, and key ordering match other write paths.
+  `resources/templates/` remains excluded from `pqn-validate` because
+  templates aren't PARA notes.
 
 - **Task roundup in daily note.** The *reporting* half shipped as
   the standalone `pqn-tasks` reporter (#83, v0.5; see

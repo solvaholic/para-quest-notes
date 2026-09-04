@@ -25,7 +25,7 @@ class CreateInputs:
     sub_path: str | None = None
     source_url: str | None = None
     body: str | None = None  # note body from stdin; replaces the skeleton
-    template: str | None = None  # template name or path; replaces the skeleton
+    template: str | None = None  # whole-note template name or path
 
 
 @dataclass
