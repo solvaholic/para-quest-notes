@@ -431,7 +431,7 @@ def test_validate_after_dry_run_skips(tmp_path: Path) -> None:
     assert res.output["skipped"] is True
 
 
-def test_move_file_creates_missing_parent_and_uses_atomic_replace(
+def test_move_file_creates_missing_parent_and_publishes_without_replace(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     vault = _seed_vault(tmp_path)
@@ -446,18 +446,57 @@ def test_move_file_creates_missing_parent_and_uses_atomic_replace(
         already_at_destination=False,
         creating_missing=True,
     )
-    replacements: list[tuple[Path, Path]] = []
-    real_replace = os.replace
+    links: list[tuple[Path, Path]] = []
+    real_link = os.link
 
-    def replace(source: Path, target: Path) -> None:
-        replacements.append((source, target))
+    def link(source: Path, target: Path) -> None:
+        links.append((source, target))
         assert source.read_text(encoding="utf-8") == "# 2026-09-02\n\n"
-        real_replace(source, target)
+        real_link(source, target)
 
-    monkeypatch.setattr("para_quest_notes.workflows.daily.steps.move_file.os.replace", replace)
+    monkeypatch.setattr("para_quest_notes.workflows.daily.steps.move_file.os.link", link)
 
     res = MoveFile(apply=True).run(ctx)
 
     assert res.output["created"] is True
-    assert replacements == [(destination.with_name(".2026-09-02.md.tmp"), destination)]
+    assert len(links) == 1
+    temp_path, target = links[0]
+    assert temp_path.parent == destination.parent
+    assert temp_path.name.startswith(".2026-09-02.md.")
+    assert temp_path.name.endswith(".tmp")
+    assert target == destination
+    assert not temp_path.exists()
     assert destination.read_text(encoding="utf-8") == "# 2026-09-02\n\n"
+
+
+def test_move_file_creation_race_preserves_winner_and_cleans_temp(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    vault = _seed_vault(tmp_path)
+    destination = vault / "resources/daily_notes/2026/09/2026-09-02.md"
+    ctx = _ctx(
+        vault=vault,
+        source_abs=None,
+        destination_abs=destination,
+        destination_rel="resources/daily_notes/2026/09/2026-09-02.md",
+        content="# 2026-09-02\n\n",
+        content_changed=True,
+        already_at_destination=False,
+        creating_missing=True,
+    )
+    real_link = os.link
+
+    def racing_link(source: Path, target: Path) -> None:
+        target.write_text("concurrent winner\n", encoding="utf-8")
+        real_link(source, target)
+
+    monkeypatch.setattr(
+        "para_quest_notes.workflows.daily.steps.move_file.os.link",
+        racing_link,
+    )
+
+    with pytest.raises(EscalateToUser, match="destination already exists"):
+        MoveFile(apply=True).run(ctx)
+
+    assert destination.read_text(encoding="utf-8") == "concurrent winner\n"
+    assert list(destination.parent.glob(".2026-09-02.md.*.tmp")) == []
