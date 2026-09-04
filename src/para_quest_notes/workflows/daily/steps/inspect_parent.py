@@ -25,6 +25,12 @@ class InspectParent:
     name = "inspect_parent"
 
     def run(self, ctx: StepContext) -> StepResult:
+        if ctx.scratchpad.get("creating_missing", False):
+            return StepResult(
+                name=self.name,
+                output={"parent_kind": "missing"},
+                meta={"creating_missing": True},
+            )
         source_rel: str = ctx.scratchpad["source_rel"]
         rel = PurePosixPath(source_rel)
         parts = rel.parts

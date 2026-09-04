@@ -52,7 +52,7 @@ The workflows preserve that reasoning, locally.
         (see [`docs/workflows/validate.md`](docs/workflows/validate.md))
   - [x] Slice 2: `pqn-create` (no-LLM)
   - [x] Slice 3: `pqn-archive` (Projects only, no-LLM)
-  - [x] Slice 4: `pqn-daily` (filing-only, no LLM)
+  - [x] Slice 4: `pqn-daily` (select, file, create, and open; no LLM)
 - [x] Phase 5.5: LLM polish + contributor onboarding
       (`pqn-create` inbox fallback, `pqn-archive --generate-outcome`,
       [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md))
@@ -144,10 +144,9 @@ frontmatter pre-populated. Drop `--apply` for dry-run. Omit
 destination path; on miss it files to `inbox/`. Full options:
 [`docs/workflows/create.md`](docs/workflows/create.md).
 
-### 4. `pqn-daily` — file a daily note into `resources/daily_notes/` (no LLM)
+### 4. `pqn-daily` — select, create, file, or open a daily note (no LLM)
 
-`pqn-daily` is filing-only; you (or another tool) author the note,
-`pqn-daily` puts it in the right place.
+`pqn-daily` selects today when no target is provided. Safe defaults remain read-only and non-opening: opt into missing-note creation with `--create-missing`, consent to the write with `--apply`, and configure an editor before using `--open`.
 
 ```bash
 # Author a daily note at the vault root
@@ -156,11 +155,13 @@ echo "# 2026-05-16" > /tmp/demo-vault/2026-05-16.md
 # File it (dry-run, then --apply)
 uv run pqn-daily --vault /tmp/demo-vault 2026-05-16
 uv run pqn-daily --vault /tmp/demo-vault 2026-05-16 --apply
+
+# Plan and create an H1-only note for a missing date
+uv run pqn-daily --vault /tmp/demo-vault --date 2026-09-02 --create-missing
+uv run pqn-daily --vault /tmp/demo-vault --date 2026-09-02 --create-missing --apply
 ```
 
-Basename search covers vault root, `inbox/`, and
-`resources/daily_notes/`. Full options:
-[`docs/workflows/daily.md`](docs/workflows/daily.md).
+Basename search covers vault root, `inbox/`, and `resources/daily_notes/`. Existing positional invocations keep their dry-run and cron-safe behavior. Full selection, creation, editor, and config options: [`docs/workflows/daily.md`](docs/workflows/daily.md).
 
 ### 5. `pqn-archive --generate-outcome` — archive a Project, LLM writes the Outcome (LLM)
 

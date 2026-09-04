@@ -7,6 +7,9 @@ only legal "loose" homes for a daily note: vault root, ``inbox/`` (any
 depth), and ``resources/daily_notes/`` (any depth, for idempotent
 re-filing).
 
+When authoring is enabled, a missing bare date emits a typed creation
+branch. Missing paths and arbitrary basenames retain the existing escalation.
+
 Path-form targets are accepted regardless of subtree — ``inspect_parent``
 is the gate that rejects daily notes living somewhere PARA-meaningful
 (``projects/``, ``areas/``, ``archive/``, other ``resources/`` subtrees).
@@ -14,17 +17,21 @@ is the gate that rejects daily notes living somewhere PARA-meaningful
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.step import StepContext, StepResult
 
+_DATE_TARGET_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(?:\.md)?$")
+
 
 class ResolveTarget:
     name = "resolve_target"
 
-    def __init__(self, target: str):
+    def __init__(self, target: str, *, create_missing: bool = False):
         self.target = target
+        self.create_missing = create_missing
 
     def run(self, ctx: StepContext) -> StepResult:
         if ctx.vault is None:
@@ -89,6 +96,16 @@ class ResolveTarget:
             unique.append(m)
 
         if not unique:
+            if self.create_missing and _DATE_TARGET_RE.fullmatch(candidate):
+                ctx.scratchpad["source_abs"] = None
+                ctx.scratchpad["source_rel"] = None
+                ctx.scratchpad["date_candidate"] = basename
+                ctx.scratchpad["creating_missing"] = True
+                return StepResult(
+                    name=self.name,
+                    output={"source": None, "missing": True},
+                    meta={"creating_missing": True},
+                )
             raise EscalateToUser(
                 step=self.name,
                 reason=f"no daily note found matching {self.target!r}",
@@ -116,6 +133,7 @@ class ResolveTarget:
             ) from exc
         ctx.scratchpad["source_abs"] = source
         ctx.scratchpad["source_rel"] = rel
+        ctx.scratchpad["creating_missing"] = False
         return StepResult(
             name=self.name,
             output={"source": rel},

@@ -7,6 +7,7 @@ step's input -> output / escalation contract.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -428,3 +429,35 @@ def test_validate_after_dry_run_skips(tmp_path: Path) -> None:
     ctx = _ctx(vault=tmp_path)
     res = ValidateAfter(apply=False).run(ctx)
     assert res.output["skipped"] is True
+
+
+def test_move_file_creates_missing_parent_and_uses_atomic_replace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    vault = _seed_vault(tmp_path)
+    destination = vault / "resources/daily_notes/2026/09/2026-09-02.md"
+    ctx = _ctx(
+        vault=vault,
+        source_abs=None,
+        destination_abs=destination,
+        destination_rel="resources/daily_notes/2026/09/2026-09-02.md",
+        content="# 2026-09-02\n\n",
+        content_changed=True,
+        already_at_destination=False,
+        creating_missing=True,
+    )
+    replacements: list[tuple[Path, Path]] = []
+    real_replace = os.replace
+
+    def replace(source: Path, target: Path) -> None:
+        replacements.append((source, target))
+        assert source.read_text(encoding="utf-8") == "# 2026-09-02\n\n"
+        real_replace(source, target)
+
+    monkeypatch.setattr("para_quest_notes.workflows.daily.steps.move_file.os.replace", replace)
+
+    res = MoveFile(apply=True).run(ctx)
+
+    assert res.output["created"] is True
+    assert replacements == [(destination.with_name(".2026-09-02.md.tmp"), destination)]
+    assert destination.read_text(encoding="utf-8") == "# 2026-09-02\n\n"

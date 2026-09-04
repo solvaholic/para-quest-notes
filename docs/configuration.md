@@ -31,12 +31,22 @@ workflows:
   tasks:
     # Effective-date precedence; omitted fields are ignored.
     date_fields: [scheduled, due, start]
+  daily:
+    # Safe defaults: neither setting bypasses the --apply write gate.
+    create_missing: false
+    open_existing: false
+    # An argv list, not a shell command string. The note path is appended.
+    editor:
+      - code
+      - --reuse-window
 
 # Where run traces go.
 run_log_dir: ~/.local/state/para-quest-notes/runs
 ```
 
 `pqn-tasks` resolves its date fields as `--date-field` flags, then `workflows.tasks.date_fields`, then the built-in `[due, scheduled, start]` default. The configured value must be a non-empty list containing only `due`, `scheduled`, and `start`.
+
+`pqn-daily` resolves `create_missing` and `open_existing` from explicit positive or negative CLI flags, then `workflows.daily`, then the safe `false` defaults. `create_missing` still requires `--apply` before it writes. `editor` must be a non-empty argv list of non-empty strings; the resolved note path is appended and the process runs without a shell. There is no default editor or OS-specific discovery.
 
 ## Vault content (in your vault)
 

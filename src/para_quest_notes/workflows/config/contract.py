@@ -18,7 +18,7 @@ Source = Literal["default", "config", "env", "flag", "cwd"]
 
 # The sections a caller can isolate with ``--section``. Omitting the flag
 # reports every section.
-SECTIONS = ("vault", "models", "ollama", "tasks", "templates", "paths")
+SECTIONS = ("vault", "models", "ollama", "daily", "tasks", "templates", "paths")
 
 
 @dataclass
@@ -117,6 +117,20 @@ class TasksInfo:
 
 
 @dataclass
+class DailyInfo:
+    create_missing: Setting
+    open_existing: Setting
+    editor: Setting
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "create_missing": self.create_missing.to_dict(),
+            "open_existing": self.open_existing.to_dict(),
+            "editor": self.editor.to_dict(),
+        }
+
+
+@dataclass
 class TemplatesInfo:
     """Template dir, per-type defaults, and (when the vault resolves) the
     template files found on disk. ``files`` is ``None`` when the vault is
@@ -160,6 +174,7 @@ class ConfigReport:
     vault: VaultInfo
     models: ModelsInfo
     ollama: OllamaInfo
+    daily: DailyInfo
     tasks: TasksInfo
     templates: TemplatesInfo
     paths: PathsInfo
@@ -169,6 +184,7 @@ class ConfigReport:
             "vault": self.vault.to_dict(),
             "models": self.models.to_dict(),
             "ollama": self.ollama.to_dict(),
+            "daily": self.daily.to_dict(),
             "tasks": self.tasks.to_dict(),
             "templates": self.templates.to_dict(),
             "paths": self.paths.to_dict(),

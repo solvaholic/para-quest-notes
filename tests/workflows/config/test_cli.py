@@ -31,7 +31,7 @@ def test_full_json_has_all_sections(vault: Path, tmp_path: Path, capsys) -> None
     code = main(["--vault", str(vault), "--config", _absent_config(tmp_path), "--format", "json"])
     assert code == 0
     data = json.loads(capsys.readouterr().out)
-    assert set(data) == {"vault", "models", "ollama", "tasks", "templates", "paths"}
+    assert set(data) == {"vault", "models", "ollama", "daily", "tasks", "templates", "paths"}
     assert data["vault"]["resolved"] is True
     assert data["vault"]["source"] == "flag"
 
@@ -132,5 +132,27 @@ def test_tasks_section_reports_honored_date_fields(vault: Path, tmp_path: Path, 
                 "source": "config",
                 "honored": True,
             }
+        }
+    }
+
+
+def test_daily_section_reports_settings_and_provenance(vault: Path, tmp_path: Path, capsys) -> None:
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        "workflows:\n  daily:\n    create_missing: true\n    editor: [code, --reuse-window]\n",
+        encoding="utf-8",
+    )
+
+    code = main(
+        ["--vault", str(vault), "--config", str(cfg), "--section", "daily", "--format", "json"]
+    )
+
+    assert code == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data == {
+        "daily": {
+            "create_missing": {"value": True, "source": "config"},
+            "open_existing": {"value": False, "source": "default"},
+            "editor": {"value": ["code", "--reuse-window"], "source": "config"},
         }
     }

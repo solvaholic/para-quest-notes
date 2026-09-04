@@ -21,8 +21,8 @@ class ComputeDestination:
 
     def run(self, ctx: StepContext) -> StepResult:
         vault: Path = ctx.vault  # type: ignore[assignment]
-        source_abs: Path = ctx.scratchpad["source_abs"]
-        source_rel: str = ctx.scratchpad["source_rel"]
+        source_abs: Path | None = ctx.scratchpad["source_abs"]
+        source_rel: str | None = ctx.scratchpad["source_rel"]
         date_iso: str = ctx.scratchpad["date_iso"]
         year: str = ctx.scratchpad["date_year"]
         month: str = ctx.scratchpad["date_month"]
@@ -31,7 +31,9 @@ class ComputeDestination:
         dest_rel_posix = dest_rel.as_posix()
         dest_abs = vault / dest_rel
 
-        already = source_abs.resolve() == dest_abs.resolve() or source_rel == dest_rel_posix
+        already = (
+            source_abs is not None and source_abs.resolve() == dest_abs.resolve()
+        ) or source_rel == dest_rel_posix
 
         ctx.scratchpad["destination_abs"] = dest_abs
         ctx.scratchpad["destination_rel"] = dest_rel_posix

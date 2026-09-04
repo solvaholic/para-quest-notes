@@ -177,6 +177,11 @@ check "daily dry-run (unfiled)" \
   uv run pqn-daily --vault "$VAULT" --format json "2026-07-05.md"
 check "daily dry-run (already filed)" \
   uv run pqn-daily --vault "$VAULT" --format json "2026-02-04.md"
+check "daily create-missing dry-run" \
+  uv run pqn-daily --vault "$VAULT" --format json \
+    --date 2026-09-02 --create-missing
+check "daily create-missing dry-run does not write" \
+  test ! -e "$VAULT/resources/daily_notes/2026/09/2026-09-02.md"
 
 if $APPLY; then
   check "daily --apply" \
@@ -185,6 +190,12 @@ if $APPLY; then
     test -f "$VAULT/resources/daily_notes/2026/07/2026-07-05.md"
   check "daily note removed from inbox" \
     test ! -f "$VAULT/inbox/2026-07-05.md"
+  check "daily create-missing --apply" \
+    uv run pqn-daily --vault "$VAULT" --format json --apply \
+      --date 2026-09-02 --create-missing
+  check "daily created exact H1-only note" \
+    cmp -s "$VAULT/resources/daily_notes/2026/09/2026-09-02.md" \
+      <(printf '# 2026-09-02\n\n')
 fi
 
 echo ""

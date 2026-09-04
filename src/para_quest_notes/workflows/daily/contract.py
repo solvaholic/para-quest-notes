@@ -11,9 +11,10 @@ from typing import Any
 
 @dataclass
 class DailyInputs:
-    """User-supplied inputs for filing one daily note."""
+    """User-supplied inputs for selecting one daily note."""
 
     target: str  # vault-relative path or bare basename (with or without .md)
+    create_missing: bool = False
 
 
 @dataclass
@@ -26,6 +27,7 @@ class DailyPlan:
     h1_inserted: bool = False
     frontmatter_migrated: bool = False
     already_at_destination: bool = False
+    would_create: bool = False
 
 
 @dataclass
@@ -37,6 +39,10 @@ class DailyResult:
     ok: bool = True
     plan: DailyPlan = field(default_factory=DailyPlan)
     moved: bool = False
+    created: bool = False
+    opened: bool = False
+    open_path: str | None = None
+    open_error: str | None = None
     escalation: dict[str, Any] | None = None
     error: str | None = None
     run_id: str | None = None
@@ -48,6 +54,10 @@ class DailyResult:
             "ok": self.ok,
             "plan": asdict(self.plan),
             "moved": self.moved,
+            "created": self.created,
+            "opened": self.opened,
+            "open_path": self.open_path,
+            "open_error": self.open_error,
             "escalation": self.escalation,
             "error": self.error,
             "run_id": self.run_id,

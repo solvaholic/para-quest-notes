@@ -20,6 +20,7 @@ from para_quest_notes.adapter.errors import ConfigError
 from .contract import (
     SECTIONS,
     ConfigReport,
+    DailyInfo,
     ModelsInfo,
     OllamaInfo,
     PathsInfo,
@@ -71,6 +72,7 @@ def _print_text(report: ConfigReport, section: str | None) -> None:
         "vault": lambda: _render_vault(report.vault),
         "models": lambda: _render_models(report.models),
         "ollama": lambda: _render_ollama(report.ollama),
+        "daily": lambda: _render_daily(report.daily),
         "tasks": lambda: _render_tasks(report.tasks),
         "templates": lambda: _render_templates(report.templates),
         "paths": lambda: _render_paths(report.paths),
@@ -122,6 +124,20 @@ def _render_tasks(tasks: TasksInfo) -> None:
     date_fields = tasks.date_fields
     honored = "honored" if date_fields.honored else "not honored"
     print(f"- date_fields: {', '.join(date_fields.value)}{_prov(date_fields.source)} ({honored})")
+
+
+def _render_daily(daily: DailyInfo) -> None:
+    print("## daily")
+    print(
+        f"- create_missing: {str(daily.create_missing.value).lower()}"
+        f"{_prov(daily.create_missing.source)}"
+    )
+    print(
+        f"- open_existing: {str(daily.open_existing.value).lower()}"
+        f"{_prov(daily.open_existing.source)}"
+    )
+    editor = "(not configured)" if daily.editor.value is None else repr(daily.editor.value)
+    print(f"- editor: {editor}{_prov(daily.editor.source)}")
 
 
 def _render_templates(templates: TemplatesInfo) -> None:

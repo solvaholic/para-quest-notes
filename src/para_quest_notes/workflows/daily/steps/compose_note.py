@@ -39,10 +39,27 @@ class ComposeNote:
     name = "compose_note"
 
     def run(self, ctx: StepContext) -> StepResult:
-        source = ctx.scratchpad["source_abs"]
         date_iso: str = ctx.scratchpad["date_iso"]
         already: bool = ctx.scratchpad.get("already_at_destination", False)
+        creating: bool = ctx.scratchpad.get("creating_missing", False)
 
+        if creating:
+            content = f"# {date_iso}\n\n"
+            ctx.scratchpad["content"] = content
+            ctx.scratchpad["content_changed"] = True
+            ctx.scratchpad["h1_inserted"] = True
+            ctx.scratchpad["frontmatter_migrated"] = False
+            return StepResult(
+                name=self.name,
+                output={
+                    "h1_inserted": True,
+                    "frontmatter_migrated": False,
+                    "content_changed": True,
+                },
+                meta={"creating_missing": True},
+            )
+
+        source = ctx.scratchpad["source_abs"]
         text = source.read_text(encoding="utf-8")
         split = split_note(text)
 

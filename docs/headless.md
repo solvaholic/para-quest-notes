@@ -33,7 +33,7 @@ pqn-validate --format json | jq '.summary.total_issues'
 pqn-ingest --format json | jq '[.files[] | select(.ok == false)]'
 
 # pqn-create / pqn-daily / pqn-archive: run_id, ok, plan, escalation,
-# error, written / moved booleans
+# error, and action booleans such as written / moved / created / opened
 pqn-archive "Some Project" --format json | jq '.plan.outcome_action'
 ```
 
@@ -72,7 +72,7 @@ All five CLIs share the same contract:
 | Code | Meaning |
 |---:|---|
 | `0` | Success. Work happened (or would happen, for dry-runs) and nothing escalated. |
-| `1` | The run completed but at least one item errored or escalated. Triggered when any `pqn-ingest` file fails, when `pqn-create` / `pqn-daily` / `pqn-archive` escalate or hit a runtime error, or when `pqn-validate` finds errors (or any warning with `--strict`). |
+| `1` | The run completed but at least one item errored or escalated. Triggered when any `pqn-ingest` file fails, when `pqn-create` / `pqn-daily` / `pqn-archive` escalate or hit a runtime error, when a requested daily editor launch fails, or when `pqn-validate` finds errors (or any warning with `--strict`). |
 | `2` | The run couldn't even start. Invalid arguments, unresolvable vault, malformed config. Always printed to stderr. |
 
 In cron contexts, treat `2` as "page me" and `1` as "look at the
@@ -153,8 +153,7 @@ not move it by hand:
              2>> /var/log/pqn/daily.err
 ```
 
-`pqn-daily` exits `1` (with an error printed) if the target doesn't
-exist, so the stderr log catches "I forgot to write yesterday."
+Because this invocation does not enable missing-note creation, `pqn-daily` exits `1` if the target does not exist. This preserves the existing cron-safe signal that yesterday's note was never authored.
 
 ### `pqn-archive` — usually NOT a cron job
 

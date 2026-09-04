@@ -21,8 +21,8 @@ class DetectShape:
     name = "detect_shape"
 
     def run(self, ctx: StepContext) -> StepResult:
-        source: Path = ctx.scratchpad["source_abs"]
-        basename = source.name
+        source: Path | None = ctx.scratchpad["source_abs"]
+        basename = source.name if source is not None else ctx.scratchpad["date_candidate"]
         m = _DAILY_RE.match(basename)
         if m is None:
             raise EscalateToUser(

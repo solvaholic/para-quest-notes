@@ -83,8 +83,9 @@ See `docs/PLAN.md` for the full breakdown.
     [`docs/PLAN.md`](docs/PLAN.md))
   - [x] Slice 3: `pqn-archive` (shipped Projects-only, no-LLM;
     LLM Outcome generation deferred — see [`docs/PLAN.md`](docs/PLAN.md))
-  - [x] Slice 4: `pqn-daily` (filing-only; no LLM; bulk migration
-    out of scope; authoring deferred to post-v1).
+  - [x] Slice 4 + Wave 5: `pqn-daily` (select/file/create/open; no LLM;
+    safe non-writing/non-opening defaults; bulk migration and task
+    roundup out of scope).
 - [x] **Phase 5.5** - LLM polish + contributor onboarding. Reshaped
   during the slice-4 → 5.5 handoff: 5.5a (shared prompts) deferred,
   5.5b reshaped as a no-LLM `pqn-create` inbox fallback, 5.5c
