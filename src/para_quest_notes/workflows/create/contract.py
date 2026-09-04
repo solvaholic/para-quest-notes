@@ -24,7 +24,7 @@ class CreateInputs:
     supports: list[str] | None = None
     sub_path: str | None = None
     source_url: str | None = None
-    body: str | None = None  # note body from stdin; replaces the skeleton
+    body: str | None = None  # rendered stdin body; replaces templates and the skeleton
     template: str | None = None  # whole-note template name or path
 
 

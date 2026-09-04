@@ -129,7 +129,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--body-stdin",
         dest="body_stdin",
         action="store_true",
-        help="Read note body content from stdin. Replaces the default skeleton.",
+        help=(
+            "Read note body content from stdin. Replaces templates and the default skeleton, "
+            "and renders $title, $type, $quest_kind, $supports, $source_url, and $created "
+            "($quest is a deprecated alias for $quest_kind). Use $$ for a literal dollar; "
+            "unknown $tokens pass through unchanged."
+        ),
     )
     p.add_argument(
         "--apply",

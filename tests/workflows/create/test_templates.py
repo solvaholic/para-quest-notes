@@ -291,13 +291,13 @@ def test_cli_stdin_overrides_template(tmp_path: Path, capsys, monkeypatch):
             "--body-stdin",
             "--apply",
         ],
-        stdin="# Stdin Wins\n\nCustom body from stdin.\n",
+        stdin="# $title\n\nCustom body from stdin for $supports.\n",
     )
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["plan"]["body_source"] == "stdin"
     written = (vault / "projects/Stdin Wins.md").read_text()
-    assert "Custom body from stdin." in written
+    assert written.endswith("# Stdin Wins\n\nCustom body from stdin for [[Work]].\n")
     assert "TEMPLATE BODY" not in written
     assert "status:" not in written
 

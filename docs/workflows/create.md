@@ -31,12 +31,7 @@ Seven steps, all pure (`--apply` only gates the actual disk write):
    delegates to `validate.api.check_basename_available` so a duplicate
    basename anywhere in the vault is also caught. Wikilinks resolve by
    basename.
-5. **`compose_note`** - emits canonical frontmatter via the shared
-   `split_note`, `merge`, `canonical_frontmatter`, and `dump_frontmatter`
-   helpers (single source of truth), plus a selected template body or a
-   type-appropriate skeleton. Template metadata merges under generated
-   values. Empty generated `supports` and `source_url` values remain
-   authoritative and are dropped from frontmatter.
+5. **`compose_note`** - emits canonical frontmatter via the shared `split_note`, `merge`, `canonical_frontmatter`, and `dump_frontmatter` helpers (single source of truth), plus a selected stdin body, template body, or type-appropriate skeleton. Stdin and template bodies pass through the same deterministic placeholder renderer after all input normalization and Quest resolution finish. Template metadata merges under generated values. Empty generated `supports` and `source_url` values remain authoritative and are dropped from frontmatter.
 6. **`write_note`** - `--apply` only. Creates the parent directory if
    needed and writes atomically (sibling temp + `os.replace`). A
    defensive re-check guards the TOCTOU window between collision check
@@ -88,8 +83,8 @@ pqn-create --vault ~/notes --format json \
 pqn-create --vault ~/notes \
   --type area --quest-kind main --title "Coffee" --apply
 
-# Pipe body content from stdin (replaces the default skeleton).
-echo "# Meeting Notes\n\nDecided to use React." | \
+# Pipe body content from stdin (replaces the default skeleton and renders placeholders).
+printf '# $title\n\nSupports $supports.\n' | \
   pqn-create --vault ~/notes --type project --title "Frontend Rewrite" \
   --supports "[[Work]]" --body-stdin --apply
 
@@ -109,11 +104,7 @@ See [`docs/templates.md`](../templates.md) for the full reference
 (template location, frontmatter precedence, variables, escaping, config
 defaults, parser policy, and fallback behavior).
 
-Quick version: `--template weekly-review` loads
-`<vault>/resources/templates/weekly-review.md`, merges any supplemental
-frontmatter beneath generated metadata, and substitutes `$title`, `$type`,
-`$created`, etc. in the body. Priority: stdin > template > config default >
-built-in skeleton.
+Quick version: `--template weekly-review` loads `<vault>/resources/templates/weekly-review.md`, merges any supplemental frontmatter beneath generated metadata, and substitutes `$title`, `$type`, `$created`, etc. in the body. `--body-stdin` substitutes the same variables from the final resolved create inputs, but treats any frontmatter-looking stdin text as body content. Use `$$` for a literal dollar; unknown `$tokens` pass through unchanged. Priority: stdin > template > config default > built-in skeleton.
 
 ### Positional path inference
 
