@@ -1,8 +1,6 @@
 # Note Templates
 
-User-defined whole-note templates for `pqn-create`. Templates live in the
-vault and can provide supplemental frontmatter plus custom note structure
-when the generated metadata and built-in skeletons don't fit.
+User-defined whole-note templates and deterministic body placeholders for `pqn-create`. Templates live in the vault and can provide supplemental frontmatter plus custom note structure when the generated metadata and built-in skeletons don't fit. Bodies supplied through `--body-stdin` use the same placeholder renderer and variable mapping.
 
 ## Where templates live
 
@@ -33,7 +31,7 @@ Title Case - all work).
 
 ## Variables
 
-Templates use `$variable` syntax. Available variables:
+Template bodies and non-empty `--body-stdin` bodies use `$variable` syntax. Values come from the final normalized create inputs after deterministic Quest and supports resolution. Available variables:
 
 | Variable | Value |
 |----------|-------|
@@ -53,17 +51,14 @@ hyphen would be read as `$quest` followed by literal `-kind`.)
 
 ### Escaping
 
-Variables are expanded everywhere in the template body, including inside code
-fences. Template frontmatter is parsed as YAML and is not variable-substituted.
-To include a literal `$` followed by a variable name, double it:
+Variables are expanded everywhere in template and stdin bodies, including inside code fences. Template frontmatter is parsed as YAML and is not variable-substituted; stdin is never parsed as template metadata. To include a literal `$`, double it:
 
 ```
 $$title    renders as    $title
 $$created  renders as    $created
 ```
 
-Unknown `$variables` (anything not in the table above) are left as-is.
-So `$PATH` or `$HOME` in a shell example won't be touched.
+Unknown `$variables` (anything not in the table above) are left as-is, so `$PATH` or `$HOME` in a shell example will not be touched.
 
 ## Frontmatter
 
@@ -106,9 +101,7 @@ When multiple body sources are available, priority is:
 3. **config default** - per-type default from `config.yaml`
 4. **built-in skeleton** - type-appropriate minimal structure
 
-When stdin wins, the template is not loaded, so neither its body nor its
-supplemental frontmatter is applied. Stdin remains verbatim; rendering
-placeholders in stdin is tracked separately in #110.
+When non-empty stdin wins, the template is not loaded, so neither its body nor its supplemental frontmatter is applied. The stdin body is rendered with the same known variables, `$$` escaping, and unknown-token pass-through as a template body. Frontmatter-looking text from stdin remains body text. Empty or whitespace-only stdin retains the existing fallback behavior and continues to the selected template or built-in skeleton.
 
 ## Config defaults
 
@@ -173,4 +166,4 @@ a `body_source` field indicating what was used:
 - `"template:<name>"` - template was found and rendered
 - `"skeleton"` - built-in skeleton (no template found or none specified)
 - `"skeleton (template not found)"` - template specified but missing
-- `"stdin"` - body came from stdin
+- `"stdin"` - body came from stdin and known placeholders were rendered

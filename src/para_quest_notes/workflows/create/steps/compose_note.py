@@ -5,6 +5,7 @@ Composes the final note content: canonical frontmatter (via
 body from one of three sources (in priority order):
 
 1. **stdin body** (``inputs.body``) - piped content replaces everything
+   and uses the same variable substitution as template bodies
 2. **template** (``inputs.template`` or config default) - loaded from
    ``<vault>/resources/templates/<name>.md`` and variable-substituted
 3. **built-in skeleton** - type-appropriate minimal structure
@@ -125,7 +126,7 @@ class ComposeNote:
         body: str
         body_source = "skeleton"
         if inputs.body is not None:
-            body = inputs.body
+            body = render_template(inputs.body, self._template_vars(inputs, title, today))
             body_source = "stdin"
         elif ctx.vault is not None and (template_name := self._resolve_template_name(inputs, ctx)):
             template_dir, _ = get_template_config(ctx.config.workflows if ctx.config else {})
@@ -171,7 +172,7 @@ class ComposeNote:
 
     @staticmethod
     def _template_vars(inputs: CreateInputs, title: str, today: str) -> dict[str, str]:
-        """Build the variable dict for template substitution."""
+        """Build the shared variable dict for template and stdin substitution."""
         supports_str = ", ".join(inputs.supports) if inputs.supports else ""
         return {
             "title": title,

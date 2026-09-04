@@ -1,4 +1,4 @@
-"""Note template loading for ``pqn-create`` (#42, #75).
+"""Note template loading and deterministic body rendering for ``pqn-create``.
 
 Templates live in the vault at ``<vault>/resources/templates/<name>.md``
 (configurable via ``create.template_dir`` in config.yaml). They use a
@@ -6,7 +6,8 @@ safe set of body variables: ``$title``, ``$type``, ``$quest_kind``,
 ``$supports``, ``$source_url``, ``$created``. ``$quest`` is a deprecated
 alias for ``$quest_kind`` (kept so pre-#98 templates keep rendering).
 Templates may include supplemental frontmatter, interpreted by the compose
-step through the shared vault frontmatter helpers.
+step through the shared vault frontmatter helpers. Non-empty stdin bodies use
+the same renderer and variable mapping after create inputs are finalized.
 
 Resolution order:
 1. Explicit ``--template`` flag (by name or path)

@@ -497,6 +497,8 @@ let them creep into the v1 release.
   `resources/templates/` remains excluded from `pqn-validate` because
   templates aren't PARA notes.
 
+- **Stdin placeholder rendering (#110) - delivered in Wave 6.** Non-empty `pqn-create --body-stdin` bodies pass through the same deterministic renderer and finalized variable mapping as template bodies. Stdin keeps priority over explicit and configured templates without loading their body or supplemental frontmatter; frontmatter-looking stdin remains body text. Empty stdin keeps its template-or-skeleton fallback, and no LLM or new flag is involved.
+
 - **Task roundup in daily note.** The *reporting* half shipped as
   the standalone `pqn-tasks` reporter (#83, v0.5; see
   [`docs/workflows/tasks.md`](workflows/tasks.md)) — read-only,
