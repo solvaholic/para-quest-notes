@@ -1,9 +1,6 @@
 # Eval fixtures
 
-Hand-curated fixtures for the registered eval harness (see
-[`docs/PLAN.md`](../../docs/PLAN.md) Phase 4). The loader is
-workflow-aware: committed fixtures now cover both `pqn-ingest` and
-`pqn-archive`.
+Hand-curated fixtures for the registered eval harness (see [`docs/PLAN.md`](../../docs/PLAN.md) Phase 4). The loader is workflow-aware: committed fixtures cover `pqn-ingest`, `pqn-archive`, and `pqn-create`.
 
 Run the harness with:
 
@@ -87,6 +84,32 @@ expected:
       - 30-minute runs
       - sustainable baseline
 ```
+
+### Create fixtures
+
+```yaml
+workflow: create
+id: create-project-routing
+title: "Plan Garden Beds"
+template_name: project
+template: |
+  # $title
+
+  ## Goals
+
+  ## Notes
+stdin: |
+  Build two raised beds before spring.
+
+  Compare cedar and galvanized steel.
+expected:
+  merge_template:
+    placements:
+      block-001: section-002
+      block-002: section-003
+```
+
+Create fixtures evaluate the model's routing decision, not generated prose. `block-*` IDs follow stdin block order, `section-*` IDs follow ATX heading order, and the judge requires the exact placement mapping. The runner writes the fixture template into its disposable eval vault before calling the production `merge_template` step.
 
 You don't have to declare every step's expectation. The runner only
 judges steps you provide an `expected.<step>` for.

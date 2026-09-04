@@ -1,0 +1,17 @@
+Route every stdin block to the most appropriate existing template heading.
+
+Return exactly one JSON object with this schema:
+{"placements":[{"block_id":"block-001","section_id":"section-001"}]}
+
+Rules:
+- Include every block ID exactly once.
+- Use only section IDs from the heading catalog.
+- Use section_id "unsorted" when no heading is a meaningful fit.
+- Do not return prose, Markdown, source text, rewritten text, explanations, or extra keys.
+- Preserve source order when choosing among equally good sections.
+
+Template heading catalog:
+$sections_json
+
+Stdin block catalog:
+$blocks_json

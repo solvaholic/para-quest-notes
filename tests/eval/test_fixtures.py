@@ -86,6 +86,61 @@ expected:
     assert fixtures[0].workflow == "ingest"
 
 
+def test_loads_create_merge_fixture(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "create.yaml",
+        """
+workflow: create
+id: create-routing
+title: Plan Garden Beds
+template_name: project
+template: |
+  # $title
+
+  ## Goals
+stdin: |
+  Build two beds.
+expected:
+  merge_template:
+    placements:
+      block-001: section-002
+""",
+    )
+    fixture = load_fixtures(tmp_path)[0]
+    assert fixture.workflow == "create"
+    assert fixture.template_name == "project"
+    assert fixture.expected.merge_template is not None
+    assert fixture.expected.merge_template.placements == (("block-001", "section-002"),)
+
+
+@pytest.mark.parametrize("template_name", ["../outside", "/tmp/outside", r"..\outside"])
+def test_create_fixture_rejects_unsafe_template_name(
+    tmp_path: Path,
+    template_name: str,
+) -> None:
+    write(
+        tmp_path,
+        "create.yaml",
+        f"""
+workflow: create
+id: create-routing
+title: Plan Garden Beds
+template_name: {template_name!r}
+template: |
+  # Plan
+stdin: |
+  Build two beds.
+expected:
+  merge_template:
+    placements:
+      block-001: section-001
+""",
+    )
+    with pytest.raises(FixtureError, match="template_name"):
+        load_fixtures(tmp_path)
+
+
 def test_unknown_workflow_raises(tmp_path: Path) -> None:
     write(
         tmp_path,

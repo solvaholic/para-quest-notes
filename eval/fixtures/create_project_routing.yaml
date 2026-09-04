@@ -1,0 +1,25 @@
+# Clear routing case for pqn-create's lossless template merge.
+workflow: create
+id: create-project-routing
+title: Plan Garden Beds
+template_name: project
+template: |
+  ---
+  status: draft
+  ---
+  # $title
+
+  Keep this template introduction.
+
+  ## Goals
+
+  ## Notes
+stdin: |
+  Build two raised beds before spring.
+
+  Compare cedar and galvanized steel.
+expected:
+  merge_template:
+    placements:
+      block-001: section-002
+      block-002: section-003

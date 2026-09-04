@@ -50,7 +50,7 @@ The workflows preserve that reasoning, locally.
 - [x] Phase 5: remaining workflows
   - [x] Slice 1: shared `vault/` + `adapter/cli.py` + `pqn-validate`
         (see [`docs/workflows/validate.md`](docs/workflows/validate.md))
-  - [x] Slice 2: `pqn-create` (no-LLM)
+  - [x] Slice 2: `pqn-create` (deterministic by default; opt-in local LLM template merge)
   - [x] Slice 3: `pqn-archive` (Projects only, no-LLM)
   - [x] Slice 4: `pqn-daily` (select, file, create, and open; no LLM)
 - [x] Phase 5.5: LLM polish + contributor onboarding
@@ -80,13 +80,7 @@ The workflows preserve that reasoning, locally.
 
 A small (~30-note) sample vault lives at [`samples/vault/`](samples/vault/). The walkthrough below exercises the nine core workflow `pqn-*` CLIs against a throwaway copy of it, so you can see the whole toolchain on first read without risking real notes.
 
-You'll need [Ollama](https://ollama.com) running locally for the
-LLM-using steps (`pqn-ingest`, the final `pqn-archive` step). The
-documented default model is `granite4.1:30b` (~18 GB); override
-with `--model` if you have something smaller. For a "what to use
-when" answer, see
-[`docs/eval.md` → Model recommendations](docs/eval.md#model-recommendations),
-driven by a real eval run.
+You'll need [Ollama](https://ollama.com) running locally for the LLM-using steps (`pqn-ingest`, the final `pqn-archive` step, and explicit `pqn-create --merge-template --apply` runs). The documented default model is `granite4.1:30b` (~18 GB); override with `--model` if you have something smaller. For a "what to use when" answer, see [`docs/eval.md` - Model recommendations](docs/eval.md#model-recommendations), driven by a real eval run.
 
 ```bash
 # 0. Set up the repo and make a throwaway vault
@@ -130,7 +124,7 @@ this is." Hand-write a few plausible inbox notes for a real demo.
 Full JSON contract and escalation shape:
 [`docs/workflows/ingest.md`](docs/workflows/ingest.md).
 
-### 3. `pqn-create` — create a single new note in its PARA + Quest home (no LLM)
+### 3. `pqn-create` — create a single new note in its PARA + Quest home
 
 ```bash
 uv run pqn-create --vault /tmp/demo-vault \
@@ -143,6 +137,8 @@ frontmatter pre-populated. Drop `--apply` for dry-run. Omit
 `--supports` and `pqn-create` tries to infer the Quest from the
 destination path; on miss it files to `inbox/`. Full options:
 [`docs/workflows/create.md`](docs/workflows/create.md).
+
+The normal create path is deterministic. To retain a selected template's structure while routing piped content beneath its headings, add `--merge-template`; on `--apply`, that explicit mode makes one schema-validated local LLM call and preserves every input block verbatim. Without `--apply`, it validates and plans statically, then reports routing as deferred without calling Ollama.
 
 ### 4. `pqn-daily` — select, create, file, or open a daily note (no LLM)
 

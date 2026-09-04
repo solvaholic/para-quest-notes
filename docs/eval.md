@@ -1,11 +1,6 @@
 # Eval harness
 
-Per-step golden-judging eval for registered workflows. Today that means
-`pqn-ingest` (Phase 4 in [`PLAN.md`](PLAN.md)); Phase 5.5d refactors the
-harness so new workflows can register their own steps without editing
-`runner.py`. Exposed as the `pqn-eval` console script so users can
-compare model choices on their own; also runnable via
-`python -m para_quest_notes.eval`.
+Per-step golden-judging eval for registered workflows. Today that means `pqn-ingest`, `pqn-archive`, and `pqn-create`; Phase 5.5d refactors the harness so new workflows can register their own steps without editing `runner.py`. Exposed as the `pqn-eval` console script so users can compare model choices on their own; also runnable via `python -m para_quest_notes.eval`.
 
 ## Where eval fits (test layers)
 
@@ -75,6 +70,7 @@ workflow-agnostic:
 - `has_expectation(fixture)`
 - `uses_llm`
 - optional fake-response and responds-baseline hooks
+- an optional disposable-vault setup hook for steps that consume real vault files
 
 `pqn-ingest` wires its registrations in
 `src/para_quest_notes/workflows/ingest_inbox/eval.py`.
@@ -103,6 +99,10 @@ replies.
   intentionally lighter than an LLM-as-judge pass: it is cheap,
   deterministic, and CI-safe, but it will miss good paraphrases when the
   expected keywords are too narrow.
+
+### `create`
+
+- `merge_template` (LLM JSON) - exact stable-ID placement mapping for every stdin block. The fixture supplies a real template in the runner's disposable vault; the production step still performs placeholder rendering, heading cataloging, schema validation, and lossless reconstruction.
 
 ## Local-only constraint
 

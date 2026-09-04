@@ -11,6 +11,13 @@ def test_registry_roundtrip_returns_registered_step() -> None:
     assert step.ref == "ingest:classify_para"
 
 
+def test_create_merge_step_registers_with_vault_setup() -> None:
+    register_defaults()
+    step = get_evaluable_step("create", "merge_template")
+    assert step.ref == "create:merge_template"
+    assert step.prepare_vault is not None
+
+
 def test_bare_step_name_defaults_to_ingest() -> None:
     workflow, name = parse_step_ref("classify_para")
     assert (workflow, name) == ("ingest", "classify_para")

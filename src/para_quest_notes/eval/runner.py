@@ -121,6 +121,15 @@ def _run_one_step(
     trace: TraceWriter | None,
     vault: Path | None = None,
 ) -> StepRunResult:
+    if step_spec.prepare_vault is not None:
+        if vault is None:
+            raise ValueError(f"eval step {step_spec.ref} requires a disposable vault")
+        step_spec.prepare_vault(fixture, vault)
+
+    if step_spec.uses_llm:
+        bind_fixture = getattr(llm, "bind_fixture", None)
+        if callable(bind_fixture):
+            bind_fixture(fixture)
     rec = _RecordingLLM(llm) if step_spec.uses_llm else None
     step = step_spec.step_factory(model if step_spec.uses_llm else None)
     ctx = StepContext(

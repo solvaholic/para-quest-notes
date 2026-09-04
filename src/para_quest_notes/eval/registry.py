@@ -13,6 +13,7 @@ DEFAULT_WORKFLOW = "ingest"
 FixtureLoader = Callable[[dict[str, Any], Path], Any]
 StepFactory = Callable[[str | None], Any]
 ContextBuilder = Callable[[Any], dict[str, Any]]
+PrepareVault = Callable[[Any, Path], None]
 StepJudge = Callable[[dict[str, Any] | None, Any], "Verdict"]
 HasExpectation = Callable[[Any], bool]
 FakeResponseBuilder = Callable[[Any], str]
@@ -36,6 +37,7 @@ class EvaluableStep:
     uses_llm: bool
     fake_response: FakeResponseBuilder | None = None
     responds_judge: RespondsJudge | None = None
+    prepare_vault: PrepareVault | None = None
 
     @property
     def ref(self) -> str:
@@ -143,10 +145,12 @@ def register_defaults() -> None:
     if _DEFAULTS_REGISTERED:
         return
     from para_quest_notes.workflows.archive.eval import register_archive_evals
+    from para_quest_notes.workflows.create.eval import register_create_evals
     from para_quest_notes.workflows.ingest_inbox.eval import register_ingest_evals
 
     register_ingest_evals()
     register_archive_evals()
+    register_create_evals()
     _DEFAULTS_REGISTERED = True
 
 

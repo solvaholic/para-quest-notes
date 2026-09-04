@@ -22,6 +22,7 @@ from para_quest_notes.eval.fixtures import (
     ExpectedFilename,
     ExpectedGenerateOutcome,
     ExpectedPickQuest,
+    ExpectedTemplateMerge,
 )
 
 
@@ -262,6 +263,50 @@ def judge_generate_outcome(
     return Verdict(step="generate_outcome", ok=True, detail=detail)
 
 
+def judge_template_merge(
+    actual: dict[str, Any] | None,
+    expected: ExpectedTemplateMerge,
+) -> Verdict:
+    if actual is None:
+        return Verdict(step="merge_template", ok=False, reason="step did not produce output")
+    placements = actual.get("placements")
+    if actual.get("status") != "merged" or not isinstance(placements, list):
+        return Verdict(
+            step="merge_template",
+            ok=False,
+            reason="step did not produce a merged placement list",
+            detail={"actual": actual},
+        )
+    got: list[tuple[str, str]] = []
+    for placement in placements:
+        if not isinstance(placement, dict):
+            return Verdict(
+                step="merge_template",
+                ok=False,
+                reason="placement was not an object",
+                detail={"actual": actual},
+            )
+        block_id = placement.get("block_id")
+        section_id = placement.get("section_id")
+        if not isinstance(block_id, str) or not isinstance(section_id, str):
+            return Verdict(
+                step="merge_template",
+                ok=False,
+                reason="placement IDs were not strings",
+                detail={"actual": actual},
+            )
+        got.append((block_id, section_id))
+
+    if tuple(got) == expected.placements:
+        return Verdict(step="merge_template", ok=True, detail={"placements": got})
+    return Verdict(
+        step="merge_template",
+        ok=False,
+        reason="placement mapping did not match expected routing",
+        detail={"expected": expected.placements, "got": got},
+    )
+
+
 def _tokens(text: str) -> set[str]:
     return {match.group(0) for match in _WORD.finditer(text.lower())}
 
@@ -312,5 +357,6 @@ __all__ = [
     "judge_propose_filename",
     "judge_responds",
     "judge_step",
+    "judge_template_merge",
     "judge_text_responds",
 ]

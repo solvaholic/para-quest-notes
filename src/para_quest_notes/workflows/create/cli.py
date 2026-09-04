@@ -9,7 +9,7 @@ import warnings
 from collections.abc import Sequence
 from pathlib import Path
 
-from para_quest_notes.adapter.cli import build_base_parser
+from para_quest_notes.adapter.cli import add_llm_args, build_base_parser
 from para_quest_notes.adapter.completion import (
     complete_quest_wikilinks,
     complete_sub_paths,
@@ -19,6 +19,7 @@ from para_quest_notes.adapter.completion import (
 )
 from para_quest_notes.adapter.config import load_config
 from para_quest_notes.adapter.errors import VaultError
+from para_quest_notes.adapter.llm import OllamaClient
 from para_quest_notes.adapter.trace import TraceWriter, new_run_path
 from para_quest_notes.adapter.vault import find_vault
 from para_quest_notes.vault.frontmatter import LegacyQuestKeyWarning
@@ -46,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="pqn-create",
         description="Create a single new note directly into its PARA + Quest home.",
     )
+    add_llm_args(p)
     p.add_argument(
         "path",
         nargs="?",
@@ -137,9 +139,21 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "--merge-template",
+        action="store_true",
+        help=(
+            "Route non-empty stdin blocks under headings in the selected template using "
+            "the local LLM on --apply. Dry-run validates and reports routing as deferred. "
+            "Requires a template that exists; invalid routing aborts before write."
+        ),
+    )
+    p.add_argument(
         "--apply",
         action="store_true",
-        help="Write the file. Without this flag, runs as a dry-run.",
+        help=(
+            "Write the file and, with --merge-template, permit the routing LLM call. "
+            "Without this flag, runs as a model-free dry-run."
+        ),
     )
     return p
 
@@ -198,6 +212,7 @@ def _resolve_inputs(args: argparse.Namespace) -> tuple[CreateInputs, Path | None
         source_url=args.source_url,
         body=None,  # filled by main() from stdin when --body-stdin is set
         template=args.template,
+        merge_template=args.merge_template,
     )
     return inputs, vault_hint
 
@@ -216,7 +231,7 @@ def main(argv: Sequence[str] | None = None, *, stdin: str | None = None) -> int:
         return 2
 
     # Read body from stdin when --body-stdin is set (or auto-detect piped input)
-    if args.body_stdin or stdin is not None:
+    if args.body_stdin or args.merge_template or stdin is not None:
         body = stdin if stdin is not None else sys.stdin.read()
         if body.strip():
             inputs = CreateInputs(
@@ -227,6 +242,8 @@ def main(argv: Sequence[str] | None = None, *, stdin: str | None = None) -> int:
                 sub_path=inputs.sub_path,
                 source_url=inputs.source_url,
                 body=body,
+                template=inputs.template,
+                merge_template=inputs.merge_template,
             )
 
     # Vault resolution: explicit --vault > path-inferred vault > normal discovery
@@ -241,6 +258,13 @@ def main(argv: Sequence[str] | None = None, *, stdin: str | None = None) -> int:
         return 2
 
     trace_path = new_run_path(config.run_log_dir)
+    llm = None
+    if args.merge_template and args.apply:
+        llm = OllamaClient(
+            base_url=config.ollama.base_url,
+            default_model=args.model or config.ollama.default_model,
+            timeout_seconds=config.ollama.request_timeout_seconds,
+        )
     with TraceWriter(trace_path) as trace:
         result = create_note(
             inputs,
@@ -248,6 +272,8 @@ def main(argv: Sequence[str] | None = None, *, stdin: str | None = None) -> int:
             apply=args.apply,
             config=config,
             trace=trace,
+            llm=llm,
+            model=args.model,
         )
 
     if args.format == "json":
@@ -264,6 +290,18 @@ def _print_text(result: CreateResult, trace_path: Path) -> None:
     mode = "APPLY" if result.apply else "DRY-RUN"
     print(f"pqn-create [{mode}] vault={result.vault} run={result.run_id}")
     print(f"trace: {trace_path}")
+    if result.plan.template_merge is not None:
+        merge_plan = result.plan.template_merge
+        if merge_plan.status == "deferred":
+            print(
+                "      template merge: deferred until --apply "
+                f"({merge_plan.input_blocks} input blocks)"
+            )
+        elif merge_plan.status == "merged":
+            print(
+                f"      template merge: merged "
+                f"({merge_plan.routed_blocks} routed, {merge_plan.unsorted_blocks} unsorted)"
+            )
     if result.escalation:
         print(f"  ESC step={result.escalation['step']}: {result.escalation['reason']}")
         return
