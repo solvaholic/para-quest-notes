@@ -77,6 +77,7 @@ class ResolveQuest:
             source_url=inputs.source_url,
             body=inputs.body,
             template=inputs.template,
+            merge_template=inputs.merge_template,
         )
         ctx.scratchpad["inputs"] = updated_inputs
 

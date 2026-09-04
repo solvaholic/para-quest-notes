@@ -21,6 +21,8 @@ import string
 from pathlib import Path
 from typing import Any
 
+from para_quest_notes.workflows.create.contract import CreateInputs
+
 DEFAULT_TEMPLATE_DIR = "resources/templates"
 
 # Safe variables available in templates. ``quest`` is a deprecated alias
@@ -89,6 +91,20 @@ def render_template(template_text: str, variables: dict[str, str]) -> str:
     return tmpl.safe_substitute(variables)
 
 
+def build_template_variables(inputs: CreateInputs, *, title: str, today: str) -> dict[str, str]:
+    """Build the finalized variable mapping shared by stdin and templates."""
+    supports_str = ", ".join(inputs.supports) if inputs.supports else ""
+    return {
+        "title": title,
+        "type": inputs.type,
+        "quest_kind": inputs.quest,
+        "quest": inputs.quest,
+        "supports": supports_str,
+        "source_url": inputs.source_url or "",
+        "created": today,
+    }
+
+
 def get_template_config(config_workflows: dict[str, Any]) -> tuple[str, dict[str, str]]:
     """Extract template config from the workflows dict.
 
@@ -102,3 +118,15 @@ def get_template_config(config_workflows: dict[str, Any]) -> tuple[str, dict[str
         if val is not None:
             defaults[str(key)] = str(val)
     return template_dir, defaults
+
+
+def select_template_name(
+    inputs: CreateInputs,
+    *,
+    config_workflows: dict[str, Any],
+) -> str | None:
+    """Resolve explicit template selection before a per-type config default."""
+    if inputs.template:
+        return inputs.template
+    _, defaults = get_template_config(config_workflows)
+    return defaults.get(inputs.type)

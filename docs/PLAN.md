@@ -268,7 +268,7 @@ location (see "Open questions" — decided 2026-05-12), so write-path
 slices below all emit frontmatter and migrate any backmatter they
 encounter on touch.
 
-#### Slice 2 — `pqn-create` (shipped, no-LLM)
+#### Slice 2 — `pqn-create` (shipped; deterministic by default, opt-in LLM merge)
 
 Shipped as a no-LLM workflow on branch `phase5-create`. The user
 supplies type + title + supports up front, so no `resolve_quest`
@@ -498,6 +498,8 @@ let them creep into the v1 release.
   templates aren't PARA notes.
 
 - **Stdin placeholder rendering (#110) - delivered in Wave 6.** Non-empty `pqn-create --body-stdin` bodies pass through the same deterministic renderer and finalized variable mapping as template bodies. Stdin keeps priority over explicit and configured templates without loading their body or supplemental frontmatter; frontmatter-looking stdin remains body text. Empty stdin keeps its template-or-skeleton fallback, and no LLM or new flag is involved.
+
+- **Template + stdin merge (#49) - delivered in Wave 6.** `pqn-create --merge-template` is the explicit, local-LLM branch. It requires non-empty stdin and a selected template, routes stable stdin block IDs only to stable existing-heading IDs or `unsorted`, validates complete one-to-one accounting, and reconstructs the note from original rendered text. Template frontmatter remains deterministic, ordinary stdin priority is unchanged without the flag, and unusable output aborts before any write.
 
 - **Task roundup in daily note.** The *reporting* half shipped as
   the standalone `pqn-tasks` reporter (#83, v0.5; see

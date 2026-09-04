@@ -125,6 +125,7 @@ class ValidateInputs:
             source_url=i.source_url,
             body=i.body,
             template=i.template,
+            merge_template=i.merge_template,
         )
         ctx.scratchpad["title"] = title
         ctx.scratchpad["inputs"] = normalized_inputs

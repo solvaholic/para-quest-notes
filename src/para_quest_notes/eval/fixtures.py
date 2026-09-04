@@ -23,6 +23,7 @@ VALID_PARA_TYPES = ("project", "area", "resource")
 VALID_QUEST_KINDS = ("main", "side")
 _INGEST_STEPS = ("classify_para", "pick_quest", "propose_filename", "plan_destination")
 _ARCHIVE_STEPS = ("generate_outcome",)
+_CREATE_STEPS = ("merge_template",)
 
 
 class FixtureError(ValueError):
@@ -135,6 +136,31 @@ class ArchiveFixture:
     fake_response: str
     source: Path | None = None
     workflow: str = "archive"
+
+
+@dataclass(frozen=True)
+class ExpectedTemplateMerge:
+    placements: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class CreateExpected:
+    merge_template: ExpectedTemplateMerge | None = None
+
+    def has(self, step: str) -> bool:
+        return getattr(self, step, None) is not None
+
+
+@dataclass(frozen=True)
+class CreateFixture:
+    id: str
+    title: str
+    template_name: str
+    template: str
+    stdin: str
+    expected: CreateExpected
+    source: Path | None = None
+    workflow: str = "create"
 
 
 # --------------------------------------------------------------------------- #
@@ -259,6 +285,36 @@ def parse_archive_fixture(raw: Any, source: Path) -> ArchiveFixture:
     )
 
 
+def parse_create_fixture(raw: Any, source: Path) -> CreateFixture:
+    if not isinstance(raw, dict):
+        raise FixtureError(f"{source}: each fixture must be a mapping")
+    fid = _require_str(raw, "id", source=source)
+    title = _require_str(raw, "title", source=source)
+    template_name = _require_str(raw, "template_name", source=source)
+    template_path = Path(template_name)
+    if (
+        template_path.is_absolute()
+        or template_name in (".", "..")
+        or "/" in template_name
+        or "\\" in template_name
+    ):
+        raise FixtureError(
+            f"{source} ({fid}): 'template_name' must be a bare name without path segments"
+        )
+    template = _require_str(raw, "template", source=source)
+    stdin = _require_str(raw, "stdin", source=source)
+    expected = _parse_create_expected(raw.get("expected") or {}, source=source, fid=fid)
+    return CreateFixture(
+        id=fid,
+        title=title,
+        template_name=template_name,
+        template=template,
+        stdin=stdin,
+        expected=expected,
+        source=source,
+    )
+
+
 def _parse_source_filename(raw: Any, *, source: Path, fid: str) -> str | None:
     """Validate the optional explicit inbox source filename.
 
@@ -326,6 +382,21 @@ def _parse_archive_expected(raw: Any, *, source: Path, fid: str) -> ArchiveExpec
         generate_outcome=_parse_generate_outcome(
             raw.get("generate_outcome"), source=source, fid=fid
         ),
+    )
+
+
+def _parse_create_expected(raw: Any, *, source: Path, fid: str) -> CreateExpected:
+    if not isinstance(raw, dict):
+        raise FixtureError(f"{source} ({fid}): 'expected' must be a mapping")
+    unknown = set(raw) - set(_CREATE_STEPS)
+    if unknown:
+        raise FixtureError(f"{source} ({fid}): expected has unknown step(s): {sorted(unknown)}")
+    return CreateExpected(
+        merge_template=_parse_template_merge(
+            raw.get("merge_template"),
+            source=source,
+            fid=fid,
+        )
     )
 
 
@@ -422,6 +493,40 @@ def _parse_generate_outcome(raw: Any, *, source: Path, fid: str) -> ExpectedGene
     return ExpectedGenerateOutcome(keywords=tuple(keywords), text=clean_text)
 
 
+def _parse_template_merge(
+    raw: Any,
+    *,
+    source: Path,
+    fid: str,
+) -> ExpectedTemplateMerge | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise FixtureError(f"{source} ({fid}): expected.merge_template must be a mapping")
+    unknown = set(raw) - {"placements"}
+    if unknown:
+        raise FixtureError(
+            f"{source} ({fid}): expected.merge_template has unknown key(s): {sorted(unknown)}"
+        )
+    placements = raw.get("placements")
+    if not isinstance(placements, dict) or not placements:
+        raise FixtureError(
+            f"{source} ({fid}): expected.merge_template.placements must be a non-empty mapping"
+        )
+    parsed: list[tuple[str, str]] = []
+    for block_id, section_id in placements.items():
+        if not isinstance(block_id, str) or not block_id.strip():
+            raise FixtureError(
+                f"{source} ({fid}): merge_template block IDs must be non-empty strings"
+            )
+        if not isinstance(section_id, str) or not section_id.strip():
+            raise FixtureError(
+                f"{source} ({fid}): merge_template section IDs must be non-empty strings"
+            )
+        parsed.append((block_id.strip(), section_id.strip()))
+    return ExpectedTemplateMerge(placements=tuple(parsed))
+
+
 def _parse_string_list(items: Iterable[Any], *, source: Path, fid: str) -> list[str]:
     out: list[str] = []
     for item in items:
@@ -475,15 +580,19 @@ __all__ = [
     "ArchiveFixture",
     "ArchiveInboundLink",
     "CatalogQuest",
+    "CreateExpected",
+    "CreateFixture",
     "Expected",
     "ExpectedClassify",
     "ExpectedDestination",
     "ExpectedFilename",
     "ExpectedGenerateOutcome",
     "ExpectedPickQuest",
+    "ExpectedTemplateMerge",
     "Fixture",
     "FixtureError",
     "load_fixtures",
     "parse_archive_fixture",
+    "parse_create_fixture",
     "parse_ingest_fixture",
 ]

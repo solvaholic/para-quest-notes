@@ -61,44 +61,29 @@ def _expected_response_for(fixture: Any, prompt_id: str | None) -> str:
     return step.fake_response(fixture)
 
 
-def _fixture_markers(fixture: Any) -> tuple[str, ...]:
-    markers: list[str] = []
-    title = getattr(fixture, "title", "")
-    body = getattr(fixture, "body", "")
-    if isinstance(title, str) and title.strip():
-        markers.append(title.strip())
-    if isinstance(body, str):
-        preview = body.strip().splitlines()
-        if preview:
-            markers.append(preview[0][:120])
-    return tuple(marker for marker in markers if marker)
+class _FixtureFakeLLM(FakeLLM):
+    """Fake client whose response is bound to the runner's current fixture."""
+
+    def __init__(self) -> None:
+        self.fixture: Any | None = None
+        super().__init__(default_model="fake-model", responder=self._respond_for_fixture)
+
+    def bind_fixture(self, fixture: Any) -> None:
+        self.fixture = fixture
+
+    def _respond_for_fixture(self, call: Any) -> LLMResponse:
+        text = _expected_response_for(self.fixture, call.prompt_id) if self.fixture else "{}"
+        return LLMResponse(
+            text=text,
+            model=call.model,
+            latency_ms=0,
+            prompt_id=call.prompt_id,
+        )
 
 
-def _fake_llm_factory(fixtures: list[Any]) -> Any:
-    """Build a FakeLLM whose responder finds the matching fixture by prompt text."""
-    by_marker_sorted = sorted(
-        ((marker, fixture) for fixture in fixtures for marker in _fixture_markers(fixture)),
-        key=lambda pair: -len(pair[0]),
-    )
-
-    def factory() -> FakeLLM:
-        def responder(call: Any) -> LLMResponse:
-            fixture: Any | None = None
-            for marker, fx in by_marker_sorted:
-                if marker and marker in call.prompt:
-                    fixture = fx
-                    break
-            text = _expected_response_for(fixture, call.prompt_id) if fixture else "{}"
-            return LLMResponse(
-                text=text,
-                model=call.model,
-                latency_ms=0,
-                prompt_id=call.prompt_id,
-            )
-
-        return FakeLLM(default_model="fake-model", responder=responder)
-
-    return factory
+def _fake_llm_factory() -> Any:
+    """Build a FakeLLM that the runner binds directly to each fixture."""
+    return _FixtureFakeLLM
 
 
 # --------------------------------------------------------------------------- #
@@ -200,9 +185,9 @@ def _resolve_out(arg: Path | None) -> Path:
     return DEFAULT_OUT_BASE / ts
 
 
-def _build_models(args: argparse.Namespace, fixtures: list[Any]) -> list[ModelSpec]:
+def _build_models(args: argparse.Namespace) -> list[ModelSpec]:
     if args.fake:
-        factory = _fake_llm_factory(fixtures)
+        factory = _fake_llm_factory()
         return [ModelSpec(name="fake-model", temperature=args.temperature, llm_factory=factory)]
     names = [n.strip() for n in args.models.split(",") if n.strip()]
     if not names:
@@ -230,7 +215,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         return 2
 
     steps = _parse_steps(args.steps)
-    models = _build_models(args, fixtures)
+    models = _build_models(args)
     out_dir = _resolve_out(args.out)
 
     summary = run_matrix(fixtures, models, steps=steps, out_dir=out_dir)

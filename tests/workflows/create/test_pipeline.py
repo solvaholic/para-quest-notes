@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from para_quest_notes.workflows.create.contract import CreateInputs
-from para_quest_notes.workflows.create.pipeline import create_note
+from para_quest_notes.workflows.create.pipeline import build_workflow, create_note
+from para_quest_notes.workflows.create.steps.compose_note import ComposeNote
+from para_quest_notes.workflows.create.steps.merge_template import MergeTemplate
 
 
 def _seed_vault(tmp_path: Path) -> Path:
@@ -109,3 +111,23 @@ def test_quest_main_without_supports_files_to_canonical(tmp_path: Path):
     assert "type: area" in text
     assert "quest-kind: main" in text
     assert "[[Coffee]]" in text
+
+
+def test_workflow_pins_one_date_across_merge_and_compose(monkeypatch):
+    class FixedDate:
+        @classmethod
+        def today(cls):
+            return cls()
+
+        def isoformat(self):
+            return "2026-09-04"
+
+    monkeypatch.setattr("para_quest_notes.workflows.create.pipeline.date", FixedDate)
+    workflow = build_workflow(
+        CreateInputs(title="Pinned Date", type="project"),
+        apply=False,
+    )
+    merge_step = next(step for step in workflow.steps if isinstance(step, MergeTemplate))
+    compose_step = next(step for step in workflow.steps if isinstance(step, ComposeNote))
+    assert merge_step.today == "2026-09-04"
+    assert compose_step._today == "2026-09-04"

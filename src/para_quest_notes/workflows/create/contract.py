@@ -26,6 +26,18 @@ class CreateInputs:
     source_url: str | None = None
     body: str | None = None  # rendered stdin body; replaces templates and the skeleton
     template: str | None = None  # whole-note template name or path
+    merge_template: bool = False
+
+
+@dataclass
+class TemplateMergePlan:
+    """Provenance and lossless-routing accounting for an explicit merge."""
+
+    status: Literal["failed", "merged"] = "failed"
+    template: str | None = None
+    input_blocks: int = 0
+    routed_blocks: int = 0
+    unsorted_blocks: int = 0
 
 
 @dataclass
@@ -37,6 +49,7 @@ class CreatePlan:
     destination_mode: DestinationMode | None = None
     frontmatter: dict[str, Any] = field(default_factory=dict)
     body_source: str | None = None
+    template_merge: TemplateMergePlan | None = None
     notes: list[str] = field(default_factory=list)
 
 

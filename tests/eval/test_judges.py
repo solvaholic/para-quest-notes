@@ -8,6 +8,7 @@ from para_quest_notes.eval.fixtures import (
     ExpectedDestination,
     ExpectedFilename,
     ExpectedPickQuest,
+    ExpectedTemplateMerge,
 )
 from para_quest_notes.eval.judges import (
     canonical_filename,
@@ -17,6 +18,7 @@ from para_quest_notes.eval.judges import (
     judge_propose_filename,
     judge_responds,
     judge_step,
+    judge_template_merge,
 )
 
 
@@ -101,6 +103,32 @@ def test_plan_destination_exact() -> None:
     exp = ExpectedDestination(destination="projects/Foo.md")
     assert judge_plan_destination({"destination": "projects/Foo.md"}, exp).ok
     assert not judge_plan_destination({"destination": "areas/Foo.md"}, exp).ok
+
+
+def test_template_merge_requires_exact_placement_mapping() -> None:
+    expected = ExpectedTemplateMerge(
+        placements=(("block-001", "section-002"), ("block-002", "unsorted"))
+    )
+    assert judge_template_merge(
+        {
+            "status": "merged",
+            "placements": [
+                {"block_id": "block-001", "section_id": "section-002"},
+                {"block_id": "block-002", "section_id": "unsorted"},
+            ],
+        },
+        expected,
+    ).ok
+    assert not judge_template_merge(
+        {
+            "status": "merged",
+            "placements": [
+                {"block_id": "block-001", "section_id": "section-003"},
+                {"block_id": "block-002", "section_id": "unsorted"},
+            ],
+        },
+        expected,
+    ).ok
 
 
 def test_judge_step_dispatches() -> None:

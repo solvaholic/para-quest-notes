@@ -175,20 +175,20 @@ def test_fake_regression_on_real_ingest_fixtures(tmp_path: Path) -> None:
     fixtures = load_fixtures(DEFAULT_FIXTURES_DIR)
     summary = run_matrix(
         fixtures,
-        [ModelSpec(name="fake-model", llm_factory=_fake_llm_factory(fixtures))],
+        [ModelSpec(name="fake-model", llm_factory=_fake_llm_factory())],
         out_dir=tmp_path,
     )
     rows = sorted((c.workflow, c.fixture_id, c.step, c.verdict.ok) for c in summary.cells)
-    assert len(rows) == 47
+    assert len(rows) == 48
     assert all(ok for _, _, _, ok in rows)
-    assert {workflow for workflow, _, _, _ in rows} == {"archive", "ingest"}
+    assert {workflow for workflow, _, _, _ in rows} == {"archive", "create", "ingest"}
 
 
 def test_archive_step_runs_with_fake_fixture(tmp_path: Path) -> None:
     fixtures = load_fixtures(DEFAULT_FIXTURES_DIR)
     summary = run_matrix(
         fixtures,
-        [ModelSpec(name="fake-model", llm_factory=_fake_llm_factory(fixtures))],
+        [ModelSpec(name="fake-model", llm_factory=_fake_llm_factory())],
         steps=["archive:generate_outcome"],
         out_dir=tmp_path,
     )
@@ -196,3 +196,48 @@ def test_archive_step_runs_with_fake_fixture(tmp_path: Path) -> None:
     assert all(cell.workflow == "archive" for cell in summary.cells)
     assert all(cell.responds and cell.responds.ok for cell in summary.cells)
     assert all(cell.verdict.ok for cell in summary.cells)
+
+
+def test_create_merge_step_runs_with_fake_fixture(tmp_path: Path) -> None:
+    fixtures = load_fixtures(DEFAULT_FIXTURES_DIR)
+    summary = run_matrix(
+        fixtures,
+        [ModelSpec(name="fake-model", llm_factory=_fake_llm_factory())],
+        steps=["create:merge_template"],
+        out_dir=tmp_path,
+    )
+    assert len(summary.cells) == 1
+    cell = summary.cells[0]
+    assert cell.workflow == "create"
+    assert cell.responds and cell.responds.ok
+    assert cell.verdict.ok
+
+
+def test_create_fake_eval_binds_response_without_prompt_marker_matching(
+    tmp_path: Path,
+) -> None:
+    fixture_path = tmp_path / "create.yaml"
+    fixture_path.write_text(
+        """
+workflow: create
+id: create-generic-template
+title: Title Absent From Prompt
+template_name: generic
+template: |
+  ## Notes
+stdin: |
+  $created "quoted" \\ path
+expected:
+  merge_template:
+    placements:
+      block-001: section-001
+""",
+        encoding="utf-8",
+    )
+    fixtures = load_fixtures(fixture_path)
+    summary = run_matrix(
+        fixtures,
+        [ModelSpec(name="fake-model", llm_factory=_fake_llm_factory())],
+    )
+    assert len(summary.cells) == 1
+    assert summary.cells[0].verdict.ok

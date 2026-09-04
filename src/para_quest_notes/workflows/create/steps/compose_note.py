@@ -35,9 +35,11 @@ from para_quest_notes.vault.frontmatter import (
 from para_quest_notes.workflows.create.contract import CreateInputs
 from para_quest_notes.workflows.create.templates import (
     TemplateNotFoundError,
+    build_template_variables,
     get_template_config,
     load_template,
     render_template,
+    select_template_name,
 )
 
 _PROJECT_BODY = """# {title}
@@ -122,11 +124,17 @@ class ComposeNote:
 
         template_frontmatter: dict[str, Any] = {}
 
-        # Body priority: stdin > template > built-in skeleton
+        variables = build_template_variables(inputs, title=title, today=today)
+
+        # Explicit merge > ordinary stdin > template > built-in skeleton.
         body: str
         body_source = "skeleton"
-        if inputs.body is not None:
-            body = render_template(inputs.body, self._template_vars(inputs, title, today))
+        if "merged_template_body" in ctx.scratchpad:
+            body = ctx.scratchpad["merged_template_body"]
+            template_frontmatter = dict(ctx.scratchpad["merged_template_frontmatter"])
+            body_source = f"merged-template:{ctx.scratchpad['merged_template_name']}"
+        elif inputs.body is not None:
+            body = render_template(inputs.body, variables)
             body_source = "stdin"
         elif ctx.vault is not None and (template_name := self._resolve_template_name(inputs, ctx)):
             template_dir, _ = get_template_config(ctx.config.workflows if ctx.config else {})
@@ -134,7 +142,7 @@ class ComposeNote:
                 raw = load_template(template_name, vault=ctx.vault, template_dir=template_dir)
                 split = split_note(raw)
                 template_frontmatter = merge(split.backmatter, split.frontmatter)
-                body = render_template(split.body, self._template_vars(inputs, title, today))
+                body = render_template(split.body, variables)
                 body_source = f"template:{template_name}"
             except TemplateNotFoundError:
                 # Template specified but not found - fall through to skeleton
@@ -164,26 +172,7 @@ class ComposeNote:
 
         Priority: explicit --template > config default for this type.
         """
-        if inputs.template:
-            return inputs.template
-        # Check config defaults
-        _, defaults = get_template_config(ctx.config.workflows if ctx.config else {})
-        return defaults.get(inputs.type)
-
-    @staticmethod
-    def _template_vars(inputs: CreateInputs, title: str, today: str) -> dict[str, str]:
-        """Build the shared variable dict for template and stdin substitution."""
-        supports_str = ", ".join(inputs.supports) if inputs.supports else ""
-        return {
-            "title": title,
-            "type": inputs.type,
-            # `quest_kind` is the documented variable; `quest` is kept as a
-            # deprecated alias so pre-#98 templates keep rendering. Because
-            # rendering uses safe_substitute (no error on unknown names), a
-            # stale `$quest` would otherwise emit literally into the note.
-            "quest_kind": inputs.quest,
-            "quest": inputs.quest,
-            "supports": supports_str,
-            "source_url": inputs.source_url or "",
-            "created": today,
-        }
+        return select_template_name(
+            inputs,
+            config_workflows=ctx.config.workflows if ctx.config else {},
+        )
