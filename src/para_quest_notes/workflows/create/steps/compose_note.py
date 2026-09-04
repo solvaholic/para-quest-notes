@@ -9,6 +9,11 @@ body from one of three sources (in priority order):
    ``<vault>/resources/templates/<name>.md`` and variable-substituted
 3. **built-in skeleton** - type-appropriate minimal structure
 
+A selected template may include frontmatter. Template metadata merges beneath
+generated metadata, while its body keeps the existing variable-substitution
+behavior. Legacy template backmatter is tolerated and migrated through the
+shared vault frontmatter helpers.
+
 Body skeletons are intentionally bare: a one-line purpose placeholder,
 the canonical sections for the type, and an empty ``Notes`` block. The
 user fills them in.
@@ -20,7 +25,12 @@ from datetime import date
 from typing import Any
 
 from para_quest_notes.adapter.step import StepContext, StepResult
-from para_quest_notes.vault.frontmatter import canonical_frontmatter, dump_frontmatter
+from para_quest_notes.vault.frontmatter import (
+    canonical_frontmatter,
+    dump_frontmatter,
+    merge,
+    split_note,
+)
 from para_quest_notes.workflows.create.contract import CreateInputs
 from para_quest_notes.workflows.create.templates import (
     TemplateNotFoundError,
@@ -109,8 +119,7 @@ class ComposeNote:
         title: str = ctx.scratchpad["title"]
         today = self._today or date.today().isoformat()
 
-        fm = canonical_frontmatter(_frontmatter_for(inputs, today=today))
-        fm_text = dump_frontmatter(fm)
+        template_frontmatter: dict[str, Any] = {}
 
         # Body priority: stdin > template > built-in skeleton
         body: str
@@ -122,7 +131,9 @@ class ComposeNote:
             template_dir, _ = get_template_config(ctx.config.workflows if ctx.config else {})
             try:
                 raw = load_template(template_name, vault=ctx.vault, template_dir=template_dir)
-                body = render_template(raw, self._template_vars(inputs, title, today))
+                split = split_note(raw)
+                template_frontmatter = merge(split.backmatter, split.frontmatter)
+                body = render_template(split.body, self._template_vars(inputs, title, today))
                 body_source = f"template:{template_name}"
             except TemplateNotFoundError:
                 # Template specified but not found - fall through to skeleton
@@ -131,6 +142,9 @@ class ComposeNote:
         else:
             body = _body_for(inputs, title)
 
+        generated_frontmatter = _frontmatter_for(inputs, today=today)
+        fm = canonical_frontmatter(merge(template_frontmatter, generated_frontmatter))
+        fm_text = dump_frontmatter(fm)
         content = fm_text + body
 
         ctx.scratchpad["content"] = content
