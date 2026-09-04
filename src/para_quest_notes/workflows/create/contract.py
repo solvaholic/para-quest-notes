@@ -36,6 +36,7 @@ class CreatePlan:
     destination: str | None = None  # vault-relative posix path
     destination_mode: DestinationMode | None = None
     frontmatter: dict[str, Any] = field(default_factory=dict)
+    body_source: str | None = None
     notes: list[str] = field(default_factory=list)
 
 

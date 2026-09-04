@@ -79,6 +79,8 @@ def _to_create_result(wf: WorkflowResult, *, vault: Path, apply: bool) -> Create
             plan.destination_mode = step.output.get("destination_mode")
         elif step.name == "compose_note" and isinstance(step.output, dict):
             plan.frontmatter = dict(step.output.get("frontmatter") or {})
+            body_source = step.output.get("body_source")
+            plan.body_source = str(body_source) if body_source is not None else None
         elif step.name == "write_note" and isinstance(step.output, dict):
             written = bool(step.output.get("written"))
 
