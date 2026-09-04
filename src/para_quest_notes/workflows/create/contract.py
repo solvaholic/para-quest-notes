@@ -33,11 +33,11 @@ class CreateInputs:
 class TemplateMergePlan:
     """Provenance and lossless-routing accounting for an explicit merge."""
 
-    status: Literal["failed", "merged"] = "failed"
+    status: Literal["failed", "deferred", "merged"] = "failed"
     template: str | None = None
-    input_blocks: int = 0
-    routed_blocks: int = 0
-    unsorted_blocks: int = 0
+    input_blocks: int | None = None
+    routed_blocks: int | None = None
+    unsorted_blocks: int | None = None
 
 
 @dataclass

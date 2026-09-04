@@ -499,7 +499,7 @@ let them creep into the v1 release.
 
 - **Stdin placeholder rendering (#110) - delivered in Wave 6.** Non-empty `pqn-create --body-stdin` bodies pass through the same deterministic renderer and finalized variable mapping as template bodies. Stdin keeps priority over explicit and configured templates without loading their body or supplemental frontmatter; frontmatter-looking stdin remains body text. Empty stdin keeps its template-or-skeleton fallback, and no LLM or new flag is involved.
 
-- **Template + stdin merge (#49) - delivered in Wave 6.** `pqn-create --merge-template` is the explicit, local-LLM branch. It requires non-empty stdin and a selected template, routes stable stdin block IDs only to stable existing-heading IDs or `unsorted`, validates complete one-to-one accounting, and reconstructs the note from original rendered text. Template frontmatter remains deterministic, ordinary stdin priority is unchanged without the flag, and unusable output aborts before any write.
+- **Template + stdin merge (#49) - delivered in Wave 6.** `pqn-create --merge-template` is the explicit, generate-on-apply local-LLM branch. Dry-run performs static template/input/destination validation and reports routing as deferred without calling Ollama. Apply routes stable stdin block IDs only to stable existing-heading IDs or `unsorted`, validates complete one-to-one accounting, reconstructs the note from original rendered text, and still aborts before any write on unusable output. Template frontmatter remains deterministic, and ordinary stdin priority is unchanged without the flag.
 
 - **Task roundup in daily note.** The *reporting* half shipped as
   the standalone `pqn-tasks` reporter (#83, v0.5; see

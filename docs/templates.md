@@ -117,7 +117,9 @@ The merge is lossless by construction:
 
 Blocks assigned to `unsorted` are retained under an existing `Unsorted` heading when one exists; otherwise the workflow appends `## Unsorted`. Blocks keep their original order within each destination section. The model never supplies note prose or frontmatter.
 
-Both dry-run and apply perform the routing call and validate the result. `--apply` remains the only write gate, so an unusable model response cannot partially create a note. Use `--model` to override the configured local Ollama model.
+Like `pqn-archive --generate-outcome`, template merging is generate-on-apply. Without `--apply`, the workflow performs every deterministic check: it resolves and parses the template, renders placeholders, catalogs headings, extracts stdin blocks, and completes ordinary destination and collision planning. It does not call Ollama or write. The plan reports merge status `deferred`, the selected template, and the statically known input-block count, but cannot preview routing or report routed/unsorted counts.
+
+With `--apply`, the workflow makes the routing call, validates the complete one-to-one plan, reconstructs the body, and only then writes. Apply is therefore the first point where model or routing-schema failures can surface, and every such failure still occurs before vault mutation. Use `--model` to override the configured local Ollama model.
 
 ## Config defaults
 
@@ -181,4 +183,5 @@ Outside merge mode, if a named template isn't found, `pqn-create` falls back to 
 - `"skeleton"` - built-in skeleton (no template found or none specified)
 - `"skeleton (template not found)"` - template specified but missing
 - `"stdin"` - body came from stdin and known placeholders were rendered
+- `"merge-deferred:<name>"` - dry-run statically validated a requested merge; routing waits for `--apply`
 - `"merged-template:<name>"` - template content was preserved and rendered stdin blocks were routed beneath its headings

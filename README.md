@@ -80,7 +80,7 @@ The workflows preserve that reasoning, locally.
 
 A small (~30-note) sample vault lives at [`samples/vault/`](samples/vault/). The walkthrough below exercises the nine core workflow `pqn-*` CLIs against a throwaway copy of it, so you can see the whole toolchain on first read without risking real notes.
 
-You'll need [Ollama](https://ollama.com) running locally for the LLM-using steps (`pqn-ingest`, the final `pqn-archive` step, and explicit `pqn-create --merge-template` runs). The documented default model is `granite4.1:30b` (~18 GB); override with `--model` if you have something smaller. For a "what to use when" answer, see [`docs/eval.md` - Model recommendations](docs/eval.md#model-recommendations), driven by a real eval run.
+You'll need [Ollama](https://ollama.com) running locally for the LLM-using steps (`pqn-ingest`, the final `pqn-archive` step, and explicit `pqn-create --merge-template --apply` runs). The documented default model is `granite4.1:30b` (~18 GB); override with `--model` if you have something smaller. For a "what to use when" answer, see [`docs/eval.md` - Model recommendations](docs/eval.md#model-recommendations), driven by a real eval run.
 
 ```bash
 # 0. Set up the repo and make a throwaway vault
@@ -138,7 +138,7 @@ frontmatter pre-populated. Drop `--apply` for dry-run. Omit
 destination path; on miss it files to `inbox/`. Full options:
 [`docs/workflows/create.md`](docs/workflows/create.md).
 
-The normal create path is deterministic. To retain a selected template's structure while routing piped content beneath its headings, add `--merge-template`; that explicit mode makes one schema-validated local LLM call and preserves every input block verbatim.
+The normal create path is deterministic. To retain a selected template's structure while routing piped content beneath its headings, add `--merge-template`; on `--apply`, that explicit mode makes one schema-validated local LLM call and preserves every input block verbatim. Without `--apply`, it validates and plans statically, then reports routing as deferred without calling Ollama.
 
 ### 4. `pqn-daily` — select, create, file, or open a daily note (no LLM)
 

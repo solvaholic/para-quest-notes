@@ -80,7 +80,7 @@ def test_merge_requires_non_empty_stdin_without_calling_llm_or_writing(tmp_path:
     result = create_note(
         _inputs(body=None),
         vault=vault,
-        apply=True,
+        apply=False,
         llm=llm,
         today="2026-09-04",
     )
@@ -103,7 +103,7 @@ def test_merge_requires_a_selected_template_without_calling_llm_or_writing(tmp_p
     result = create_note(
         _inputs(template=None),
         vault=vault,
-        apply=True,
+        apply=False,
         llm=llm,
         today="2026-09-04",
     )
@@ -123,7 +123,7 @@ def test_merge_requires_selected_template_to_exist_without_calling_llm(tmp_path:
     result = create_note(
         _inputs(template="missing"),
         vault=vault,
-        apply=True,
+        apply=False,
         llm=llm,
         today="2026-09-04",
     )
@@ -415,11 +415,10 @@ def test_unusable_model_output_escalates_before_write(
     assert not (vault / "projects/Merged Project.md").exists()
 
 
-def test_merge_dry_run_calls_llm_but_does_not_write(tmp_path: Path) -> None:
+def test_merge_dry_run_defers_routing_without_calling_llm_or_writing(tmp_path: Path) -> None:
     vault = _seed_vault(tmp_path)
     _write_template(vault)
     llm = FakeLLM()
-    llm.queue(_routing("section-003"))
 
     result = create_note(
         _inputs(),
@@ -431,10 +430,37 @@ def test_merge_dry_run_calls_llm_but_does_not_write(tmp_path: Path) -> None:
 
     assert result.ok, result.escalation or result.error
     assert result.written is False
+    assert result.plan.body_source == "merge-deferred:structured"
+    assert result.plan.template_merge is not None
+    assert result.plan.template_merge.status == "deferred"
+    assert result.plan.template_merge.template == "structured"
+    assert result.plan.template_merge.input_blocks == 1
+    assert result.plan.template_merge.routed_blocks is None
+    assert result.plan.template_merge.unsorted_blocks is None
+    assert llm.calls == []
+    assert not (vault / "projects/Merged Project.md").exists()
+
+
+def test_merge_apply_calls_llm_once_and_writes(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    _write_template(vault)
+    llm = FakeLLM()
+    llm.queue(_routing("section-003"))
+
+    result = create_note(
+        _inputs(),
+        vault=vault,
+        apply=True,
+        llm=llm,
+        today="2026-09-04",
+    )
+
+    assert result.ok, result.escalation or result.error
+    assert result.written is True
     assert result.plan.template_merge is not None
     assert result.plan.template_merge.status == "merged"
     assert len(llm.calls) == 1
-    assert not (vault / "projects/Merged Project.md").exists()
+    assert (vault / "projects/Merged Project.md").exists()
 
 
 def test_merge_keeps_frontmatter_deterministic_and_out_of_the_prompt(tmp_path: Path) -> None:
@@ -505,8 +531,10 @@ def test_merge_uses_configured_default_template(tmp_path: Path) -> None:
 
     assert result.ok, result.escalation or result.error
     assert result.plan.template_merge is not None
+    assert result.plan.template_merge.status == "deferred"
     assert result.plan.template_merge.template == "project-default"
-    assert result.plan.body_source == "merged-template:project-default"
+    assert result.plan.body_source == "merge-deferred:project-default"
+    assert llm.calls == []
 
 
 def test_without_merge_flag_stdin_still_wins_without_loading_template_or_calling_llm(
@@ -540,7 +568,7 @@ def test_without_merge_flag_stdin_still_wins_without_loading_template_or_calling
     assert "Template introduction" not in written
 
 
-def test_cli_merge_flag_reads_stdin_and_reports_json_provenance(
+def test_cli_merge_dry_run_reads_stdin_and_reports_deferred_json(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
@@ -549,9 +577,11 @@ def test_cli_merge_flag_reads_stdin_and_reports_json_provenance(
     _write_template(vault)
     config = tmp_path / "config.yaml"
     config.write_text(f"run_log_dir: {tmp_path / 'runs'}\n", encoding="utf-8")
-    llm = FakeLLM()
-    llm.queue(_routing("section-003"))
-    monkeypatch.setattr(cli, "OllamaClient", lambda **_kwargs: llm)
+    monkeypatch.setattr(
+        cli,
+        "OllamaClient",
+        lambda **_kwargs: pytest.fail("dry-run must not construct an LLM client"),
+    )
     monkeypatch.setattr(cli.sys, "stdin", io.StringIO("CLI block.\n"))
 
     rc = cli.main(
@@ -577,18 +607,17 @@ def test_cli_merge_flag_reads_stdin_and_reports_json_provenance(
     payload = json.loads(capsys.readouterr().out)
     assert rc == 0
     assert payload["written"] is False
-    assert payload["plan"]["body_source"] == "merged-template:structured"
+    assert payload["plan"]["body_source"] == "merge-deferred:structured"
     assert payload["plan"]["template_merge"] == {
-        "status": "merged",
+        "status": "deferred",
         "template": "structured",
         "input_blocks": 1,
-        "routed_blocks": 1,
-        "unsorted_blocks": 0,
+        "routed_blocks": None,
+        "unsorted_blocks": None,
     }
-    assert len(llm.calls) == 1
 
 
-def test_cli_text_reports_merge_status(
+def test_cli_text_reports_deferred_merge_status(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
@@ -597,9 +626,11 @@ def test_cli_text_reports_merge_status(
     _write_template(vault)
     config = tmp_path / "config.yaml"
     config.write_text(f"run_log_dir: {tmp_path / 'runs'}\n", encoding="utf-8")
-    llm = FakeLLM()
-    llm.queue(_routing("section-003"))
-    monkeypatch.setattr(cli, "OllamaClient", lambda **_kwargs: llm)
+    monkeypatch.setattr(
+        cli,
+        "OllamaClient",
+        lambda **_kwargs: pytest.fail("dry-run must not construct an LLM client"),
+    )
 
     rc = cli.main(
         [
@@ -622,8 +653,9 @@ def test_cli_text_reports_merge_status(
 
     output = capsys.readouterr().out
     assert rc == 0
-    assert "template merge: merged" in output
-    assert "1 routed, 0 unsorted" in output
+    assert "template merge: deferred until --apply" in output
+    assert "routed" not in output
+    assert "unsorted" not in output
 
 
 def test_merge_trace_records_raw_and_parsed_routing_plan(tmp_path: Path) -> None:
@@ -638,7 +670,7 @@ def test_merge_trace_records_raw_and_parsed_routing_plan(tmp_path: Path) -> None
         result = create_note(
             _inputs(),
             vault=vault,
-            apply=False,
+            apply=True,
             llm=llm,
             trace=trace,
             today="2026-09-04",

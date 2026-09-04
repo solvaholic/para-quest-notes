@@ -51,6 +51,7 @@ def _build_merge_template(model: str | None) -> MergeTemplate:
     return MergeTemplate(
         prompt=loader.get("merge_template"),
         today=_FIXED_TODAY,
+        apply=True,
         model=model,
     )
 

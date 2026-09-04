@@ -1,10 +1,10 @@
 # pqn-create
 
-Author a single new note into its PARA home, with canonical frontmatter and either a note template or a type-appropriate body skeleton. The default path is deterministic; `--merge-template` explicitly opts into one local LLM call that routes stdin blocks under an existing template's headings. One note per invocation. No moves or rewrites - just one new file.
+Author a single new note into its PARA home, with canonical frontmatter and either a note template or a type-appropriate body skeleton. The default path is deterministic; `--merge-template --apply` explicitly opts into one local LLM call that routes stdin blocks under an existing template's headings. One note per invocation. No moves or rewrites - just one new file.
 
 ## What it does
 
-Eight steps (`--apply` only gates the actual disk write):
+Eight steps (`--apply` gates merge routing and the actual disk write):
 
 1. **`validate_inputs`** - checks `--type`, `--quest-kind`, `--title`
    (Title Case, allowed character set, no spaceless camelCase/PascalCase),
@@ -29,7 +29,7 @@ Eight steps (`--apply` only gates the actual disk write):
    delegates to `validate.api.check_basename_available` so a duplicate
    basename anywhere in the vault is also caught. Wikilinks resolve by
    basename.
-5. **`merge_template`** - only when `--merge-template` is requested. Requires non-empty stdin and a selected template that exists. Deterministically renders placeholders, gives each stdin block and each template heading a stable ID, and asks the local LLM for an ID-only routing plan. Every stdin block must appear exactly once and may target only an existing heading or `unsorted`; unusable output escalates before any write. The workflow reconstructs the body from the original rendered blocks, so the model cannot rewrite or drop source text.
+5. **`merge_template`** - only when `--merge-template` is requested. Requires non-empty stdin and a selected template that exists. Deterministically renders placeholders and gives each stdin block and each template heading a stable ID. Dry-run stops there and records deferred routing; apply asks the local LLM for an ID-only routing plan. Every stdin block must appear exactly once and may target only an existing heading or `unsorted`; unusable output escalates before any write. The workflow reconstructs the body from the original rendered blocks, so the model cannot rewrite or drop source text.
 6. **`compose_note`** - emits canonical frontmatter via the shared `split_note`, `merge`, `canonical_frontmatter`, and `dump_frontmatter` helpers (single source of truth), plus a selected stdin body, template body, merged template body, or type-appropriate skeleton. Stdin and template bodies pass through the same deterministic placeholder renderer after all input normalization and Quest resolution finish. Template metadata merges under generated values. Empty generated `supports` and `source_url` values remain authoritative and are dropped from frontmatter.
 7. **`write_note`** - `--apply` only. Creates the parent directory if
    needed and writes atomically (sibling temp + `os.replace`). A
@@ -178,25 +178,25 @@ Canonical destination example:
 
 ### Template merge
 
-A successful merge reports its provenance and accounting in the plan. Dry-run and apply both call the model because `--merge-template` is the explicit consent; only apply writes the validated result.
+The merge plan reports its current status and only the accounting known at that point. Following the generate-on-apply precedent of `pqn-archive --generate-outcome`, a dry-run performs deterministic template/input validation and destination/collision planning but does not call the model. It reports routing as deferred until apply, so it cannot preview actual section placement or expose routed/unsorted counts. A successful apply reports `status: "merged"`, `body_source: "merged-template:<name>"`, and the completed routed/unsorted counts.
 
 ```json
 {
   "plan": {
-    "body_source": "merged-template:weekly-review",
+    "body_source": "merge-deferred:weekly-review",
     "template_merge": {
-      "status": "merged",
+      "status": "deferred",
       "template": "weekly-review",
       "input_blocks": 3,
-      "routed_blocks": 2,
-      "unsorted_blocks": 1
+      "routed_blocks": null,
+      "unsorted_blocks": null
     }
   },
   "written": false
 }
 ```
 
-If merge mode is requested without non-empty stdin or without a selected template that exists, `ok` is `false`, `written` is `false`, no LLM call occurs, and the structured escalation names `merge_template`. Invalid JSON, missing or duplicated block IDs, unknown heading IDs, and any other unusable model output follow the same no-write escalation path.
+If merge mode is requested without non-empty stdin or without a selected template that exists, both dry-run and apply return `ok: false`, `written: false`, make no LLM call, and name `merge_template` in the structured escalation. On apply, invalid JSON, missing or duplicated block IDs, unknown heading IDs, and any other unusable model output follow the same no-write escalation path. Because dry-run does not call the model, apply is the first point those model-dependent failures can surface.
 
 ### Inbox fallback
 

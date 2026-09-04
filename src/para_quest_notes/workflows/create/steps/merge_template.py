@@ -35,10 +35,12 @@ class MergeTemplate:
         prompt: Prompt,
         *,
         today: str,
+        apply: bool,
         model: str | None = None,
     ):
         self.prompt = prompt
         self.today = today
+        self.apply = apply
         self.model = model
 
     def run(self, ctx: StepContext) -> StepResult:
@@ -104,6 +106,25 @@ class MergeTemplate:
                 context={},
             )
         sections = catalog_template_sections(template_body)
+        if not self.apply:
+            ctx.scratchpad["deferred_template_body"] = template_body
+            ctx.scratchpad["deferred_template_frontmatter"] = template_frontmatter
+            ctx.scratchpad["deferred_template_name"] = template_name
+            return StepResult(
+                name=self.name,
+                output={
+                    "status": "deferred",
+                    "template": template_name,
+                    "input_blocks": len(blocks),
+                },
+                meta={
+                    "status": "deferred",
+                    "template": template_name,
+                    "input_blocks": len(blocks),
+                    "template_sections": len(sections),
+                },
+            )
+
         parsed = self._call_llm(ctx, blocks=blocks, sections=sections)
         assignments = _validate_routing_plan(parsed, blocks=blocks, sections=sections)
         merged_body = merge_routed_blocks(

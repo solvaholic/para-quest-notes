@@ -143,13 +143,17 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Route non-empty stdin blocks under headings in the selected template using "
-            "the local LLM. Requires a template that exists; invalid routing aborts before write."
+            "the local LLM on --apply. Dry-run validates and reports routing as deferred. "
+            "Requires a template that exists; invalid routing aborts before write."
         ),
     )
     p.add_argument(
         "--apply",
         action="store_true",
-        help="Write the file. Without this flag, runs as a dry-run.",
+        help=(
+            "Write the file and, with --merge-template, permit the routing LLM call. "
+            "Without this flag, runs as a model-free dry-run."
+        ),
     )
     return p
 
@@ -255,7 +259,7 @@ def main(argv: Sequence[str] | None = None, *, stdin: str | None = None) -> int:
 
     trace_path = new_run_path(config.run_log_dir)
     llm = None
-    if args.merge_template:
+    if args.merge_template and args.apply:
         llm = OllamaClient(
             base_url=config.ollama.base_url,
             default_model=args.model or config.ollama.default_model,
@@ -288,10 +292,16 @@ def _print_text(result: CreateResult, trace_path: Path) -> None:
     print(f"trace: {trace_path}")
     if result.plan.template_merge is not None:
         merge_plan = result.plan.template_merge
-        print(
-            f"      template merge: {merge_plan.status} "
-            f"({merge_plan.routed_blocks} routed, {merge_plan.unsorted_blocks} unsorted)"
-        )
+        if merge_plan.status == "deferred":
+            print(
+                "      template merge: deferred until --apply "
+                f"({merge_plan.input_blocks} input blocks)"
+            )
+        elif merge_plan.status == "merged":
+            print(
+                f"      template merge: merged "
+                f"({merge_plan.routed_blocks} routed, {merge_plan.unsorted_blocks} unsorted)"
+            )
     if result.escalation:
         print(f"  ESC step={result.escalation['step']}: {result.escalation['reason']}")
         return

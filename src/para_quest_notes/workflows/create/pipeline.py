@@ -52,6 +52,7 @@ def build_workflow(
             MergeTemplate(
                 prompt=loader.get("merge_template"),
                 today=resolved_today,
+                apply=apply,
                 model=model,
             ),
             ComposeNote(today=resolved_today),
@@ -119,7 +120,14 @@ def _to_create_result(
             plan.destination = step.output.get("destination")
             plan.destination_mode = step.output.get("destination_mode")
         elif step.name == "merge_template" and isinstance(step.output, dict):
-            if step.output.get("status") == "merged":
+            merge_status = step.output.get("status")
+            if merge_status == "deferred":
+                plan.template_merge = TemplateMergePlan(
+                    status="deferred",
+                    template=str(step.output["template"]),
+                    input_blocks=int(step.output["input_blocks"]),
+                )
+            elif merge_status == "merged":
                 plan.template_merge = TemplateMergePlan(
                     status="merged",
                     template=str(step.output["template"]),

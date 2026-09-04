@@ -133,6 +133,10 @@ class ComposeNote:
             body = ctx.scratchpad["merged_template_body"]
             template_frontmatter = dict(ctx.scratchpad["merged_template_frontmatter"])
             body_source = f"merged-template:{ctx.scratchpad['merged_template_name']}"
+        elif "deferred_template_body" in ctx.scratchpad:
+            body = ctx.scratchpad["deferred_template_body"]
+            template_frontmatter = dict(ctx.scratchpad["deferred_template_frontmatter"])
+            body_source = f"merge-deferred:{ctx.scratchpad['deferred_template_name']}"
         elif inputs.body is not None:
             body = render_template(inputs.body, variables)
             body_source = "stdin"
