@@ -12,10 +12,12 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-Bucket = Literal["overdue", "due_today", "upcoming"]
+Bucket = Literal["overdue", "due_today", "upcoming", "unscheduled"]
+UnscheduledMode = Literal["hide", "show", "only"]
 
 # Human-facing bucket order (most urgent first).
-BUCKET_ORDER: tuple[Bucket, ...] = ("overdue", "due_today", "upcoming")
+BUCKET_ORDER: tuple[Bucket, ...] = ("overdue", "due_today", "upcoming", "unscheduled")
+UNSCHEDULED_CHOICES: tuple[Literal["show", "only"], ...] = ("show", "only")
 
 # The Obsidian Tasks emoji date fields, in the default precedence used to
 # pick a task's effective (bucketing) date. Due-first matches the
@@ -29,7 +31,7 @@ UNASSIGNED = "unassigned"
 
 @dataclass
 class TaskItem:
-    """One reportable task: an open/in-progress task carrying a tracked date.
+    """One reportable open/in-progress task.
 
     ``path`` is vault-relative POSIX. ``line`` is 1-based into the file.
     ``description`` is the task text with trailing Tasks emoji-metadata
@@ -39,7 +41,8 @@ class TaskItem:
     dates the line carried (any may be null). ``effective_date`` is the one
     that actually drove bucketing — the first present date in the report's
     configured ``date_fields`` precedence — and ``date_source`` names which
-    field it came from (``"due"``, ``"scheduled"``, or ``"start"``).
+    field it came from (``"due"``, ``"scheduled"``, or ``"start"``). Both
+    are null for an unscheduled task.
 
     ``areas`` / ``quests`` are the grouping keys derived from the note's
     ``supports:`` frontmatter (``quests`` rolls Side Quests up to their
@@ -52,8 +55,8 @@ class TaskItem:
     raw: str
     state: str
     bucket: Bucket
-    effective_date: str
-    date_source: str
+    effective_date: str | None
+    date_source: str | None
     due: str | None = None
     scheduled: str | None = None
     start: str | None = None
@@ -93,6 +96,10 @@ class TasksReport:
     def upcoming(self) -> list[TaskItem]:
         return self._in("upcoming")
 
+    @property
+    def unscheduled(self) -> list[TaskItem]:
+        return self._in("unscheduled")
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "vault": self.vault,
@@ -109,6 +116,7 @@ class TasksReport:
                 "overdue": len(self.overdue),
                 "due_today": len(self.due_today),
                 "upcoming": len(self.upcoming),
+                "unscheduled": len(self.unscheduled),
             },
             "tasks": [asdict(t) for t in self.tasks],
         }

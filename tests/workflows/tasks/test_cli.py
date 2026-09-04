@@ -49,10 +49,125 @@ def test_json_output_contract(tmp_path: Path, capsys):
     assert rc == 0
     data = json.loads(out)
     assert data["summary"]["overdue"] == 1
+    assert data["summary"]["unscheduled"] == 0
     assert data["tasks"][0]["description"] == "Pay taxes"
     assert data["tasks"][0]["quests"] == ["Health"]
     assert data["types"] is None
     assert data["quest"] is None
+
+
+def test_json_unscheduled_fields_are_nullable(tmp_path: Path, capsys):
+    v = _vault(tmp_path)
+    _write(v / "projects" / "Later.md", "# Later\n- [ ] Decide when to do this\n")
+
+    rc = main(["--vault", str(v), "--unscheduled", "show", "--format", "json"])
+
+    assert rc == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["summary"]["unscheduled"] == 1
+    task = next(task for task in data["tasks"] if task["bucket"] == "unscheduled")
+    assert task["description"] == "Decide when to do this"
+    assert task["effective_date"] is None
+    assert task["date_source"] is None
+    assert task["due"] is None
+    assert task["scheduled"] is None
+    assert task["start"] is None
+
+
+def test_unscheduled_only_renders_untracked_date_hint(tmp_path: Path, capsys):
+    v = tmp_path / "mix"
+    _write(v / "projects" / "P.md", f"# P\n- [ ] Pick a do date 📅 {_PAST}\n")
+
+    rc = main(
+        [
+            "--vault",
+            str(v),
+            "--date-field",
+            "scheduled",
+            "--unscheduled",
+            "only",
+        ]
+    )
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "## Unscheduled (1)" in out
+    assert f"- [[P]] Pick a do date (untracked: 📅 {_PAST})" in out
+
+
+def test_unscheduled_only_groups_and_composes_with_type_and_quest(tmp_path: Path, capsys):
+    v = _vault(tmp_path)
+    _write(
+        v / "projects" / "Undated Project.md",
+        "---\ntype: project\nsupports:\n- '[[Health]]'\n---\n"
+        "# Undated Project\n- [ ] Project open loop\n",
+    )
+    _write(
+        v / "areas" / "Undated Area.md",
+        "---\ntype: area\nsupports:\n- '[[Health]]'\n---\n# Undated Area\n- [ ] Area open loop\n",
+    )
+
+    rc = main(
+        [
+            "--vault",
+            str(v),
+            "--unscheduled",
+            "only",
+            "--type",
+            "project",
+            "--quest",
+            "health",
+            "--group-by",
+            "quest",
+        ]
+    )
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "## Health (1)" in out
+    assert "- [[Undated Project]] Project open loop (unscheduled)" in out
+    assert "Area open loop" not in out
+    assert "Pay taxes" not in out
+
+
+def test_overdue_conflicts_with_unscheduled_only(tmp_path: Path, capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        main(
+            [
+                "--vault",
+                str(_vault(tmp_path)),
+                "--overdue",
+                "--unscheduled",
+                "only",
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert "--overdue cannot be combined with --unscheduled only" in capsys.readouterr().err
+
+
+def test_overdue_composes_with_unscheduled_show(tmp_path: Path, capsys):
+    v = _vault(tmp_path)
+    _write(v / "projects" / "Later.md", "# Later\n- [ ] Decide when\n")
+
+    rc = main(
+        [
+            "--vault",
+            str(v),
+            "--overdue",
+            "--unscheduled",
+            "show",
+            "--format",
+            "json",
+        ]
+    )
+
+    assert rc == 0
+    data = json.loads(capsys.readouterr().out)
+    assert [(task["description"], task["bucket"]) for task in data["tasks"]] == [
+        ("Pay taxes", "overdue"),
+        ("Decide when", "unscheduled"),
+    ]
 
 
 def test_type_filter_repeats_and_composes_with_quest(tmp_path: Path, capsys):
@@ -210,6 +325,18 @@ def test_empty_vault_reports_nothing(tmp_path: Path, capsys):
     out = capsys.readouterr().out
     assert rc == 0
     assert "No open tasks due." in out
+
+
+def test_empty_unscheduled_only_report_has_specific_message(tmp_path: Path, capsys):
+    v = tmp_path / "empty"
+    _write(v / "projects" / "P.md", "# P\nno tasks here\n")
+
+    rc = main(["--vault", str(v), "--unscheduled", "only"])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert out.startswith("# Unscheduled tasks as of ")
+    assert "No open unscheduled tasks." in out
 
 
 def test_missing_vault_errors(tmp_path: Path, capsys):

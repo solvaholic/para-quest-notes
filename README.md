@@ -62,7 +62,7 @@ The workflows preserve that reasoning, locally.
       v0.5.x). See [`docs/workflows/quests.md`](docs/workflows/quests.md).
       Lands the shared `vault/links.py` + `vault/scope.py` building
       blocks.
-- [x] `pqn-tasks` — read-only reporter for scheduled/due tasks
+- [x] `pqn-tasks` — read-only reporter for dated and unscheduled tasks
       (v0.5; see [`docs/workflows/tasks.md`](docs/workflows/tasks.md))
 - [x] `pqn-search` — read-only, PARA + Quest-aware keyword search over
       the vault (title + content; ranks Resources by inbound links).
@@ -78,13 +78,7 @@ The workflows preserve that reasoning, locally.
 
 ## Quickstart: end-to-end against the sample vault
 
-A small (~30-note) sample vault lives at
-[`samples/vault/`](samples/vault/). The walkthrough below exercises
-the eight core workflow `pqn-*` CLIs against a throwaway copy of it, so
-you can see the whole toolchain on first read without risking real
-notes. (The read-only `pqn-tasks` reporter isn't shown here — the
-sample vault carries no due-dated tasks — but see
-[`docs/workflows/tasks.md`](docs/workflows/tasks.md).)
+A small (~30-note) sample vault lives at [`samples/vault/`](samples/vault/). The walkthrough below exercises the nine core workflow `pqn-*` CLIs against a throwaway copy of it, so you can see the whole toolchain on first read without risking real notes.
 
 You'll need [Ollama](https://ollama.com) running locally for the
 LLM-using steps (`pqn-ingest`, the final `pqn-archive` step). The
@@ -223,7 +217,24 @@ uv run pqn-quests --vault /tmp/demo-vault --quest '[[Health]]'
 
 Full options: [`docs/workflows/quests.md`](docs/workflows/quests.md).
 
-### 8. `pqn-search` — keyword search over the vault (no LLM)
+### 8. `pqn-tasks` — review dated and unscheduled open tasks (no LLM)
+
+Read-only: report dated tasks by urgency, or surface open loops that still need a date or decision. The sample vault intentionally carries undated tasks, so it demonstrates the opt-in unscheduled view.
+
+```bash
+# Existing deadline view (empty for the bundled sample).
+uv run pqn-tasks --vault /tmp/demo-vault
+
+# Every open task with none of the active date fields.
+uv run pqn-tasks --vault /tmp/demo-vault --unscheduled only
+
+# Flat JSON for agents/tools.
+uv run pqn-tasks --vault /tmp/demo-vault --unscheduled show --format json | jq
+```
+
+Full options and JSON contract: [`docs/workflows/tasks.md`](docs/workflows/tasks.md).
+
+### 9. `pqn-search` — keyword search over the vault (no LLM)
 
 Read-only: match notes by title and/or body, scope by `--type` /
 `--quest`, and rank hits by the PARA + Quest model (title hits first;

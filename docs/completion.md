@@ -81,6 +81,9 @@ pqn-tasks --group-by <TAB>
 pqn-tasks --date-field <TAB>
 # due  scheduled  start
 
+pqn-tasks --unscheduled <TAB>
+# only  show
+
 pqn-search --format <TAB>
 # json  text
 ```

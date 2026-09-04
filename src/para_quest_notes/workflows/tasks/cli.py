@@ -1,10 +1,10 @@
 """``pqn-tasks`` CLI entry point.
 
-Read-only reporter: scans the vault for open tasks carrying Obsidian
-Tasks due dates and prints what's overdue / due today / due soon. Text
-output is markdown (plain ``-`` bullets, source note wikilinked) so a
-roundup can be pasted into a daily note without re-parsing as live
-tasks; ``--format json`` emits the structured contract.
+Read-only reporter: scans the vault for open tasks and prints dated tasks
+by urgency plus optional unscheduled tasks. Text output is markdown
+(plain ``-`` bullets, source note wikilinked) so a roundup can be pasted
+into a daily note without re-parsing as live tasks; ``--format json``
+emits the structured contract.
 """
 
 from __future__ import annotations
@@ -26,7 +26,15 @@ from para_quest_notes.adapter.errors import ConfigError, VaultError
 from para_quest_notes.adapter.vault import find_vault
 from para_quest_notes.vault.scope import PARA_TYPES
 
-from .contract import BUCKET_ORDER, DATE_FIELDS, UNASSIGNED, TaskItem, TasksReport
+from .contract import (
+    BUCKET_ORDER,
+    DATE_FIELDS,
+    UNASSIGNED,
+    UNSCHEDULED_CHOICES,
+    TaskItem,
+    TasksReport,
+    UnscheduledMode,
+)
 from .pipeline import scan_vault_tasks
 from .settings import resolve_date_fields
 
@@ -34,6 +42,13 @@ _BUCKET_LABELS = {
     "overdue": "Overdue",
     "due_today": "Due today",
     "upcoming": "Upcoming",
+    "unscheduled": "Unscheduled",
+}
+
+_DATE_EMOJI = {
+    "due": "📅",
+    "scheduled": "⏳",
+    "start": "🛫",
 }
 
 
@@ -41,9 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = build_base_parser(
         prog="pqn-tasks",
         description=(
-            "Report open tasks carrying Obsidian Tasks dates (📅 due, ⏳ "
-            "scheduled, 🛫 start), bucketed into overdue / due today / "
-            "upcoming by their effective date. Read-only, no LLM."
+            "Report dated open tasks by urgency and optionally tasks with no "
+            "active Obsidian Tasks date (📅 due, ⏳ scheduled, 🛫 start). "
+            "Read-only, no LLM."
         ),
     )
     p.add_argument(
@@ -57,6 +72,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--overdue",
         action="store_true",
         help="Report only overdue tasks (due before today).",
+    )
+    p.add_argument(
+        "--unscheduled",
+        choices=UNSCHEDULED_CHOICES,
+        default="hide",
+        help=(
+            "How to report tasks carrying none of the active date fields: "
+            "'show' appends them after dated tasks; 'only' excludes all dated "
+            "tasks. Omitted by default."
+        ),
     )
     p.add_argument(
         "--group-by",
@@ -110,6 +135,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     enable_completion(parser)
     args = parser.parse_args(argv)
+    if args.overdue and args.unscheduled == "only":
+        parser.error("--overdue cannot be combined with --unscheduled only")
 
     try:
         config = load_config(args.config)
@@ -133,12 +160,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         group_by=args.group_by,
         date_fields=date_fields,
         include_archive=args.include_archive,
+        unscheduled=args.unscheduled,
     )
 
     if args.format == "json":
         print(json.dumps(report.to_dict(), indent=2))
     else:
-        print(render_markdown(report))
+        print(render_markdown(report, unscheduled=args.unscheduled))
     return 0
 
 
@@ -146,11 +174,29 @@ def _wikilink(path: str) -> str:
     return f"[[{PurePosixPath(path).stem}]]"
 
 
-def _render_task(task: TaskItem, *, show_bucket: bool) -> str:
-    parts = [f"{task.date_source} {task.effective_date}"]
+def _render_task(
+    task: TaskItem,
+    *,
+    show_bucket: bool,
+    date_fields: Sequence[str],
+) -> str:
+    parts: list[str] = []
+    if task.date_source is not None and task.effective_date is not None:
+        parts.append(f"{task.date_source} {task.effective_date}")
     if show_bucket:
         parts.append(_BUCKET_LABELS[task.bucket].lower())
-    return f"- {_wikilink(task.path)} {task.description} ({', '.join(parts)})"
+
+    if task.bucket == "unscheduled":
+        untracked = [
+            f"{_DATE_EMOJI[field]} {value}"
+            for field in DATE_FIELDS
+            if field not in date_fields and (value := getattr(task, field)) is not None
+        ]
+        if untracked:
+            parts.append(f"untracked: {', '.join(untracked)}")
+
+    suffix = f" ({', '.join(parts)})" if parts else ""
+    return f"- {_wikilink(task.path)} {task.description}{suffix}"
 
 
 def _grouped(report: TasksReport) -> list[tuple[str, list[TaskItem]]]:
@@ -181,21 +227,36 @@ def _grouped(report: TasksReport) -> list[tuple[str, list[TaskItem]]]:
     return [(name, buckets[name]) for name in sorted(buckets, key=sort_key)]
 
 
-def render_markdown(report: TasksReport) -> str:
-    horizon = f"within {report.due_in} day(s)"
-    if report.due_in == 0:
-        horizon = "today or overdue"
-    title = f"# Tasks as of {report.reference_date} ({horizon})"
+def render_markdown(
+    report: TasksReport,
+    *,
+    unscheduled: UnscheduledMode = "hide",
+) -> str:
+    if unscheduled == "only":
+        title = f"# Unscheduled tasks as of {report.reference_date}"
+        empty_message = "No open unscheduled tasks."
+    else:
+        horizon = f"within {report.due_in} day(s)"
+        if report.due_in == 0:
+            horizon = "today or overdue"
+        title = f"# Tasks as of {report.reference_date} ({horizon})"
+        empty_message = "No open tasks due."
 
     if not report.tasks:
-        return f"{title}\n\nNo open tasks due.\n"
+        return f"{title}\n\n{empty_message}\n"
 
     show_bucket = report.group_by != "due"
     lines = [title, ""]
     for header, tasks in _grouped(report):
         lines.append(f"## {header} ({len(tasks)})")
         for task in tasks:
-            lines.append(_render_task(task, show_bucket=show_bucket))
+            lines.append(
+                _render_task(
+                    task,
+                    show_bucket=show_bucket,
+                    date_fields=report.date_fields,
+                )
+            )
         lines.append("")
     return "\n".join(lines).rstrip("\n") + "\n"
 

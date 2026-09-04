@@ -13,8 +13,9 @@ fields — ``📅`` due, ``⏳`` scheduled, ``🛫`` start. Because the
 resolution falls through, a user who only sets one kind of date (e.g.
 ``⏳`` scheduled as their "do date") is fully served without any
 configuration; precedence only disambiguates a task that carries
-several dates. A task with no tracked date is not reported. Done
-(``[x]``) and cancelled (``[-]``) tasks are never reported.
+several dates. A task with no active tracked date is reported only when
+the unscheduled mode requests it. Done (``[x]``) and cancelled (``[-]``)
+tasks are never reported.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ from para_quest_notes.vault.quests import Quest, discover_quests
 from para_quest_notes.vault.scope import Scope, note_supports, para_type_of
 from para_quest_notes.vault.tasks import ScannedTask, scan_tasks
 
-from .contract import DATE_FIELDS, Bucket, TaskItem, TasksReport
+from .contract import DATE_FIELDS, Bucket, TaskItem, TasksReport, UnscheduledMode
 
 # Directories we never scan (matches pqn-validate's convention). ``archive/``
 # is excluded too unless include_archive is set: archived tasks are
@@ -103,6 +104,7 @@ def scan_vault_tasks(
     group_by: str = "due",
     date_fields: Sequence[str] | None = None,
     include_archive: bool = False,
+    unscheduled: UnscheduledMode = "hide",
 ) -> TasksReport:
     """Scan ``vault`` and return a :class:`TasksReport`.
 
@@ -115,7 +117,9 @@ def scan_vault_tasks(
     ``date_fields`` is the ordered precedence over
     ``("due", "scheduled", "start")`` used to pick each task's effective
     (bucketing) date; a field omitted from the list is ignored entirely,
-    so ``["scheduled"]`` reports scheduled-dated tasks only.
+    so ``["scheduled"]`` reports scheduled-dated tasks only by default.
+    ``unscheduled`` may include or exclusively report tasks that carry none
+    of those active fields.
     """
     ref = today or date.today()
     horizon = ref + timedelta(days=due_in)
@@ -153,13 +157,21 @@ def scan_vault_tasks(
                 continue
             resolved = _effective_date(task, fields)
             if resolved is None:
-                continue
-            eff_date, source = resolved
-            bucket = _bucket_for(eff_date, ref, horizon)
-            if bucket is None:
-                continue
-            if overdue_only and bucket != "overdue":
-                continue
+                if unscheduled == "hide":
+                    continue
+                eff_date = None
+                source = None
+                bucket: Bucket = "unscheduled"
+            else:
+                if unscheduled == "only":
+                    continue
+                eff_date, source = resolved
+                dated_bucket = _bucket_for(eff_date, ref, horizon)
+                if dated_bucket is None:
+                    continue
+                bucket = dated_bucket
+                if overdue_only and bucket != "overdue":
+                    continue
             items.append(
                 TaskItem(
                     path=rel.as_posix(),
@@ -168,7 +180,7 @@ def scan_vault_tasks(
                     raw=task.text,
                     state=task.state,
                     bucket=bucket,
-                    effective_date=eff_date.isoformat(),
+                    effective_date=eff_date.isoformat() if eff_date else None,
                     date_source=source,
                     due=task.due.isoformat() if task.due else None,
                     scheduled=task.scheduled.isoformat() if task.scheduled else None,
@@ -180,7 +192,14 @@ def scan_vault_tasks(
                 )
             )
 
-    items.sort(key=lambda t: (t.effective_date, t.path, t.line))
+    items.sort(
+        key=lambda task: (
+            task.effective_date is None,
+            task.effective_date or "",
+            task.path,
+            task.line,
+        )
+    )
 
     return TasksReport(
         vault=str(vault),
