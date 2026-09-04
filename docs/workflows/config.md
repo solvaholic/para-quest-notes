@@ -22,6 +22,7 @@ It reports:
   `workflows.<name>.model` overrides, each flagged with whether it's
   actually **honored** (see the drift note below).
 - **ollama** — `base_url` and `request_timeout_seconds`.
+- **daily** — effective `create_missing`, `open_existing`, and editor argv settings with provenance.
 - **tasks** — the effective `date_fields` precedence, its provenance, and whether `pqn-tasks` honors it.
 - **templates** — the template dir (`create.template_dir`), the per-type
   defaults (`create.defaults.<type>`), and the template files found in the
@@ -41,6 +42,7 @@ pqn-config --vault /tmp/demo-vault
 
 # One section at a time.
 pqn-config --vault /tmp/demo-vault --section models
+pqn-config --vault /tmp/demo-vault --section daily
 pqn-config --vault /tmp/demo-vault --section tasks
 pqn-config --vault /tmp/demo-vault --section templates
 pqn-config --vault /tmp/demo-vault --section vault
@@ -49,7 +51,7 @@ pqn-config --vault /tmp/demo-vault --section vault
 pqn-config --vault /tmp/demo-vault --format json | jq
 ```
 
-`--section` accepts `vault`, `models`, `ollama`, `tasks`, `templates`, or `paths`. Omit it to report everything. There is deliberately **no** `set` counterpart — configuration is edited by hand in `config.yaml`.
+`--section` accepts `vault`, `models`, `ollama`, `daily`, `tasks`, `templates`, or `paths`. Omit it to report everything. There is deliberately **no** `set` counterpart - configuration is edited by hand in `config.yaml`.
 
 Vault discovery follows the standard order
 ([`docs/configuration.md`](../configuration.md)): `--vault` →
@@ -74,6 +76,8 @@ raw `config.yaml` to see which keys were actually present, rather than
 guessing from whether a value happens to equal its default.
 
 Workflow settings also carry an `honored` flag. `tasks.date_fields` is `true` because `pqn-tasks` consumes it; documented-but-unwired model overrides remain `false`.
+
+The daily settings do not need a separate `honored` marker because all three are consumed directly by `pqn-daily`. An omitted editor is reported as `null` with `source: default`; this means "not configured", not OS editor discovery.
 
 ## The per-workflow model drift it surfaces
 
@@ -107,6 +111,11 @@ If a workflow is later wired to honor its override, add its name to
   "ollama": {
     "base_url": {"value": "http://localhost:11434", "source": "default"},
     "request_timeout_seconds": {"value": 120, "source": "default"}
+  },
+  "daily": {
+    "create_missing": {"value": false, "source": "default"},
+    "open_existing": {"value": true, "source": "config"},
+    "editor": {"value": ["code", "--reuse-window"], "source": "config"}
   },
   "tasks": {
     "date_fields": {

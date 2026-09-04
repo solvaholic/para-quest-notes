@@ -26,7 +26,7 @@ def build_workflow(inputs: DailyInputs, *, apply: bool) -> Workflow:
     return Workflow(
         name="daily",
         steps=[
-            ResolveTarget(inputs.target),
+            ResolveTarget(inputs.target, create_missing=inputs.create_missing),
             DetectShape(),
             InspectParent(),
             ComputeDestination(),
@@ -55,10 +55,12 @@ def file_daily_note(
 def _to_daily_result(wf: WorkflowResult, *, vault: Path, apply: bool) -> DailyResult:
     plan = DailyPlan()
     moved = False
+    created = False
 
     for step in wf.steps:
         if step.name == "resolve_target" and isinstance(step.output, dict):
             plan.source = step.output.get("source")
+            plan.would_create = bool(step.output.get("missing"))
         elif step.name == "detect_shape" and isinstance(step.output, dict):
             plan.date = step.output.get("date")
         elif step.name == "compute_destination" and isinstance(step.output, dict):
@@ -69,6 +71,7 @@ def _to_daily_result(wf: WorkflowResult, *, vault: Path, apply: bool) -> DailyRe
             plan.frontmatter_migrated = bool(step.output.get("frontmatter_migrated"))
         elif step.name == "move_file" and isinstance(step.output, dict):
             moved = bool(step.output.get("moved"))
+            created = bool(step.output.get("created"))
 
     return DailyResult(
         vault=str(vault),
@@ -76,6 +79,7 @@ def _to_daily_result(wf: WorkflowResult, *, vault: Path, apply: bool) -> DailyRe
         ok=wf.ok,
         plan=plan,
         moved=moved,
+        created=created,
         escalation=wf.escalation,
         error=wf.error,
         run_id=wf.run_id,

@@ -109,6 +109,24 @@ def test_tasks_date_fields_reports_default(tmp_path: Path) -> None:
     assert report.tasks.date_fields.honored is True
 
 
+def test_daily_settings_report_config_and_default_provenance(tmp_path: Path) -> None:
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text(
+        "workflows:\n  daily:\n    create_missing: true\n    editor: [code, --reuse-window]\n",
+        encoding="utf-8",
+    )
+    config = load_config(cfg_file)
+
+    report = inspect_config(config=config, env={}, start_dir=tmp_path)
+
+    assert report.daily.create_missing.value is True
+    assert report.daily.create_missing.source == "config"
+    assert report.daily.open_existing.value is False
+    assert report.daily.open_existing.source == "default"
+    assert report.daily.editor.value == ["code", "--reuse-window"]
+    assert report.daily.editor.source == "config"
+
+
 def test_template_files_listed_when_dir_exists(tmp_path: Path) -> None:
     vault = _mk_vault(tmp_path / "v")
     tdir = vault / "resources" / "templates"

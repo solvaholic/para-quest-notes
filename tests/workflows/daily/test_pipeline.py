@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from para_quest_notes.workflows.daily.contract import DailyInputs
 from para_quest_notes.workflows.daily.pipeline import file_daily_note
+from para_quest_notes.workflows.validate.api import validate_paths
 
 
 def _seed_vault(tmp_path: Path) -> Path:
@@ -119,3 +121,97 @@ def test_zero_match_escalation(tmp_path: Path) -> None:
     assert not res.ok
     assert res.escalation is not None
     assert res.escalation["step"] == "resolve_target"
+
+
+def test_missing_date_plans_creation_without_mutating_vault(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    before = sorted(path.relative_to(vault) for path in vault.rglob("*"))
+
+    res = file_daily_note(
+        DailyInputs(target="2026-09-02", create_missing=True),
+        vault=vault,
+        apply=False,
+    )
+
+    assert res.ok
+    assert res.plan.source is None
+    assert res.plan.destination == "resources/daily_notes/2026/09/2026-09-02.md"
+    assert res.plan.would_create is True
+    assert res.created is False
+    assert sorted(path.relative_to(vault) for path in vault.rglob("*")) == before
+
+
+def test_missing_date_apply_creates_exact_h1_only_note(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+
+    res = file_daily_note(
+        DailyInputs(target="2026-09-02", create_missing=True),
+        vault=vault,
+        apply=True,
+    )
+
+    destination = vault / "resources/daily_notes/2026/09/2026-09-02.md"
+    assert res.ok
+    assert res.moved is False
+    assert res.created is True
+    assert res.plan.would_create is True
+    assert destination.read_text(encoding="utf-8") == "# 2026-09-02\n\n"
+
+
+def test_missing_invalid_date_and_collision_never_write(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    (vault / "areas" / "2026-09-02.md").write_text("collision\n", encoding="utf-8")
+
+    invalid = file_daily_note(
+        DailyInputs(target="2026-02-31", create_missing=True),
+        vault=vault,
+        apply=True,
+    )
+    collision = file_daily_note(
+        DailyInputs(target="2026-09-02", create_missing=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert invalid.escalation is not None
+    assert invalid.escalation["step"] == "detect_shape"
+    assert collision.escalation is not None
+    assert collision.escalation["step"] == "check_collision"
+    assert not (vault / "resources/daily_notes/2026/02/2026-02-31.md").exists()
+    assert not (vault / "resources/daily_notes/2026/09/2026-09-02.md").exists()
+
+
+def test_missing_arbitrary_path_does_not_enter_authoring(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+
+    res = file_daily_note(
+        DailyInputs(target="inbox/2026-09-02.md", create_missing=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert res.escalation is not None
+    assert res.escalation["step"] == "resolve_target"
+    assert not (vault / "resources/daily_notes/2026/09/2026-09-02.md").exists()
+
+
+def test_apply_creation_smokes_copied_sample_vault(tmp_path: Path) -> None:
+    sample = Path(__file__).resolve().parents[3] / "samples" / "vault"
+    vault = tmp_path / "vault"
+    shutil.copytree(sample, vault)
+
+    res = file_daily_note(
+        DailyInputs(target="2026-09-02", create_missing=True),
+        vault=vault,
+        apply=True,
+    )
+
+    payload = res.to_dict()
+    destination = vault / "resources/daily_notes/2026/09/2026-09-02.md"
+    assert payload["ok"] is True
+    assert payload["moved"] is False
+    assert payload["created"] is True
+    assert payload["plan"]["source"] is None
+    assert payload["plan"]["would_create"] is True
+    assert destination.read_text(encoding="utf-8") == "# 2026-09-02\n\n"
+    assert validate_paths(vault, [destination]).issues == []

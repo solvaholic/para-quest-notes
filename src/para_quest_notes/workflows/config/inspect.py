@@ -21,10 +21,12 @@ from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.trace import default_state_dir
 from para_quest_notes.adapter.vault import resolve_vault
 from para_quest_notes.workflows.create.templates import get_template_config
+from para_quest_notes.workflows.daily.settings import resolve_daily_settings
 from para_quest_notes.workflows.tasks.settings import resolve_date_fields
 
 from .contract import (
     ConfigReport,
+    DailyInfo,
     HonoredSetting,
     ModelOverride,
     ModelsInfo,
@@ -92,6 +94,7 @@ def inspect_config(
         vault=vault_info,
         models=_inspect_models(config, raw),
         ollama=_inspect_ollama(config, raw),
+        daily=_inspect_daily(config, raw),
         tasks=_inspect_tasks(config, raw),
         templates=_inspect_templates(config, raw, template_dir, defaults, vault_path),
         paths=_inspect_paths(config, raw),
@@ -150,6 +153,24 @@ def _inspect_tasks(config: Config, raw: Mapping[str, Any]) -> TasksInfo:
             source=_source(raw, "workflows", "tasks", "date_fields"),
             honored=True,
         )
+    )
+
+
+def _inspect_daily(config: Config, raw: Mapping[str, Any]) -> DailyInfo:
+    settings = resolve_daily_settings(config.workflows)
+    return DailyInfo(
+        create_missing=Setting(
+            value=settings.create_missing,
+            source=_source(raw, "workflows", "daily", "create_missing"),
+        ),
+        open_existing=Setting(
+            value=settings.open_existing,
+            source=_source(raw, "workflows", "daily", "open_existing"),
+        ),
+        editor=Setting(
+            value=None if settings.editor is None else list(settings.editor),
+            source=_source(raw, "workflows", "daily", "editor"),
+        ),
     )
 
 

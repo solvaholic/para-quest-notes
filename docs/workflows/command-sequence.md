@@ -12,7 +12,7 @@ pqn-quests     (read-only, no deps - generate the Quest index)
 pqn-tasks      (read-only, no deps - report dated/unscheduled tasks)
 pqn-search     (read-only, no deps - keyword search over the vault)
 pqn-create     (needs vault path; creates areas/, projects/, resources/)
-pqn-daily      (needs vault path; files existing date-shaped notes)
+pqn-daily      (needs vault path; selects/files/creates/opens daily notes)
 pqn-ingest     (needs Ollama + Quest notes in areas/ to classify against)
 pqn-archive    (needs a project note in projects/ to archive)
 ```
@@ -25,9 +25,7 @@ Key relationships:
   first.
 - **`pqn-create` enables `pqn-archive`** - you can only archive a
   project that exists under `projects/`.
-- **`pqn-daily` is independent** - it files date-shaped notes into
-  `resources/daily_notes/YYYY/MM/`. It doesn't create new notes; it
-  moves existing ones to their canonical path.
+- **`pqn-daily` is independent** - it selects and files date-shaped notes into `resources/daily_notes/YYYY/MM/`. Missing-note creation and editor opening are opt-in, and writes still require `--apply`.
 - **`pqn-validate` is a bookend** - run it before and after mutations
   to confirm vault health.
 - **`pqn-config` is read-only inspection** - reports the effective
@@ -84,7 +82,7 @@ encoded your Main Quests as Area notes yet.
 3. pqn-create Main Quest area notes       (establishes areas/)
 4. pqn-create Side Quest area notes       (optional, adds classification targets)
 5. pqn-ingest --file ... --apply          (iteratively ingest from inbox/)
-6. pqn-daily --apply                      (file any date-shaped notes)
+6. pqn-daily --apply                      (file any existing date-shaped notes)
 7. pqn-validate --vault PATH              (confirm health)
 ```
 
@@ -146,7 +144,7 @@ Ollama to verify CLI arg parsing and vault interactions:
 ```
 pqn-validate  (vault well-formed)
 pqn-create    (scaffold a note)
-pqn-daily     (file a daily note)
+pqn-daily     (file or create a daily note)
 pqn-archive   (archive a project)
 pqn-ingest    (expect escalation without Ollama)
 pqn-validate  (vault still well-formed after mutations)
@@ -188,6 +186,4 @@ pqn-validate --vault ~/notes --format json --strict
   yet.
 - **Routine generation:** the notes-system spec describes recurring
   tasks generated into daily notes. This workflow doesn't exist yet.
-- **Note authoring for `pqn-daily`:** currently filing-only. It moves
-  an existing `YYYY-MM-DD.md` to its canonical path but doesn't
-  create a blank daily note from scratch.
+- **Daily-note templates and task roundup:** `pqn-daily` can create an exact H1-only note, but template content, routine-task prepopulation, and task-roundup integration remain out of scope.

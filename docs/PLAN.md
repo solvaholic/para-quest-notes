@@ -338,19 +338,16 @@ migration. Areas/Resources escalate as planned.
   task carries Obsidian Tasks scheduling emoji (📅 ⏳ 🛫 🔁 ✅ ❌)
   rather than silently rewriting around them.
 
-#### Slice 4 — `pqn-daily` (shipped, filing-only, no-LLM)
+#### Slice 4 — `pqn-daily` (shipped, selection + filing + authoring + opening, no-LLM)
 
-Shipped as a no-LLM workflow. Files one date-shaped note
-(`YYYY-MM-DD.md`) into `resources/daily_notes/YYYY/MM/`.
-Idempotent re-run on an already-filed note is a no-op success
-(cron-safe). Authoring (creating today's empty daily note from
-scratch) is deferred — see "Post-v1 candidates" below.
+Shipped as a no-LLM workflow. Selects today or an explicit date, files one date-shaped note (`YYYY-MM-DD.md`) into `resources/daily_notes/YYYY/MM/`, can create an exact H1-only note when missing, and can open a real resolved note through configured editor argv. Safe defaults keep creation and opening disabled, `--apply` remains the only write consent, and idempotent re-runs remain cron-safe.
 
 - Lands `workflows/daily/` + `pqn-daily` console script + per-step
   tests + `docs/workflows/daily.md` JSON contract.
 - Steps as built: `resolve_target` (basename search scoped to vault
   root + `inbox/` + `resources/daily_notes/`; explicit paths accepted
-  anywhere), `detect_shape` (regex + real-calendar-date check, so
+  anywhere; a missing bare date can enter the opt-in authoring branch),
+  `detect_shape` (regex + real-calendar-date check, so
   `2026-02-31.md` is rejected here, not later), `inspect_parent`
   (escalates when source lives under `projects/`, `areas/`,
   `archive/`, or any other `resources/<...>/` subtree), `compute_destination`
@@ -361,16 +358,16 @@ scratch) is deferred — see "Post-v1 candidates" below.
   frontmatter as-is — daily notes don't get canonical PARA
   frontmatter injected since they inherit Quest context from
   contents per the spec; migrates legacy tail backmatter on touch;
-  prepends `# YYYY-MM-DD` H1 if absent), `move_file` (`--apply`-gated
-  atomic write+unlink; in-place rewrite when already at destination
-  but content changed), `validate_after` (scoped to new path).
+  prepends `# YYYY-MM-DD` H1 if absent; emits exact H1-only content for
+  creation), `move_file` (`--apply`-gated atomic create or write+unlink;
+  in-place rewrite when already at destination but content changed),
+  `validate_after` (scoped to new path).
 - Default dry-run; `--apply` to write.
-- **Shared-infra reuse:** no new shared helpers needed — the
-  `ignore_path` parameter on `check_basename_available` already
+- **Shared-infra reuse:** the `ignore_path` parameter on
+  `check_basename_available` already
   existed (added during slice 1 for `pqn-ingest`'s self-rename case).
-- **Out of scope:** authoring (`--today` / `--date` to create empty
-  daily notes; tracked under "Post-v1 candidates" below), bulk
-  migration of legacy daily notes, task roundup sections.
+- **Wave 5 delivered (#124):** optional positional target; bare/`--today`/`--date` selection; independently configurable and positively/negatively overridable missing-note creation and editor opening; additive JSON/text results; effective-config provenance. Missing-note authoring is exact H1-only content and remains `--apply` gated.
+- **Out of scope:** templates, frontmatter, routine tasks, task roundup sections, bulk migration, implicit apply, and OS editor discovery.
 
 #### Workflow conventions for all remaining slices
 
@@ -478,17 +475,7 @@ two open at once (mirrors phase 5).
 Not promised for v0.1. Listed here so we don't lose them and don't
 let them creep into the v1 release.
 
-- **`pqn-daily` authoring mode.** A `--today` / `--date 2026-05-12`
-  flag (no positional `target`) that creates the empty daily note
-  in place at `resources/daily_notes/YYYY/MM/YYYY-MM-DD.md` if it
-  doesn't exist. Open design choices: where the H1-only template
-  lives (likely just the H1 and a blank body in v0.1), whether to
-  seed any frontmatter (the spec says daily notes don't carry
-  frontmatter — leaning "no"), whether to pre-populate routine
-  tasks from Areas (see "Task roundup" below — same data source).
-  Why not in v1: filing-mode usage will tell us what shape the
-  authored note should have. Better as an additive flag on a
-  stable filing CLI than a rushed inclusion.
+- **`pqn-daily` authoring mode - delivered in Wave 5 (#124).** Bare/`--today`/`--date` selection, explicit/configured missing-note creation, and configured editor opening landed as additive behavior. Authored notes are exactly an H1 plus a blank line, with no frontmatter, template, or routine tasks. Writes still require `--apply`.
 
 - **`--file` richer input.** Extend `--file` on `pqn-ingest` (and any
   other workflow that gains it) to accept: a directory (process all

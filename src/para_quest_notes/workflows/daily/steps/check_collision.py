@@ -32,7 +32,7 @@ class CheckCollision:
         already: bool = ctx.scratchpad.get("already_at_destination", False)
         destination: str = ctx.scratchpad["destination_rel"]
         dest_abs: Path = ctx.scratchpad["destination_abs"]
-        source_abs: Path = ctx.scratchpad["source_abs"]
+        source_abs: Path | None = ctx.scratchpad["source_abs"]
         date_iso: str = ctx.scratchpad["date_iso"]
         basename = f"{date_iso}.md"
 
