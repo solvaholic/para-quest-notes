@@ -556,3 +556,175 @@ def test_malformed_daily_config_exits_two_with_exact_key(tmp_path: Path, capsys,
 
     assert rc == 2
     assert "workflows.daily.open_existing" in err
+
+
+def test_task_roundup_help_and_dry_run_json(tmp_path: Path, capsys, monkeypatch) -> None:
+    assert "--task-roundup" in build_parser().format_help()
+    vault = _seed_vault(tmp_path)
+    daily = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    daily.parent.mkdir(parents=True)
+    daily.write_text("# 2026-09-07\n\n", encoding="utf-8")
+    (vault / "projects/Project.md").write_text(
+        "# Project\n\n- [ ] Today 📅 2026-09-07\n",
+        encoding="utf-8",
+    )
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--format",
+            "json",
+            "--date",
+            "2026-09-07",
+            "--task-roundup",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["task_roundup"] == {
+        "action": "insert",
+        "applied": False,
+        "reference_date": "2026-09-07",
+        "due_in": 7,
+        "group_by": "due",
+        "date_fields": ["due", "scheduled", "start"],
+        "include_archive": False,
+        "unscheduled": "hide",
+        "files_scanned": 2,
+        "summary": {
+            "total": 1,
+            "overdue": 0,
+            "due_today": 1,
+            "upcoming": 0,
+            "unscheduled": 0,
+        },
+    }
+    assert daily.read_text(encoding="utf-8") == "# 2026-09-07\n\n"
+
+
+def test_task_roundup_text_distinguishes_plan_apply_and_unchanged(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    vault = _seed_vault(tmp_path)
+    daily = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    daily.parent.mkdir(parents=True)
+    daily.write_text("# 2026-09-07\n\n", encoding="utf-8")
+    (vault / "projects/Project.md").write_text(
+        "# Project\n\n- [ ] Today 📅 2026-09-07\n",
+        encoding="utf-8",
+    )
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+    common = [
+        "--vault",
+        str(vault),
+        "--config",
+        str(cfg),
+        "--date",
+        "2026-09-07",
+        "--task-roundup",
+    ]
+
+    assert main(common) == 0
+    assert "task roundup: would insert 1 task" in capsys.readouterr().out
+    assert main([*common, "--apply"]) == 0
+    assert "task roundup: inserted 1 task" in capsys.readouterr().out
+    assert main([*common, "--apply"]) == 0
+    assert "task roundup: unchanged (1 task)" in capsys.readouterr().out
+
+
+def test_task_roundup_text_reports_replacement(tmp_path: Path, capsys, monkeypatch) -> None:
+    vault = _seed_vault(tmp_path)
+    daily = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    daily.parent.mkdir(parents=True)
+    daily.write_text(
+        "# 2026-09-07\n\n"
+        "<!-- pqn-daily:task-roundup:start -->\n"
+        "stale\n"
+        "<!-- pqn-daily:task-roundup:end -->\n",
+        encoding="utf-8",
+    )
+    (vault / "projects/Project.md").write_text(
+        "# Project\n\n- [ ] Today 📅 2026-09-07\n",
+        encoding="utf-8",
+    )
+    cfg = _config(tmp_path)
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--date",
+            "2026-09-07",
+            "--task-roundup",
+            "--apply",
+        ]
+    )
+
+    assert rc == 0
+    assert "task roundup: replaced 1 task" in capsys.readouterr().out
+
+
+def test_invalid_tasks_config_only_affects_requested_roundup(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    vault = _seed_vault(tmp_path)
+    daily = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    daily.parent.mkdir(parents=True)
+    daily.write_text("# 2026-09-07\n\n", encoding="utf-8")
+    cfg = _config(tmp_path, "workflows:\n  tasks:\n    date_fields: [deadline]\n")
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+    common = [
+        "--vault",
+        str(vault),
+        "--config",
+        str(cfg),
+        "--date",
+        "2026-09-07",
+    ]
+
+    assert main(common) == 0
+    capsys.readouterr()
+    assert main([*common, "--task-roundup"]) == 2
+    assert "workflows.tasks.date_fields" in capsys.readouterr().err
+
+
+def test_task_roundup_honors_tasks_date_fields_config(tmp_path: Path, capsys, monkeypatch) -> None:
+    vault = _seed_vault(tmp_path)
+    daily = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    daily.parent.mkdir(parents=True)
+    daily.write_text("# 2026-09-07\n\n", encoding="utf-8")
+    (vault / "projects/Project.md").write_text(
+        "# Project\n\n- [ ] Due only 📅 2026-09-07\n- [ ] Scheduled ⏳ 2026-09-07\n",
+        encoding="utf-8",
+    )
+    cfg = _config(tmp_path, "workflows:\n  tasks:\n    date_fields: [scheduled]\n")
+    monkeypatch.delenv("PARA_QUEST_VAULT", raising=False)
+
+    rc = main(
+        [
+            "--vault",
+            str(vault),
+            "--config",
+            str(cfg),
+            "--format",
+            "json",
+            "--date",
+            "2026-09-07",
+            "--task-roundup",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert rc == 0
+    assert payload["task_roundup"]["date_fields"] == ["scheduled"]
+    assert payload["task_roundup"]["summary"]["total"] == 1

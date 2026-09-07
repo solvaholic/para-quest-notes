@@ -12,7 +12,7 @@ pqn-quests     (read-only, no deps - generate the Quest index)
 pqn-tasks      (read-only, no deps - report dated/unscheduled tasks)
 pqn-search     (read-only, no deps - keyword search over the vault)
 pqn-create     (needs vault path; creates areas/, projects/, resources/)
-pqn-daily      (needs vault path; selects/files/creates/opens daily notes)
+pqn-daily      (needs vault path; selects/files/creates/opens daily notes; optionally embeds pqn-tasks)
 pqn-ingest     (needs Ollama + Quest notes in areas/ to classify against)
 pqn-archive    (needs a project note in projects/ to archive)
 ```
@@ -25,7 +25,7 @@ Key relationships:
   first.
 - **`pqn-create` enables `pqn-archive`** - you can only archive a
   project that exists under `projects/`.
-- **`pqn-daily` is independent** - it selects and files date-shaped notes into `resources/daily_notes/YYYY/MM/`. Missing-note creation and editor opening are opt-in, and writes still require `--apply`.
+- **`pqn-daily` usually stands alone** - it selects and files date-shaped notes into `resources/daily_notes/YYYY/MM/`. Explicit `--task-roundup` reuses the read-only `pqn-tasks` scanner and configured date-field precedence; missing-note creation, roundups, and editor opening are opt-in, and writes still require `--apply`.
 - **`pqn-validate` is a bookend** - run it before and after mutations
   to confirm vault health.
 - **`pqn-config` is read-only inspection** - reports the effective
@@ -82,7 +82,7 @@ encoded your Main Quests as Area notes yet.
 3. pqn-create Main Quest area notes       (establishes areas/)
 4. pqn-create Side Quest area notes       (optional, adds classification targets)
 5. pqn-ingest --file ... --apply          (iteratively ingest from inbox/)
-6. pqn-daily --apply                      (file any existing date-shaped notes)
+6. pqn-daily --task-roundup --apply       (file a daily note and refresh its task report)
 7. pqn-validate --vault PATH              (confirm health)
 ```
 
@@ -103,7 +103,7 @@ has `vault:` set so you can run commands from anywhere.
 ```
 pqn-create --type project --title "..." --supports "[[Quest]]" --apply
 pqn-create --type resource --title "..." --apply
-pqn-daily 2026-07-05.md --apply         (file today's daily note)
+pqn-daily 2026-07-05.md --task-roundup --apply  (file today's note and refresh tasks)
 pqn-ingest --apply                       (sweep inbox/)
 pqn-validate                             (periodic health check)
 pqn-archive "Done Project" --apply       (archive completed projects)
@@ -144,7 +144,7 @@ Ollama to verify CLI arg parsing and vault interactions:
 ```
 pqn-validate  (vault well-formed)
 pqn-create    (scaffold a note)
-pqn-daily     (file or create a daily note)
+pqn-daily     (file/create a daily note; optionally refresh tasks)
 pqn-archive   (archive a project)
 pqn-ingest    (expect escalation without Ollama)
 pqn-validate  (vault still well-formed after mutations)
@@ -164,8 +164,9 @@ done | jq -s '[.[] | select(.escalated)]' > escalations.json
 ### Scheduled daily filing
 
 ```bash
-# In crontab or launchd - file today's daily note if it exists
+# In crontab or launchd - file today's daily note and refresh its task roundup
 pqn-daily --vault ~/notes --apply "$(date +%Y-%m-%d).md" 2>/dev/null
+pqn-daily --vault ~/notes --task-roundup --apply "$(date +%Y-%m-%d).md" 2>/dev/null
 ```
 
 ### Validate as a CI gate
@@ -186,4 +187,4 @@ pqn-validate --vault ~/notes --format json --strict
   yet.
 - **Routine generation:** the notes-system spec describes recurring
   tasks generated into daily notes. This workflow doesn't exist yet.
-- **Daily-note templates and task roundup:** `pqn-daily` can create an exact H1-only note, but template content, routine-task prepopulation, and task-roundup integration remain out of scope.
+- **Daily-note templates and routine generation:** `pqn-daily` can create an exact H1-only note and refresh a managed `pqn-tasks` roundup, but template content and routine-task prepopulation remain out of scope.

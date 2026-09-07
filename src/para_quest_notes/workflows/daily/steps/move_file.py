@@ -17,11 +17,50 @@ Dry-run by default. With ``apply=True``:
 from __future__ import annotations
 
 import os
+import stat
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.step import StepContext, StepResult
+
+
+@dataclass(frozen=True)
+class SourceSnapshot:
+    """Source bytes and identity captured before composition begins."""
+
+    content: bytes
+    device: int
+    inode: int
+    mode: int
+
+    @classmethod
+    def capture(cls, path: Path) -> SourceSnapshot:
+        with path.open("rb") as handle:
+            content = handle.read()
+            source_stat = os.fstat(handle.fileno())
+        return cls(
+            content=content,
+            device=source_stat.st_dev,
+            inode=source_stat.st_ino,
+            mode=stat.S_IMODE(source_stat.st_mode),
+        )
+
+    def matches(self, path: Path) -> bool:
+        try:
+            current = self.capture(path)
+            path_stat = path.stat()
+        except FileNotFoundError:
+            return False
+        return (
+            current.device == path_stat.st_dev
+            and current.inode == path_stat.st_ino
+            and current.device == self.device
+            and current.inode == self.inode
+            and current.mode == self.mode
+            and current.content == self.content
+        )
 
 
 class MoveFile:
@@ -55,7 +94,7 @@ class MoveFile:
             if dest_abs.exists():
                 self._destination_exists(dest_rel)
             dest_abs.parent.mkdir(parents=True, exist_ok=True)
-            self._publish_without_replace(dest_abs, dest_rel, content)
+            self._publish_without_replace(dest_abs, dest_rel, content, mode=None)
             return StepResult(
                 name=self.name,
                 output={"moved": False, "created": True, "destination": dest_rel},
@@ -64,8 +103,12 @@ class MoveFile:
 
         if already:
             if content_changed:
+                if source is None:  # pragma: no cover - guarded by prior steps
+                    raise RuntimeError("daily filing source is missing")
+                snapshot = self._source_snapshot(ctx)
+                self._verify_source_unchanged(ctx, source, snapshot)
                 # Rewrite in place atomically; no source removal.
-                self._replace(dest_abs, content)
+                self._replace(dest_abs, content, mode=snapshot.mode)
             return StepResult(
                 name=self.name,
                 output={
@@ -80,10 +123,13 @@ class MoveFile:
         if dest_abs.exists():
             self._destination_exists(dest_rel)
 
-        dest_abs.parent.mkdir(parents=True, exist_ok=True)
-        self._publish_without_replace(dest_abs, dest_rel, content)
         if source is None:  # pragma: no cover - guarded by the creating branch
             raise RuntimeError("daily filing source is missing")
+        snapshot = self._source_snapshot(ctx)
+        self._verify_source_unchanged(ctx, source, snapshot)
+        dest_abs.parent.mkdir(parents=True, exist_ok=True)
+        self._publish_without_replace(dest_abs, dest_rel, content, mode=snapshot.mode)
+        self._verify_source_unchanged(ctx, source, snapshot, destination_written=True)
         source.unlink()
 
         return StepResult(
@@ -92,9 +138,16 @@ class MoveFile:
             meta={"applied": True},
         )
 
-    def _publish_without_replace(self, destination: Path, dest_rel: str, content: str) -> None:
+    def _publish_without_replace(
+        self,
+        destination: Path,
+        dest_rel: str,
+        content: str,
+        *,
+        mode: int | None,
+    ) -> None:
         """Publish complete content atomically, refusing a concurrent winner."""
-        temp = self._write_unique_temp(destination, content)
+        temp = self._write_unique_temp(destination, content, mode=mode)
         try:
             os.link(temp, destination)
         except FileExistsError:
@@ -102,15 +155,15 @@ class MoveFile:
         finally:
             temp.unlink(missing_ok=True)
 
-    def _replace(self, destination: Path, content: str) -> None:
-        temp = self._write_unique_temp(destination, content)
+    def _replace(self, destination: Path, content: str, *, mode: int) -> None:
+        temp = self._write_unique_temp(destination, content, mode=mode)
         try:
             os.replace(temp, destination)
         finally:
             temp.unlink(missing_ok=True)
 
     @staticmethod
-    def _write_unique_temp(destination: Path, content: str) -> Path:
+    def _write_unique_temp(destination: Path, content: str, *, mode: int | None) -> Path:
         while True:
             temp = destination.with_name(f".{destination.name}.{uuid.uuid4().hex}.tmp")
             try:
@@ -119,7 +172,9 @@ class MoveFile:
                 continue
             complete = False
             try:
-                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                if mode is not None:
+                    os.fchmod(descriptor, mode)
+                with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as handle:
                     handle.write(content)
                     handle.flush()
                     os.fsync(handle.fileno())
@@ -128,6 +183,39 @@ class MoveFile:
                 if not complete:
                     temp.unlink(missing_ok=True)
             return temp
+
+    @staticmethod
+    def _source_snapshot(ctx: StepContext) -> SourceSnapshot:
+        snapshot = ctx.scratchpad.get("source_snapshot")
+        if not isinstance(snapshot, SourceSnapshot):
+            raise RuntimeError("daily filing source snapshot is missing")
+        return snapshot
+
+    @staticmethod
+    def _verify_source_unchanged(
+        ctx: StepContext,
+        source: Path,
+        snapshot: SourceSnapshot,
+        *,
+        destination_written: bool = False,
+    ) -> None:
+        if snapshot.matches(source):
+            return
+        source_rel = ctx.scratchpad.get("source_rel") or str(source)
+        detail = (
+            "the planned destination was retained and the edited source was not removed"
+            if destination_written
+            else "no vault write was performed"
+        )
+        raise EscalateToUser(
+            step=MoveFile.name,
+            reason=f"source changed during daily composition; {detail}",
+            options=[],
+            context={
+                "source": source_rel,
+                "destination_written": destination_written,
+            },
+        )
 
     def _destination_exists(self, dest_rel: str) -> None:
         raise EscalateToUser(

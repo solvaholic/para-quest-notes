@@ -172,6 +172,12 @@ echo ""
 echo "=== pqn-daily: file a daily note ==="
 # Seed an unfiled daily note in inbox.
 printf '# 2026-07-05\n\nSmoke test daily.\n' > "$VAULT/inbox/2026-07-05.md"
+# Seed one dated task for the managed-roundup branch.
+cat > "$VAULT/areas/Smoke Roundup Source.md" << 'EOF'
+# Smoke Roundup Source
+
+- [ ] Refresh roundup smoke 📅 2026-09-03
+EOF
 
 check "daily dry-run (unfiled)" \
   uv run pqn-daily --vault "$VAULT" --format json "2026-07-05.md"
@@ -182,6 +188,15 @@ check "daily create-missing dry-run" \
     --date 2026-09-02 --create-missing
 check "daily create-missing dry-run does not write" \
   test ! -e "$VAULT/resources/daily_notes/2026/09/2026-09-02.md"
+
+daily_roundup_dry_run() {
+  uv run pqn-daily --vault "$VAULT" --format json \
+    --date 2026-09-03 --create-missing --task-roundup |
+    uv run python -c 'import json, sys; p=json.load(sys.stdin); r=p["task_roundup"]; assert r["action"] == "insert"; assert r["applied"] is False; assert r["reference_date"] == "2026-09-03"; assert r["summary"]["due_today"] == 1'
+}
+check "daily task-roundup dry-run" daily_roundup_dry_run
+check "daily task-roundup dry-run does not write" \
+  test ! -e "$VAULT/resources/daily_notes/2026/09/2026-09-03.md"
 
 if $APPLY; then
   check "daily --apply" \
@@ -196,6 +211,24 @@ if $APPLY; then
   check "daily created exact H1-only note" \
     cmp -s "$VAULT/resources/daily_notes/2026/09/2026-09-02.md" \
       <(printf '# 2026-09-02\n\n')
+
+  daily_roundup_apply() {
+    uv run pqn-daily --vault "$VAULT" --format json --apply \
+      --date 2026-09-03 --create-missing --task-roundup |
+      uv run python -c 'import json, sys; p=json.load(sys.stdin); r=p["task_roundup"]; assert p["created"] is True; assert r["action"] == "insert"; assert r["applied"] is True; assert r["summary"]["due_today"] == 1'
+  }
+  check "daily task-roundup --apply" daily_roundup_apply
+  ROUNDUP_NOTE="$VAULT/resources/daily_notes/2026/09/2026-09-03.md"
+  check "daily task-roundup markers written once" \
+    sh -c "test \"\$(grep -c '<!-- pqn-daily:task-roundup:start -->' '$ROUNDUP_NOTE')\" -eq 1 && test \"\$(grep -c '<!-- pqn-daily:task-roundup:end -->' '$ROUNDUP_NOTE')\" -eq 1"
+  check "daily task-roundup contains plain task bullet" \
+    grep -q -- '- \[\[Smoke Roundup Source\]\] Refresh roundup smoke (due 2026-09-03)' "$ROUNDUP_NOTE"
+  cp "$ROUNDUP_NOTE" "$WORK_DIR/roundup-first.md"
+  check "daily task-roundup idempotent rerun" \
+    uv run pqn-daily --vault "$VAULT" --format json --apply \
+      --date 2026-09-03 --task-roundup
+  check "daily task-roundup rerun is byte-identical" \
+    cmp -s "$ROUNDUP_NOTE" "$WORK_DIR/roundup-first.md"
 fi
 
 echo ""

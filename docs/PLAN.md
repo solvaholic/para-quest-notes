@@ -367,7 +367,8 @@ Shipped as a no-LLM workflow. Selects today or an explicit date, files one date-
   `check_basename_available` already
   existed (added during slice 1 for `pqn-ingest`'s self-rename case).
 - **Wave 5 delivered (#124):** optional positional target; bare/`--today`/`--date` selection; independently configurable and positively/negatively overridable missing-note creation and editor opening; additive JSON/text results; effective-config provenance. Missing-note authoring is exact H1-only content and remains `--apply` gated.
-- **Out of scope:** templates, frontmatter, routine tasks, task roundup sections, bulk migration, implicit apply, and OS editor discovery.
+- **Task-roundup follow-up delivered (#135):** explicit `--task-roundup` reuses the default `pqn-tasks` report with the selected note's date, inserts or idempotently replaces one marked region, and keeps all task/report failures before the existing `--apply`-gated write step.
+- **Out of scope:** templates, frontmatter, routine generation, task mutation and custom roundup filters, bulk migration, implicit apply, and OS editor discovery.
 
 #### Workflow conventions for all remaining slices
 
@@ -499,16 +500,7 @@ let them creep into the v1 release.
 
 - **Stdin placeholder rendering (#110) - delivered in Wave 6.** Non-empty `pqn-create --body-stdin` bodies pass through the same deterministic renderer and finalized variable mapping as template bodies. Stdin keeps priority over explicit and configured templates without loading their body or supplemental frontmatter; frontmatter-looking stdin remains body text. Empty stdin keeps its template-or-skeleton fallback, and no LLM or new flag is involved.
 
-- **Task roundup in daily note.** The *reporting* half shipped as
-  the standalone `pqn-tasks` reporter (#83, v0.5; see
-  [`docs/workflows/tasks.md`](workflows/tasks.md)) — read-only,
-  scans the whole vault except `archive/` for open tasks carrying
-  Obsidian Tasks due dates and buckets them overdue / due today /
-  upcoming. What remains deferred is the `pqn-daily` *integration*: a
-  step that writes (and idempotently replaces) a roundup section into
-  today's daily note. `pqn-tasks` emits plain `-` bullets (not
-  `- [ ]`) precisely so a pasted roundup never re-parses as live
-  tasks.
+- **Task roundup in daily note - delivered by #135.** The standalone `pqn-tasks` reporter (#83, v0.5; see [`docs/workflows/tasks.md`](workflows/tasks.md)) remains read-only and stdout-only. `pqn-daily --task-roundup` now reuses its default scanner and renderer in process, binds the report to the selected daily-note date, and writes or idempotently replaces one managed region only under `--apply`. Plain `-` bullets ensure generated output never re-parses as live tasks.
   - **Open design choice — resolved:** parse Obsidian Tasks emoji
     (`📅 2026-05-15`) as the canonical syntax in v1. Dataview inline
     fields (`[due:: 2026-05-15]`) and plain checkboxes are deferred to
