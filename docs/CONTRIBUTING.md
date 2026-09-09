@@ -57,8 +57,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
 
 ## Smoke testing
 
-`scripts/smoke.sh` runs all `pqn-*` commands in sequence against a
-disposable copy of `samples/vault/`. No Ollama required.
+`scripts/smoke.sh` runs all `pqn-*` commands in sequence against a disposable copy of `samples/vault/`. It isolates its config, vault environment, and trace output from your machine, disables its Ollama endpoint, and explicitly disables `pqn-daily` opening so `--apply` never launches your configured editor. No Ollama required.
 
 ```bash
 ./scripts/smoke.sh            # dry-run assertions only

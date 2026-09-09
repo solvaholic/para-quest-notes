@@ -11,7 +11,19 @@ saying where the hit landed (title vs body) with a short snippet.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Any
+from typing import Literal, TypeAlias
+
+MatchLocation: TypeAlias = Literal["title", "body"]
+ScopeValue: TypeAlias = bool | int | list[str] | str | None
+
+
+@dataclass(frozen=True)
+class MatchEvidence:
+    """The preferred evidence for one distinct query keyword."""
+
+    keyword: str
+    where: MatchLocation
+    snippet: str
 
 
 @dataclass(frozen=True)
@@ -24,7 +36,7 @@ class MatchContext:
     first body match for a body hit.
     """
 
-    where: str  # "title" | "body"
+    where: MatchLocation
     snippet: str
 
 
@@ -47,6 +59,9 @@ class SearchResult:
     # Internal ranking signal, surfaced for transparency. For non-Resources
     # this is 0 (backlink count only factors into Resource ranking).
     incoming_links: int = 0
+    # Ordered, one-item-per-distinct-keyword match evidence. Added after the
+    # existing fields to preserve positional construction compatibility.
+    matches: list[MatchEvidence] = field(default_factory=list)
 
 
 @dataclass
@@ -55,10 +70,10 @@ class SearchResults:
 
     vault: str
     query: list[str] = field(default_factory=list)
-    scope: dict[str, Any] = field(default_factory=dict)
+    scope: dict[str, ScopeValue] = field(default_factory=dict)
     results: list[SearchResult] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "vault": self.vault,
             "query": list(self.query),
@@ -71,6 +86,7 @@ class SearchResults:
                     "supports": list(r.supports),
                     "match_context": asdict(r.match_context),
                     "incoming_links": r.incoming_links,
+                    "matches": [asdict(match) for match in r.matches],
                 }
                 for r in self.results
             ],

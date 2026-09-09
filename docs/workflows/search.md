@@ -30,6 +30,7 @@ results.
 - Multiple keywords are combined with **AND**: a note is a result only
   when every keyword appears in the searched fields. (Use `| head` or
   `--limit` to cap; pipe to `rg` for regex.)
+- Each result reports one ordered evidence item for every distinct query keyword. Keyword identity is case-insensitive, so repeated spellings collapse to the first supplied spelling and query position. An item reports the keyword, whether its preferred match is in the title or body, and a snippet. When the keyword occurs in both enabled fields, title evidence wins.
 - Filters the matches by `--type` (repeatable, include-only) and
   `--quest` (notes whose `supports:` includes that Quest).
 - Ranks the survivors and prints a **flat list**, most-relevant first,
@@ -116,7 +117,7 @@ isn't an error), `2` for an invocation problem (vault not found).
 
 | Flag                | Meaning                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------- |
-| `query`             | One or more keywords (positional). AND across keywords, case-insensitive.                    |
+| `query`             | One or more keywords (positional). AND across keywords, case-insensitive. Repeated spellings collapse to the first spelling for per-keyword evidence. |
 | `--title`           | Match the note title (basename). Default: title and content.                                |
 | `--content`         | Match the note body, including code blocks. Default: title and content.                     |
 | `--type`            | Include only this PARA type (`project` \| `area` \| `resource`). Repeatable, include-only.  |
@@ -154,12 +155,18 @@ vault-relative path, the PARA type (with the inbound-link count for
 Resources, since that count drives their ranking), any declared
 `supports:`, and where the hit landed plus a snippet.
 
+Single-keyword output retains the original `title`/`body` tail. For multiple distinct keywords, the tail names each keyword and its preferred evidence location:
+
 ```text
 # Search results for "running" (3 matches)
 
 - resources/Running Shoes.md (resource, 2 links) - title: "Running Shoes"
 - projects/Run a 5K.md (project, supports: Health) - body: "...a running plan for..."
 - resources/daily_notes/2026/02/2026-02-05.md (resource) - body: "...went running today..."
+
+# Search results for "running plan" (1 match)
+
+- projects/Run a 5K.md (project, supports: Health) - matches: running (body): "...a running plan..."; plan (body): "...a running plan..."
 ```
 
 ## JSON contract
@@ -174,8 +181,18 @@ A **flat list** under `results`, most-relevant first. Each result:
   `supports:` is which Quest(s) the note serves.
 - `match_context` - `{where, snippet}`. `where` is `"title"` or
   `"body"`; `snippet` is the title (title hit) or a whitespace-collapsed
-  window around the first body match. The window width is set by
-  `--snippet-radius` (`0` yields an empty `snippet`).
+  window around the earliest body match. This compatibility field prefers
+  `"title"` when any keyword has title evidence, otherwise `"body"`. The
+  window width is set by `--snippet-radius` (`0` yields an empty
+  `snippet`).
+- `matches` - ordered per-keyword evidence items: `{keyword, where,
+  snippet}`. There is at most one item for each distinct case-insensitive
+  query keyword; repeated query spellings use the first supplied spelling
+  and position. `where` is `"title"` when that keyword matches both
+  enabled fields, otherwise `"body"`. Body snippets are separate
+  whitespace-collapsed windows around the keyword's first body occurrence;
+  snippets are empty, but locations and keywords remain present, when
+  `--snippet-radius 0` is used.
 - `incoming_links` - inbound-link count (the Resource ranking signal;
   `0` for non-Resources), surfaced for transparency.
 
@@ -199,6 +216,9 @@ A **flat list** under `results`, most-relevant first. Each result:
       "type": "resource",
       "supports": [],
       "match_context": {"where": "title", "snippet": "Running Shoes"},
+      "matches": [
+        {"keyword": "running", "where": "title", "snippet": "Running Shoes"}
+      ],
       "incoming_links": 2
     }
   ]

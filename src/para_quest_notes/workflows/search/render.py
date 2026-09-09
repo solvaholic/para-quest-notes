@@ -23,6 +23,13 @@ def _meta(result: SearchResult) -> str:
 
 
 def _bullet(result: SearchResult) -> str:
+    if len(result.matches) > 1:
+        evidence = "; ".join(
+            f"{match.keyword} ({match.where})" + (f': "{match.snippet}"' if match.snippet else "")
+            for match in result.matches
+        )
+        return f"- {result.path} ({_meta(result)}) - matches: {evidence}"
+
     where = result.match_context.where
     snippet = result.match_context.snippet
     tail = f' - {where}: "{snippet}"' if snippet else f" - {where}"

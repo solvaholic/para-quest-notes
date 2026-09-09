@@ -7,11 +7,12 @@ directly rather than shelling out to the CLI.
 from __future__ import annotations
 
 from .builder import search
-from .contract import MatchContext, SearchResult, SearchResults
+from .contract import MatchContext, MatchEvidence, SearchResult, SearchResults
 from .render import render_text
 
 __all__ = [
     "MatchContext",
+    "MatchEvidence",
     "SearchResult",
     "SearchResults",
     "render_text",

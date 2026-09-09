@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from para_quest_notes.workflows.search.contract import (
     MatchContext,
+    MatchEvidence,
     SearchResult,
     SearchResults,
 )
@@ -75,3 +76,53 @@ def test_empty_snippet_omits_quoted_tail():
     )
     assert "resources/Running Shoes.md (resource) - title" in out
     assert '"' not in out.split("\n", 2)[-1]
+
+
+def test_single_evidence_keeps_existing_text_shape():
+    out = render_text(
+        _results(
+            SearchResult(
+                path="resources/Running Shoes.md",
+                type="resource",
+                match_context=MatchContext(where="title", snippet="Running Shoes"),
+                matches=[MatchEvidence(keyword="running", where="title", snippet="Running Shoes")],
+            )
+        )
+    )
+    assert out == (
+        '# Search results for "running" (1 match)\n\n'
+        '- resources/Running Shoes.md (resource) - title: "Running Shoes"\n'
+    )
+
+
+def test_multiple_evidence_names_each_keyword_and_location():
+    out = render_text(
+        _results(
+            SearchResult(
+                path="projects/Run a 5K.md",
+                type="project",
+                match_context=MatchContext(where="title", snippet="Run a 5K"),
+                matches=[
+                    MatchEvidence(keyword="run", where="title", snippet="Run a 5K"),
+                    MatchEvidence(keyword="plan", where="body", snippet="...training plan..."),
+                ],
+            )
+        )
+    )
+    assert 'matches: run (title): "Run a 5K"; plan (body): "...training plan..."' in out
+
+
+def test_multiple_evidence_with_zero_radius_keeps_keywords_and_locations():
+    out = render_text(
+        _results(
+            SearchResult(
+                path="projects/Run a 5K.md",
+                type="project",
+                matches=[
+                    MatchEvidence(keyword="run", where="title", snippet=""),
+                    MatchEvidence(keyword="plan", where="body", snippet=""),
+                ],
+            )
+        )
+    )
+    assert "matches: run (title); plan (body)" in out

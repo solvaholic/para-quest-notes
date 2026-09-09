@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
 
+from para_quest_notes.workflows.search import MatchEvidence
 from para_quest_notes.workflows.search.builder import search
 
 
@@ -66,6 +68,75 @@ def test_and_semantics_across_keywords(vault: Path):
     # "running" appears in the daily note; "gear" only in Running Shoes body.
     both = search(vault, ["running", "gear"])
     assert [r.path for r in both.results] == ["resources/Running Shoes.md"]
+
+
+def test_match_evidence_uses_distinct_keywords_in_first_query_order(vault: Path):
+    result = search(vault, ["RUNNING", "gear", "running", "GEAR"]).results[0]
+
+    assert [(match.keyword, match.where) for match in result.matches] == [
+        ("RUNNING", "title"),
+        ("gear", "body"),
+    ]
+    assert result.matches[0].snippet == "Running Shoes"
+    assert "gear" in result.matches[1].snippet.lower()
+
+
+def test_match_evidence_has_one_item_for_a_repeated_body_keyword(vault: Path):
+    write(
+        vault / "projects" / "Repeated Occurrences.md",
+        "---\ntype: project\n---\nThe evidence keyword appears twice: evidence.\n",
+    )
+
+    hit = next(
+        result
+        for result in search(vault, ["evidence"]).results
+        if result.path == "projects/Repeated Occurrences.md"
+    )
+    assert len(hit.matches) == 1
+    assert hit.matches[0].keyword == "evidence"
+    assert hit.matches[0].where == "body"
+
+
+def test_match_evidence_records_title_body_and_mixed_hits(vault: Path):
+    write(
+        vault / "projects" / "Title Signal.md",
+        "---\ntype: project\n---\nThe body has no matching term.\n",
+    )
+    write(
+        vault / "projects" / "Body Only.md",
+        "---\ntype: project\n---\nA body signal appears here.\n",
+    )
+    write(
+        vault / "projects" / "Mixed Title Keyword.md",
+        "---\ntype: project\n---\nA body signal appears here too.\n",
+    )
+
+    title = search(vault, ["signal"], title=True).results
+    assert [result.matches[0].where for result in title] == ["title"]
+
+    body = search(vault, ["signal"], content=True).results
+    assert [result.matches[0].where for result in body] == ["body", "body"]
+
+    mixed = next(
+        result for result in search(vault, ["title", "signal"]).results if "Mixed" in result.path
+    )
+    assert [(match.keyword, match.where) for match in mixed.matches] == [
+        ("title", "title"),
+        ("signal", "body"),
+    ]
+
+
+def test_title_evidence_wins_when_a_keyword_appears_in_both_fields(vault: Path):
+    write(
+        vault / "projects" / "Both Signal.md",
+        "---\ntype: project\n---\nA signal also appears in the body.\n",
+    )
+
+    hit = next(
+        result for result in search(vault, ["signal"]).results if "Both Signal" in result.path
+    )
+    assert hit.matches == [MatchEvidence(keyword="signal", where="title", snippet="Both Signal")]
+    assert hit.match_context.where == "title"
 
 
 def test_title_hits_rank_before_body_hits(vault: Path):
@@ -154,6 +225,8 @@ def test_snippet_radius_controls_body_window(vault: Path):
     assert "training" in wide_snip.lower()
     assert "training" in narrow_snip.lower()
     assert len(narrow_snip) < len(wide_snip)
+    assert wide.results[0].matches[0].snippet == wide_snip
+    assert narrow.results[0].matches[0].snippet == narrow_snip
 
 
 def test_snippet_radius_zero_suppresses_body_snippet(vault: Path):
@@ -161,6 +234,7 @@ def test_snippet_radius_zero_suppresses_body_snippet(vault: Path):
     hit = results.results[0]
     assert hit.match_context.where == "body"
     assert hit.match_context.snippet == ""
+    assert hit.matches == [MatchEvidence(keyword="training", where="body", snippet="")]
 
 
 def test_snippet_radius_zero_suppresses_title_snippet(vault: Path):
@@ -168,6 +242,7 @@ def test_snippet_radius_zero_suppresses_title_snippet(vault: Path):
     shoes = next(r for r in results.results if r.path == "resources/Running Shoes.md")
     assert shoes.match_context.where == "title"
     assert shoes.match_context.snippet == ""
+    assert shoes.matches == [MatchEvidence(keyword="running", where="title", snippet="")]
 
 
 def test_snippet_radius_negative_clamps_to_zero(vault: Path):
@@ -179,3 +254,65 @@ def test_snippet_radius_negative_clamps_to_zero(vault: Path):
 def test_snippet_radius_echoed_in_scope(vault: Path):
     results = search(vault, ["running"], snippet_radius=25)
     assert results.scope["snippet_radius"] == 25
+
+
+def test_match_context_keeps_compatibility_selection_and_body_window(vault: Path):
+    write(
+        vault / "projects" / "Compatibility.md",
+        "---\ntype: project\n---\nBeta appears first, then much later alpha appears.\n",
+    )
+
+    hit = next(
+        result
+        for result in search(vault, ["alpha", "beta"], content=True, snippet_radius=8).results
+        if result.path == "projects/Compatibility.md"
+    )
+    assert [(match.keyword, match.where) for match in hit.matches] == [
+        ("alpha", "body"),
+        ("beta", "body"),
+    ]
+    assert hit.match_context.where == "body"
+    assert hit.match_context.snippet == hit.matches[1].snippet
+
+
+def test_content_search_includes_fenced_code_block_evidence(vault: Path):
+    write(
+        vault / "projects" / "Code Example.md",
+        "---\ntype: project\n---\n```sh\nfenced-token\n```\n",
+    )
+
+    hit = next(
+        result
+        for result in search(vault, ["fenced-token"], content=True).results
+        if "Code" in result.path
+    )
+    assert hit.matches[0].where == "body"
+    assert "fenced-token" in hit.matches[0].snippet
+
+
+def test_empty_results_and_output_are_deterministic(vault: Path):
+    assert search(vault, ["zzzznotfound"]).results == []
+    first = search(vault, ["running", "gear"]).to_dict()
+    second = search(vault, ["running", "gear"]).to_dict()
+    assert first == second
+
+
+def test_search_sample_vault_copy_exposes_multikeyword_evidence(tmp_path: Path):
+    sample = Path(__file__).resolve().parents[3] / "samples" / "vault"
+    copied_vault = tmp_path / "vault"
+    shutil.copytree(sample, copied_vault)
+    write(
+        copied_vault / "projects" / "Evidence Title Token.md",
+        "---\ntype: project\n---\nEvidence body token is deliberately unique.\n",
+    )
+
+    hit = next(
+        result
+        for result in search(copied_vault, ["title", "body"]).results
+        if result.path == "projects/Evidence Title Token.md"
+    )
+    assert [(match.keyword, match.where) for match in hit.matches] == [
+        ("title", "title"),
+        ("body", "body"),
+    ]
+    assert hit.match_context.where == "title"
