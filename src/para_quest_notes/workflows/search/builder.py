@@ -27,6 +27,7 @@ notes, so archived notes can appear as results but never confer link weight.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from para_quest_notes.vault.frontmatter import split_note
@@ -34,32 +35,115 @@ from para_quest_notes.vault.links import build_backlink_index
 from para_quest_notes.vault.scope import Scope, note_supports, para_type_of
 from para_quest_notes.workflows.validate.pipeline import list_markdown_files
 
-from .contract import MatchContext, SearchResult, SearchResults
+from .contract import MatchContext, MatchEvidence, MatchLocation, SearchResult, SearchResults
 
 DEFAULT_SNIPPET_RADIUS = 40
 
 
-def _snippet(body: str, keywords_lower: list[str], radius: int) -> str:
-    """A whitespace-collapsed window around the first body keyword match.
+@dataclass(frozen=True)
+class _Keyword:
+    """One distinct user-supplied keyword, retaining its first spelling."""
+
+    original: str
+    normalized: str
+
+
+@dataclass(frozen=True)
+class _KeywordHit:
+    """The preferred enabled-field hit for one keyword.
+
+    ``position`` stays internal. It lets the compatibility ``match_context``
+    retain its existing earliest-body-match snippet without exposing offsets
+    in the public JSON contract.
+    """
+
+    keyword: _Keyword
+    where: MatchLocation
+    position: int
+
+
+def _distinct_keywords(query: list[str]) -> list[_Keyword]:
+    """Return non-empty query keywords once, case-insensitively, in order."""
+    seen: set[str] = set()
+    keywords: list[_Keyword] = []
+    for original in query:
+        normalized = original.lower()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        keywords.append(_Keyword(original=original, normalized=normalized))
+    return keywords
+
+
+def _snippet_at(body: str, position: int, radius: int) -> str:
+    """A whitespace-collapsed window around a body match at ``position``.
 
     ``radius`` characters on each side of the match. A ``radius`` of 0 means
-    "no snippet" and returns the empty string. Falls back to the leading body
-    text if no keyword is found (shouldn't happen for a body hit, but keeps
-    the function total).
+    "no snippet" and returns the empty string.
     """
     if radius <= 0:
         return ""
-    low = body.lower()
-    positions = [low.find(k) for k in keywords_lower if k in low]
-    if not positions:
-        return " ".join(body.split())[: 2 * radius].strip()
-    pos = min(positions)
-    start = max(0, pos - radius)
-    end = min(len(body), pos + radius)
+    start = max(0, position - radius)
+    end = min(len(body), position + radius)
     fragment = " ".join(body[start:end].split())
     prefix = "..." if start > 0 else ""
     suffix = "..." if end < len(body) else ""
     return f"{prefix}{fragment}{suffix}"
+
+
+def _keyword_hits(
+    keywords: list[_Keyword],
+    *,
+    title: str,
+    body: str,
+    search_title: bool,
+    search_content: bool,
+) -> list[_KeywordHit]:
+    """Locate every keyword's title-preferred evidence in enabled fields."""
+    title_low = title.lower()
+    body_low = body.lower()
+    hits: list[_KeywordHit] = []
+    for keyword in keywords:
+        title_position = title_low.find(keyword.normalized) if search_title else -1
+        if title_position >= 0:
+            hits.append(_KeywordHit(keyword=keyword, where="title", position=title_position))
+            continue
+
+        body_position = body_low.find(keyword.normalized) if search_content else -1
+        if body_position >= 0:
+            hits.append(_KeywordHit(keyword=keyword, where="body", position=body_position))
+    return hits
+
+
+def _match_evidence(
+    hits: list[_KeywordHit], *, title: str, body: str, radius: int
+) -> list[MatchEvidence]:
+    """Build the ordered public evidence list from keyword hits."""
+    return [
+        MatchEvidence(
+            keyword=hit.keyword.original,
+            where=hit.where,
+            snippet=title
+            if hit.where == "title" and radius > 0
+            else (_snippet_at(body, hit.position, radius) if hit.where == "body" else ""),
+        )
+        for hit in hits
+    ]
+
+
+def _compatibility_context(
+    hits: list[_KeywordHit], *, title: str, body: str, radius: int
+) -> MatchContext:
+    """Derive the legacy context from the richer, title-preferred evidence."""
+    title_hit = next((hit for hit in hits if hit.where == "title"), None)
+    if title_hit is not None:
+        return MatchContext(where="title", snippet=title if radius > 0 else "")
+
+    first_body_hit = min(hits, key=lambda hit: hit.position)
+    return MatchContext(
+        where="body",
+        snippet=_snippet_at(body, first_body_hit.position, radius),
+    )
 
 
 def search(
@@ -93,7 +177,7 @@ def search(
     radius = max(0, snippet_radius)
     search_title = title or not (title or content)
     search_content = content or not (title or content)
-    keywords = [k.lower() for k in query if k]
+    keywords = _distinct_keywords(query)
 
     scope = Scope.from_args(types=types, quest=quest)
 
@@ -118,29 +202,22 @@ def search(
 
         title_text = md.stem
         body_text = split.body
-        title_low = title_text.lower()
-        body_low = body_text.lower()
-
         # A note is a result only when every keyword is satisfied by some
         # enabled field (AND across keywords, OR across fields).
-        matched = keywords and all(
-            (search_title and kw in title_low) or (search_content and kw in body_low)
-            for kw in keywords
+        hits = _keyword_hits(
+            keywords,
+            title=title_text,
+            body=body_text,
+            search_title=search_title,
+            search_content=search_content,
         )
-        if not matched:
+        if not keywords or len(hits) != len(keywords):
             continue
 
         para_type = para_type_of(vault, md, meta)
         supports = note_supports(meta)
         if not scope.matches(para_type=para_type, supports=supports):
             continue
-
-        title_has_any = search_title and any(kw in title_low for kw in keywords)
-        if title_has_any:
-            snippet = title_text if radius > 0 else ""
-            match = MatchContext(where="title", snippet=snippet)
-        else:
-            match = MatchContext(where="body", snippet=_snippet(body_text, keywords, radius))
 
         incoming = len(backlinks.sources_for(md.stem)) if para_type == "resource" else 0
 
@@ -149,8 +226,11 @@ def search(
                 path=md.relative_to(vault).as_posix(),
                 type=para_type,
                 supports=supports,
-                match_context=match,
+                match_context=_compatibility_context(
+                    hits, title=title_text, body=body_text, radius=radius
+                ),
                 incoming_links=incoming,
+                matches=_match_evidence(hits, title=title_text, body=body_text, radius=radius),
             )
         )
 

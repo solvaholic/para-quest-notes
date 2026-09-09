@@ -138,8 +138,7 @@ should:
 
 ### Pre-release / CI check
 
-The smoke script (`scripts/smoke.sh`) runs this sequence without
-Ollama to verify CLI arg parsing and vault interactions:
+The smoke script (`scripts/smoke.sh`) runs this sequence without Ollama to verify CLI arg parsing and vault interactions. It uses an isolated temporary config, disables its Ollama endpoint, and explicitly disables daily-note opening, so it never inherits a configured editor while exercising `--apply`:
 
 ```
 pqn-validate  (vault well-formed)

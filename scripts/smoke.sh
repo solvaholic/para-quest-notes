@@ -43,6 +43,23 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 VAULT="$WORK_DIR/vault"
 cp -r "$SAMPLE_VAULT" "$VAULT"
 
+# The smoke run must not inherit a user's vault, traces, or editor behavior.
+# In particular, an ambient workflows.daily.open_existing setting must never
+# open a real note while this script exercises --apply.
+TEST_CONFIG_HOME="$WORK_DIR/config"
+mkdir -p "$TEST_CONFIG_HOME/para-quest-notes"
+cat > "$TEST_CONFIG_HOME/para-quest-notes/config.yaml" << EOF
+run_log_dir: $WORK_DIR/runs
+ollama:
+  base_url: http://127.0.0.1:9
+  request_timeout_seconds: 1
+workflows:
+  daily:
+    open_existing: false
+EOF
+export XDG_CONFIG_HOME="$TEST_CONFIG_HOME"
+unset PARA_QUEST_VAULT
+
 # Create resources/templates and a custom smoke test template
 mkdir -p "$VAULT/resources/templates"
 cat > "$VAULT/resources/templates/smoke-template.md" << 'EOF'
@@ -174,25 +191,25 @@ echo "=== pqn-daily: file a daily note ==="
 printf '# 2026-07-05\n\nSmoke test daily.\n' > "$VAULT/inbox/2026-07-05.md"
 
 check "daily dry-run (unfiled)" \
-  uv run pqn-daily --vault "$VAULT" --format json "2026-07-05.md"
+  uv run pqn-daily --vault "$VAULT" --format json --no-open "2026-07-05.md"
 check "daily dry-run (already filed)" \
-  uv run pqn-daily --vault "$VAULT" --format json "2026-02-04.md"
+  uv run pqn-daily --vault "$VAULT" --format json --no-open "2026-02-04.md"
 check "daily create-missing dry-run" \
   uv run pqn-daily --vault "$VAULT" --format json \
-    --date 2026-09-02 --create-missing
+    --date 2026-09-02 --create-missing --no-open
 check "daily create-missing dry-run does not write" \
   test ! -e "$VAULT/resources/daily_notes/2026/09/2026-09-02.md"
 
 if $APPLY; then
   check "daily --apply" \
-    uv run pqn-daily --vault "$VAULT" --format json --apply "2026-07-05.md"
+    uv run pqn-daily --vault "$VAULT" --format json --apply --no-open "2026-07-05.md"
   check "daily note moved to destination" \
     test -f "$VAULT/resources/daily_notes/2026/07/2026-07-05.md"
   check "daily note removed from inbox" \
     test ! -f "$VAULT/inbox/2026-07-05.md"
   check "daily create-missing --apply" \
     uv run pqn-daily --vault "$VAULT" --format json --apply \
-      --date 2026-09-02 --create-missing
+      --date 2026-09-02 --create-missing --no-open
   check "daily created exact H1-only note" \
     cmp -s "$VAULT/resources/daily_notes/2026/09/2026-09-02.md" \
       <(printf '# 2026-09-02\n\n')

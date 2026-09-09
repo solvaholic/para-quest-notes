@@ -8,6 +8,7 @@ JSON. See ``docs/workflows/search.md``.
 
 from para_quest_notes.workflows.search.api import (
     MatchContext,
+    MatchEvidence,
     SearchResult,
     SearchResults,
     render_text,
@@ -16,6 +17,7 @@ from para_quest_notes.workflows.search.api import (
 
 __all__ = [
     "MatchContext",
+    "MatchEvidence",
     "SearchResult",
     "SearchResults",
     "render_text",

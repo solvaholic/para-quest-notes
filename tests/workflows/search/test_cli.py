@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -49,8 +50,9 @@ def test_json_output_is_parseable(vault: Path, capsys):
     assert data["query"] == ["running"]
     assert data["summary"]["results"] >= 1
     top = data["results"][0]
-    assert set(top) >= {"path", "type", "supports", "match_context", "incoming_links"}
+    assert set(top) >= {"path", "type", "supports", "match_context", "matches", "incoming_links"}
     assert set(top["match_context"]) == {"where", "snippet"}
+    assert top["matches"] == [{"keyword": "running", "where": "title", "snippet": "Running Shoes"}]
 
 
 def test_type_filter_flag(vault: Path, capsys):
@@ -159,6 +161,31 @@ def test_no_matches_exits_zero(vault: Path, capsys):
     out = capsys.readouterr().out
     assert code == 0
     assert "No matches." in out
+
+
+def test_json_sample_vault_copy_keeps_match_context_and_matches_in_sync(tmp_path: Path, capsys):
+    sample = Path(__file__).resolve().parents[3] / "samples" / "vault"
+    copied_vault = tmp_path / "vault"
+    shutil.copytree(sample, copied_vault)
+    write(
+        copied_vault / "projects" / "Sample Evidence Title.md",
+        "---\ntype: project\n---\nSample evidence body appears here.\n",
+    )
+
+    code = main(["--vault", str(copied_vault), "--format", "json", "title", "body"])
+    data = json.loads(capsys.readouterr().out)
+
+    assert code == 0
+    hit = next(
+        result
+        for result in data["results"]
+        if result["path"] == "projects/Sample Evidence Title.md"
+    )
+    assert hit["match_context"] == {"where": "title", "snippet": "Sample Evidence Title"}
+    assert hit["matches"] == [
+        {"keyword": "title", "where": "title", "snippet": "Sample Evidence Title"},
+        {"keyword": "body", "where": "body", "snippet": "Sample evidence body appears here."},
+    ]
 
 
 def test_missing_vault_exits_two(tmp_path: Path, capsys, monkeypatch):
