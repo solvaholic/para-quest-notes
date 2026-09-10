@@ -179,20 +179,8 @@ A **flat list** under `results`, most-relevant first. Each result:
   serves). A **list**, and deliberately not the same axis as
   `quest-kind`: `quest-kind:` is the main/side/none classifier,
   `supports:` is which Quest(s) the note serves.
-- `match_context` - `{where, snippet}`. `where` is `"title"` or
-  `"body"`; `snippet` is the title (title hit) or a whitespace-collapsed
-  window around the earliest body match. This compatibility field prefers
-  `"title"` when any keyword has title evidence, otherwise `"body"`. The
-  window width is set by `--snippet-radius` (`0` yields an empty
-  `snippet`).
-- `matches` - ordered per-keyword evidence items: `{keyword, where,
-  snippet}`. There is at most one item for each distinct case-insensitive
-  query keyword; repeated query spellings use the first supplied spelling
-  and position. `where` is `"title"` when that keyword matches both
-  enabled fields, otherwise `"body"`. Body snippets are separate
-  whitespace-collapsed windows around the keyword's first body occurrence;
-  snippets are empty, but locations and keywords remain present, when
-  `--snippet-radius 0` is used.
+- `match_context` - `{where, snippet}`. `where` is `"title"` or `"body"`; `snippet` is the title (title hit) or a whitespace-collapsed window around the earliest body match. This compatibility field prefers `"title"` when any keyword has title evidence, otherwise `"body"`. The window width is set by `--snippet-radius` (`0` yields an empty `snippet`).
+- `matches` - ordered per-keyword evidence items: `{keyword, where, snippet}`. There is at most one item for each distinct case-insensitive query keyword; repeated query spellings use the first supplied spelling and position. `where` is `"title"` when that keyword matches both enabled fields, otherwise `"body"`. Body snippets are separate whitespace-collapsed windows around the keyword's first body occurrence; snippets are empty, but locations and keywords remain present, when `--snippet-radius 0` is used.
 - `incoming_links` - inbound-link count (the Resource ranking signal;
   `0` for non-Resources), surfaced for transparency.
 
