@@ -38,7 +38,7 @@ from para_quest_notes.adapter.config import Config, load_config
 from para_quest_notes.adapter.errors import ConfigError, VaultError
 from para_quest_notes.adapter.vault import find_vault
 from para_quest_notes.vault.quests import discover_quests
-from para_quest_notes.workflows.create.templates import (
+from para_quest_notes.workflows.creation import (
     get_template_config,
     resolve_template_path,
 )

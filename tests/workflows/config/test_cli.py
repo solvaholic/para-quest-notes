@@ -139,7 +139,11 @@ def test_tasks_section_reports_honored_date_fields(vault: Path, tmp_path: Path, 
 def test_daily_section_reports_settings_and_provenance(vault: Path, tmp_path: Path, capsys) -> None:
     cfg = tmp_path / "config.yaml"
     cfg.write_text(
-        "workflows:\n  daily:\n    create_missing: true\n    editor: [code, --reuse-window]\n",
+        "workflows:\n"
+        "  daily:\n"
+        "    create_missing: true\n"
+        "    editor: [code, --reuse-window]\n"
+        "    template: daily\n",
         encoding="utf-8",
     )
 
@@ -154,5 +158,21 @@ def test_daily_section_reports_settings_and_provenance(vault: Path, tmp_path: Pa
             "create_missing": {"value": True, "source": "config"},
             "open_existing": {"value": False, "source": "default"},
             "editor": {"value": ["code", "--reuse-window"], "source": "config"},
+            "template": {"value": "daily", "source": "config"},
         }
     }
+
+
+def test_daily_section_reports_explicit_null_template_provenance(
+    vault: Path, tmp_path: Path, capsys
+) -> None:
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text("workflows:\n  daily:\n    template: null\n", encoding="utf-8")
+
+    code = main(
+        ["--vault", str(vault), "--config", str(cfg), "--section", "daily", "--format", "json"]
+    )
+
+    assert code == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["daily"]["template"] == {"value": None, "source": "config"}

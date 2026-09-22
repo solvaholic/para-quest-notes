@@ -31,7 +31,7 @@ def build_workflow(inputs: DailyInputs, *, apply: bool) -> Workflow:
             InspectParent(),
             ComputeDestination(),
             CheckCollision(),
-            ComposeNote(),
+            ComposeNote(template=inputs.template),
             MoveFile(apply=apply),
             ValidateAfter(apply=apply),
         ],
@@ -69,6 +69,8 @@ def _to_daily_result(wf: WorkflowResult, *, vault: Path, apply: bool) -> DailyRe
         elif step.name == "compose_note" and isinstance(step.output, dict):
             plan.h1_inserted = bool(step.output.get("h1_inserted"))
             plan.frontmatter_migrated = bool(step.output.get("frontmatter_migrated"))
+            body_source = step.output.get("body_source")
+            plan.body_source = str(body_source) if body_source is not None else None
         elif step.name == "move_file" and isinstance(step.output, dict):
             moved = bool(step.output.get("moved"))
             created = bool(step.output.get("created"))

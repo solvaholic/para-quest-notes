@@ -137,6 +137,7 @@ def test_missing_date_plans_creation_without_mutating_vault(tmp_path: Path) -> N
     assert res.plan.source is None
     assert res.plan.destination == "resources/daily_notes/2026/09/2026-09-02.md"
     assert res.plan.would_create is True
+    assert res.plan.body_source == "skeleton"
     assert res.created is False
     assert sorted(path.relative_to(vault) for path in vault.rglob("*")) == before
 
@@ -155,6 +156,7 @@ def test_missing_date_apply_creates_exact_h1_only_note(tmp_path: Path) -> None:
     assert res.moved is False
     assert res.created is True
     assert res.plan.would_create is True
+    assert res.plan.body_source == "skeleton"
     assert destination.read_text(encoding="utf-8") == "# 2026-09-02\n\n"
 
 
