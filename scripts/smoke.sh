@@ -315,6 +315,10 @@ echo ""
 echo "=== pqn-search: keyword search over the vault (read-only, no LLM) ==="
 check "search title+body" \
   uv run pqn-search --vault "$VAULT" --format json sourdough
+check "search direct links (text)" \
+  uv run pqn-search --vault "$VAULT" --links "Workshop"
+check "search direct links (json)" \
+  uv run pqn-search --vault "$VAULT" --links "areas/Workshop.md" --format json
 
 echo ""
 echo "=== pqn-validate: vault still well-formed after mutations ==="

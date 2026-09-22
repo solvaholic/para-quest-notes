@@ -8,7 +8,7 @@ count for Resources, since that count drives their ranking), any declared
 
 from __future__ import annotations
 
-from .contract import SearchResult, SearchResults
+from .contract import LinkSearchResult, LinkSearchResults, SearchResult, SearchResults
 
 
 def _meta(result: SearchResult) -> str:
@@ -47,4 +47,49 @@ def render_text(results: SearchResults) -> str:
 
     lines = [header, ""]
     lines.extend(_bullet(r) for r in results.results)
+    return "\n".join(lines) + "\n"
+
+
+def _link_meta(result: LinkSearchResult) -> str:
+    parts = [result.type or "untyped"]
+    if result.supports:
+        parts.append(f"supports: {', '.join(result.supports)}")
+    return ", ".join(parts)
+
+
+def _link_bullet(result: LinkSearchResult) -> str:
+    context = result.link_context
+    return (
+        f"- {result.path} ({_link_meta(result)}) - {context.relation}: "
+        f"outgoing {context.outgoing_occurrences}, "
+        f"incoming {context.incoming_occurrences}"
+    )
+
+
+def render_link_text(results: LinkSearchResults) -> str:
+    """Render direct link neighbors and unresolved outgoing targets."""
+    count = len(results.results)
+    lines = [
+        f'# Link neighbors for "{results.target.path}" ({count} match{"" if count == 1 else "es"})',
+        "",
+    ]
+    if results.results:
+        lines.extend(_link_bullet(result) for result in results.results)
+    else:
+        lines.append("No linked notes.")
+
+    if results.unresolved_links:
+        lines.extend(["", "## Unresolved outgoing links", ""])
+        for unresolved in results.unresolved_links:
+            occurrence_label = "occurrence" if unresolved.occurrences == 1 else "occurrences"
+            candidate_text = (
+                f" - candidates: {', '.join(unresolved.candidates)}"
+                if unresolved.candidates
+                else ""
+            )
+            lines.append(
+                f"- {unresolved.target} ({unresolved.reason}, "
+                f"{unresolved.occurrences} {occurrence_label}){candidate_text}"
+            )
+
     return "\n".join(lines) + "\n"

@@ -96,7 +96,8 @@ See `docs/PLAN.md` for the full breakdown.
 - [x] **Post-v0.1 workflows** (shipped, targeting v0.5)
   - [x] `pqn-quests` - generated Quest index (read-only, no LLM)
   - [x] `pqn-tasks` - read-only reporter for dated and unscheduled tasks
-  - [x] `pqn-search` - PARA + Quest-aware keyword search (read-only)
+  - [x] `pqn-search` - PARA + Quest-aware keyword search plus direct
+    outgoing-link/backlink traversal (read-only)
   - [x] `pqn-config` - effective-config inspector with provenance
     (read-only)
 - [ ] **Phase 7** - grow eval fixtures toward ~30; revisit

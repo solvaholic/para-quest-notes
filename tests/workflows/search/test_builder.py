@@ -209,6 +209,19 @@ def test_archive_links_do_not_count(vault: Path):
     assert shoes.incoming_links == 2
 
 
+def test_archive_links_do_not_count_when_archive_results_are_included(vault: Path):
+    write(
+        vault / "archive" / "resources" / "Old Gear.md",
+        "---\ntype: resource\n---\nUsed [[Running Shoes]] back then.\n",
+    )
+    shoes = next(
+        r
+        for r in search(vault, ["running"], include_archive=True).results
+        if r.path == "resources/Running Shoes.md"
+    )
+    assert shoes.incoming_links == 2
+
+
 def test_scope_echoed_in_results(vault: Path):
     results = search(vault, ["running"], types=["resource"], limit=5)
     assert results.scope["types"] == ["resource"]

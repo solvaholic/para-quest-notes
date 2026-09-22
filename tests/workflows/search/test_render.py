@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 from para_quest_notes.workflows.search.contract import (
+    LinkContext,
+    LinkSearchResult,
+    LinkSearchResults,
     MatchContext,
     MatchEvidence,
+    ResolvedLinkTarget,
     SearchResult,
     SearchResults,
+    UnresolvedLink,
 )
-from para_quest_notes.workflows.search.render import render_text
+from para_quest_notes.workflows.search.render import render_link_text, render_text
 
 
 def _results(*results: SearchResult) -> SearchResults:
@@ -126,3 +131,59 @@ def test_multiple_evidence_with_zero_radius_keeps_keywords_and_locations():
         )
     )
     assert "matches: run (title); plan (body)" in out
+
+
+def test_link_text_renders_target_neighbors_and_unresolved_links():
+    results = LinkSearchResults(
+        vault="/v",
+        target=ResolvedLinkTarget(
+            path="resources/Running Shoes.md",
+            type="resource",
+            supports=[],
+        ),
+        results=[
+            LinkSearchResult(
+                path="projects/Run a 5K.md",
+                type="project",
+                supports=["Health"],
+                link_context=LinkContext(
+                    relation="mutual",
+                    outgoing_occurrences=1,
+                    incoming_occurrences=2,
+                ),
+            )
+        ],
+        unresolved_links=[
+            UnresolvedLink(
+                target="Missing Note",
+                occurrences=1,
+                reason="missing",
+            )
+        ],
+    )
+
+    out = render_link_text(results)
+
+    assert out.startswith('# Link neighbors for "resources/Running Shoes.md" (1 match)')
+    assert (
+        "- projects/Run a 5K.md (project, supports: Health) - mutual: outgoing 1, incoming 2"
+    ) in out
+    assert "## Unresolved outgoing links" in out
+    assert "- Missing Note (missing, 1 occurrence)" in out
+    assert out.endswith("\n")
+
+
+def test_link_text_empty_neighborhood_is_successful():
+    results = LinkSearchResults(
+        vault="/v",
+        target=ResolvedLinkTarget(
+            path="areas/Alone.md",
+            type="area",
+            supports=[],
+        ),
+    )
+
+    out = render_link_text(results)
+
+    assert "(0 matches)" in out
+    assert "No linked notes." in out

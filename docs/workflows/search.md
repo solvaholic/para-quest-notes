@@ -1,8 +1,6 @@
 # pqn-search
 
-Keyword search over the vault, **PARA + Quest-aware**. Match notes by
-title and/or body, scope by note type and Quest, and rank hits by the
-model. Read-only, stateless, no LLM.
+Keyword search and direct one-hop link traversal over the vault, **PARA + Quest-aware**. Match notes by title and/or body, or resolve one target and inspect its outgoing links and incoming backlinks. Scope results by note type and Quest. Read-only, stateless, no LLM.
 
 ## Why not just `rg`?
 
@@ -18,12 +16,22 @@ you work:
 - It **finds your notes without making you think about where the vault
   is or how it's organized** - vault discovery is built in, and it runs
   the same way in every shell.
+- It answers the direct graph question **"what does this note link to, and what links back to it?"** without requiring likely keywords first.
 
 If you want raw substring matching with no ranking or scope, `rg` wins.
 Reach for `pqn-search` when the PARA + Quest structure should shape the
 results.
 
-## What it does
+## Modes
+
+Exactly one mode is required:
+
+- **Keyword mode:** pass one or more positional keywords.
+- **Link mode:** pass `--links TARGET`.
+
+The modes are mutually exclusive. `--title`, `--content`, and `--snippet-radius` belong only to keyword mode and fail clearly with `--links`. Shared filters (`--type`, `--quest`, `--limit`, `--include-archive`) apply to both modes.
+
+## Keyword mode
 
 - Matches on **title** (the note basename) and/or **body content**,
   case-insensitively.
@@ -39,6 +47,56 @@ results.
 ```bash
 pqn-search --vault ~/notes sourdough
 ```
+
+## Link mode
+
+`--links TARGET` resolves one note and returns its direct, one-hop neighbors:
+
+- **outgoing** - the target links to the neighbor;
+- **incoming** - the neighbor links to the target;
+- **mutual** - both directions exist.
+
+Each neighbor appears once. Directional occurrence counts include repeated links, while self-links are excluded from results. Anchors and aliases do not change identity, so `[[Foo]]`, `[[Foo#Heading]]`, and `[[Foo|Alias]]` resolve alike. A path-qualified wikilink such as `[[folder/Foo]]` resolves that exact note and can disambiguate duplicate basenames. Embedded wikilinks such as `![[Foo]]` count because they use the same canonical parser.
+
+```bash
+# Resolve a unique basename, with or without .md.
+pqn-search --vault ~/notes --links "Running Shoes"
+
+# Use a vault-relative path to disambiguate duplicate basenames.
+pqn-search --vault ~/notes --links "resources/Running Shoes.md"
+
+# Filters apply to neighboring notes, not to the target.
+pqn-search --vault ~/notes --links "Running Shoes" \
+    --type project --quest '[[Health]]' --limit 10
+```
+
+### Target resolution
+
+The target is resolved against the same Markdown-file universe searched by the mode:
+
+1. A vault-relative path selects that exact `.md` file.
+2. Otherwise the target matches a note basename case-insensitively, with or without `.md`.
+3. A missing target is an actionable error.
+4. An ambiguous basename is an actionable error listing candidate paths; pass one of those paths.
+5. Absolute paths, vault escapes, excluded directories, and archived notes without `--include-archive` do not resolve.
+
+Shell completion follows the same contract: unique names complete as bare stems, while duplicate names complete as vault-relative paths.
+
+### Unresolved outgoing links
+
+The requested target must resolve uniquely, but links inside it may be broken or ambiguous. Link mode reports those separately without failing the lookup. Each unresolved item includes the normalized target, occurrence count, `missing` or `ambiguous` reason, and candidate paths for ambiguity. A link to an archived note is unresolved unless `--include-archive` places that note in the selected file universe.
+
+### Link ranking
+
+Link neighbors are sorted by:
+
+1. mutual relation;
+2. outgoing relation;
+3. incoming relation;
+4. total outgoing plus incoming occurrences, descending;
+5. vault-relative path.
+
+Resource backlink popularity does not affect link-mode ranking. The requested note's direct relationship is the signal.
 
 ## Ranking (v1)
 
@@ -61,10 +119,7 @@ substring matching.
 
 - **`inbox/` and daily notes are searched by default** - that's where
   recent, findable notes live, so they need no include flag.
-- **`archive/` is excluded by default**; pass `--include-archive` to
-  search it too. Even then, archived notes never confer inbound-link
-  weight on a Resource (the ranking index is always built from the
-  active set).
+- **`archive/` is excluded by default**; pass `--include-archive` to search it too. In link mode this applies to both target resolution and neighboring notes. In keyword mode archived notes never confer inbound-link weight on a Resource because the ranking index is always built from the active set.
 - Standard exclusions (`.git/`, `.obsidian/`, `.trash/`,
   `node_modules/`) are always skipped.
 
@@ -104,6 +159,10 @@ pqn-search --vault ~/notes --snippet-radius 0 docker
 
 # Flat JSON for agents/tools.
 pqn-search --vault ~/notes --format json sourdough | jq
+
+# Direct outgoing links and backlinks.
+pqn-search --vault ~/notes --links "Running Shoes"
+pqn-search --vault ~/notes --links "resources/Running Shoes.md" --format json | jq
 ```
 
 Vault discovery follows the standard order
@@ -117,7 +176,8 @@ isn't an error), `2` for an invocation problem (vault not found).
 
 | Flag                | Meaning                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------- |
-| `query`             | One or more keywords (positional). AND across keywords, case-insensitive. Repeated spellings collapse to the first spelling for per-keyword evidence. |
+| `query`             | One or more keywords (positional). AND across keywords, case-insensitive. Mutually exclusive with `--links`. |
+| `--links`           | Resolve one target and report direct outgoing links and incoming backlinks. Mutually exclusive with positional keywords. |
 | `--title`           | Match the note title (basename). Default: title and content.                                |
 | `--content`         | Match the note body, including code blocks. Default: title and content.                     |
 | `--type`            | Include only this PARA type (`project` \| `area` \| `resource`). Repeatable, include-only.  |
@@ -131,6 +191,8 @@ isn't an error), `2` for an invocation problem (vault not found).
 
 Passing both `--title` and `--content` is the same as passing neither:
 both fields are searched.
+
+Passing `--title`, `--content`, or `--snippet-radius` with `--links` is an invocation error rather than a silently ignored option.
 
 ## Configuration
 
@@ -148,7 +210,7 @@ A negative or non-integer value is a loud error (exit 2). Everything
 else about a run - which vault, which config - is reported by
 `pqn-config`.
 
-## Text output
+## Keyword text output
 
 A flat list, most-relevant first. One bullet per result: the
 vault-relative path, the PARA type (with the inbound-link count for
@@ -169,7 +231,7 @@ Single-keyword output retains the original `title`/`body` tail. For multiple dis
 - projects/Run a 5K.md (project, supports: Health) - matches: running (body): "...a running plan..."; plan (body): "...a running plan..."
 ```
 
-## JSON contract
+## Keyword JSON contract
 
 A **flat list** under `results`, most-relevant first. Each result:
 
@@ -216,13 +278,94 @@ A **flat list** under `results`, most-relevant first. Each result:
 Field names are stable across releases - agents and humans both consume
 this. New fields may be added; existing fields will not be renamed.
 
+## Link text output
+
+Link output names the resolved target, emits one bullet per neighbor with its relation and directional counts, and adds an unresolved-outgoing-links section only when needed:
+
+```text
+# Link neighbors for "resources/Running Shoes.md" (2 matches)
+
+- projects/Run a 5K.md (project, supports: Health) - mutual: outgoing 1, incoming 2
+- resources/Race Day.md (resource) - outgoing: outgoing 1, incoming 0
+
+## Unresolved outgoing links
+
+- Missing Note (missing, 1 occurrence)
+```
+
+Zero neighboring notes is successful and renders `No linked notes.` Unresolved outgoing links can still appear below that message.
+
+## Link JSON contract
+
+Link mode uses a distinct result contract and an explicit top-level `"mode": "links"`. Existing keyword JSON is unchanged.
+
+The relation counts in `summary` describe returned results after filters and `--limit`. `unresolved_outgoing` and `unresolved_links` remain complete because filtering neighbors does not repair or hide links written in the target note.
+
+```json
+{
+  "vault": "/path/to/vault",
+  "mode": "links",
+  "target": {
+    "path": "resources/Running Shoes.md",
+    "type": "resource",
+    "supports": []
+  },
+  "scope": {
+    "types": null,
+    "quest": null,
+    "include_archive": false,
+    "limit": null
+  },
+  "summary": {
+    "results": 2,
+    "outgoing": 1,
+    "incoming": 0,
+    "mutual": 1,
+    "unresolved_outgoing": 1
+  },
+  "results": [
+    {
+      "path": "projects/Run a 5K.md",
+      "type": "project",
+      "supports": ["Health"],
+      "link_context": {
+        "relation": "mutual",
+        "outgoing_occurrences": 1,
+        "incoming_occurrences": 2
+      }
+    }
+  ],
+  "unresolved_links": [
+    {
+      "target": "Missing Note",
+      "occurrences": 1,
+      "reason": "missing",
+      "candidates": []
+    }
+  ]
+}
+```
+
 ## Use as a library
 
 ```python
-from para_quest_notes.workflows.search.api import render_text, search
+from para_quest_notes.workflows.search.api import (
+    LinkTargetError,
+    render_link_text,
+    render_text,
+    search,
+    search_links,
+)
 
 results = search(vault, ["running"], types=["resource"])
 print(render_text(results))
+
+try:
+    neighbors = search_links(vault, "Running Shoes", types=["project"])
+except LinkTargetError as exc:
+    print(exc)
+else:
+    print(render_link_text(neighbors))
 ```
 
 ## Shared infrastructure
@@ -230,19 +373,14 @@ print(render_text(results))
 `pqn-search` is the sibling of `pqn-quests`; both consume the two
 link-aware building blocks in the `vault/` package:
 
-- **`vault/links.py`** - wikilink parser + backlink index (used for the
-  Resource ranking).
+- **`vault/links.py`** - canonical wikilink parser, compatibility backlink index, and reusable one-pass in-memory note graph. The graph keys notes by vault-relative path, resolves basenames case-insensitively, stores directional occurrence counts, and preserves missing or ambiguous outgoing targets without a persistent index.
 - **`vault/scope.py`** - PARA-type detection and the `--type` / `--quest`
   filter.
 
 ## Scope / non-goals
 
-- **Keyword/lexical only.** "Find similar notes" (semantic similarity)
-  is out of scope - it needs either a cloud LLM (violates local-first)
-  or a local vector index, and "Vector indexing of the vault" is listed
-  under Out of scope in [`docs/PLAN.md`](../PLAN.md). A lexical
-  similarity proxy (shared wikilinks + shared salient terms) would be a
-  separate, later issue.
+- **One hop only.** Link mode does not transitively traverse the graph and has no `--depth`; `pqn-quests --depth` is a separate `supports:` rollup concern.
+- **No similarity search.** "Find related notes without a direct link" remains separate follow-up work. No embeddings, vectors, LLM, network, or opaque relevance score is introduced here.
 - **No graph rendering / pattern analysis.** Visualizing the wikilink
   graph or surfacing "surprising" relationships is a different concern
   (and overlaps

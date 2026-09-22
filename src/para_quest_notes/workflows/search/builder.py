@@ -31,11 +31,23 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from para_quest_notes.vault.frontmatter import split_note
-from para_quest_notes.vault.links import build_backlink_index
+from para_quest_notes.vault.links import LinkNote, build_backlink_index, build_link_graph
 from para_quest_notes.vault.scope import Scope, note_supports, para_type_of
 from para_quest_notes.workflows.validate.pipeline import list_markdown_files
 
-from .contract import MatchContext, MatchEvidence, MatchLocation, SearchResult, SearchResults
+from .contract import (
+    LinkContext,
+    LinkRelation,
+    LinkSearchResult,
+    LinkSearchResults,
+    MatchContext,
+    MatchEvidence,
+    MatchLocation,
+    ResolvedLinkTarget,
+    SearchResult,
+    SearchResults,
+    UnresolvedLink,
+)
 
 DEFAULT_SNIPPET_RADIUS = 40
 
@@ -260,4 +272,105 @@ def search(
             "snippet_radius": radius,
         },
         results=results,
+    )
+
+
+def _note_scope(vault: Path, note: LinkNote) -> tuple[str | None, list[str]]:
+    split = split_note(note.text)
+    meta: dict[str, object] = {**split.backmatter, **split.frontmatter}
+    return para_type_of(vault, note.path, meta), note_supports(meta)
+
+
+def search_links(
+    vault: Path,
+    target: str,
+    *,
+    types: list[str] | None = None,
+    quest: str | None = None,
+    include_archive: bool = False,
+    limit: int | None = None,
+) -> LinkSearchResults:
+    """Return the target note's direct outgoing links and incoming backlinks."""
+    if limit is not None and limit < 0:
+        raise ValueError("limit must be >= 0")
+    files = list_markdown_files(vault, include_archive=include_archive)
+    graph = build_link_graph(vault, files)
+    target_note = graph.resolve_target(target)
+    target_type, target_supports = _note_scope(graph.vault, target_note)
+    scope = Scope.from_args(types=types, quest=quest)
+
+    outgoing = {
+        edge.target.relative_path: edge.occurrences for edge in graph.outgoing_from(target_note)
+    }
+    incoming = {
+        edge.source.relative_path: edge.occurrences for edge in graph.incoming_to(target_note)
+    }
+
+    results: list[LinkSearchResult] = []
+    for relative_path in sorted(set(outgoing) | set(incoming)):
+        if relative_path == target_note.relative_path:
+            continue
+        note = graph.note_at(relative_path)
+        para_type, supports = _note_scope(graph.vault, note)
+        if not scope.matches(para_type=para_type, supports=supports):
+            continue
+
+        outgoing_occurrences = outgoing.get(relative_path, 0)
+        incoming_occurrences = incoming.get(relative_path, 0)
+        relation: LinkRelation
+        if outgoing_occurrences and incoming_occurrences:
+            relation = "mutual"
+        elif outgoing_occurrences:
+            relation = "outgoing"
+        else:
+            relation = "incoming"
+        results.append(
+            LinkSearchResult(
+                path=relative_path,
+                type=para_type,
+                supports=supports,
+                link_context=LinkContext(
+                    relation=relation,
+                    outgoing_occurrences=outgoing_occurrences,
+                    incoming_occurrences=incoming_occurrences,
+                ),
+            )
+        )
+
+    relation_rank = {"mutual": 0, "outgoing": 1, "incoming": 2}
+    results.sort(
+        key=lambda result: (
+            relation_rank[result.link_context.relation],
+            -(result.link_context.outgoing_occurrences + result.link_context.incoming_occurrences),
+            result.path,
+        )
+    )
+    if limit is not None:
+        results = results[:limit]
+
+    unresolved = [
+        UnresolvedLink(
+            target=item.target,
+            occurrences=item.occurrences,
+            reason=item.reason,
+            candidates=list(item.candidates),
+        )
+        for item in graph.unresolved_from(target_note)
+    ]
+
+    return LinkSearchResults(
+        vault=str(vault),
+        target=ResolvedLinkTarget(
+            path=target_note.relative_path,
+            type=target_type,
+            supports=target_supports,
+        ),
+        scope={
+            "types": sorted(scope.types) if scope.types is not None else None,
+            "quest": scope.quest,
+            "include_archive": include_archive,
+            "limit": limit,
+        },
+        results=results,
+        unresolved_links=unresolved,
     )

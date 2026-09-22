@@ -65,7 +65,8 @@ The workflows preserve that reasoning, locally.
 - [x] `pqn-tasks` — read-only reporter for dated and unscheduled tasks
       (v0.5; see [`docs/workflows/tasks.md`](docs/workflows/tasks.md))
 - [x] `pqn-search` — read-only, PARA + Quest-aware keyword search over
-      the vault (title + content; ranks Resources by inbound links).
+      the vault (title + content; ranks Resources by inbound links), plus
+      direct one-hop outgoing-link/backlink traversal.
       See [`docs/workflows/search.md`](docs/workflows/search.md).
 - [x] `pqn-config` — read-only inspector for the effective config with
       per-value provenance (v0.5; no LLM). See
@@ -235,12 +236,14 @@ uv run pqn-tasks --vault /tmp/demo-vault --unscheduled show --format json | jq
 
 Full options and JSON contract: [`docs/workflows/tasks.md`](docs/workflows/tasks.md).
 
-### 9. `pqn-search` — keyword search over the vault (no LLM)
+### 9. `pqn-search` — keyword and direct-link search over the vault (no LLM)
 
 Read-only: match notes by title and/or body, scope by `--type` /
 `--quest`, and rank hits by the PARA + Quest model (title hits first;
 Resources tie-broken by inbound-link count). Prints a flat list, text
-(default) or JSON.
+(default) or JSON. The mutually exclusive `--links TARGET` mode resolves one
+note and reports its direct outgoing links and incoming backlinks, including
+broken or ambiguous outgoing targets.
 
 ```bash
 # Title + body (default), whole active vault
@@ -252,6 +255,11 @@ uv run pqn-search --vault /tmp/demo-vault --quest '[[Health]]' plan
 
 # Flat JSON for agents/tools
 uv run pqn-search --vault /tmp/demo-vault --format json sourdough | jq
+
+# One-hop outgoing links and backlinks around a note
+uv run pqn-search --vault /tmp/demo-vault --links "Workshop"
+uv run pqn-search --vault /tmp/demo-vault \
+    --links "areas/Workshop.md" --format json | jq
 ```
 
 Full options: [`docs/workflows/search.md`](docs/workflows/search.md).

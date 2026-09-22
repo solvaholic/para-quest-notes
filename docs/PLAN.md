@@ -475,6 +475,8 @@ two open at once (mirrors phase 5).
 Not promised for v0.1. Listed here so we don't lose them and don't
 let them creep into the v1 release.
 
+- **`pqn-search --links TARGET` - delivered.** Direct one-hop outgoing-link and backlink traversal now shares a reusable in-memory graph with the existing link-aware workflows. Target resolution is identity-safe and archive-aware, missing or ambiguous outgoing links are reported rather than guessed, and the mode remains read-only, deterministic, no-LLM, and free of persistent indexing. Transitive traversal, similarity, and visualization remain separate concerns.
+
 - **`pqn-daily` authoring mode - delivered in Wave 5 (#124).** Bare/`--today`/`--date` selection, explicit/configured missing-note creation, and configured editor opening landed as additive behavior. Authored notes are exactly an H1 plus a blank line, with no frontmatter, template, or routine tasks. Writes still require `--apply`.
 
 - **`--file` richer input.** Extend `--file` on `pqn-ingest` (and any
