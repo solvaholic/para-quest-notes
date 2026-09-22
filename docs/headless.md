@@ -155,6 +155,8 @@ not move it by hand:
 
 Because this invocation does not enable missing-note creation, `pqn-daily` exits `1` if the target does not exist. This preserves the existing cron-safe signal that yesterday's note was never authored.
 
+Add `--task-roundup` when the same run should also refresh the managed default `pqn-tasks` report. The scan is deterministic and still writes only because `--apply` is present.
+
 ### `pqn-archive` — usually NOT a cron job
 
 Archive needs a specific Project target, the same RAM-hungry model
