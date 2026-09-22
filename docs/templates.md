@@ -1,6 +1,6 @@
 # Note Templates
 
-User-defined whole-note templates and deterministic body placeholders for `pqn-create`. Templates live in the vault and can provide supplemental frontmatter plus custom note structure when the generated metadata and built-in skeletons don't fit. Bodies supplied through `--body-stdin` use the same placeholder renderer and variable mapping.
+User-defined whole-note templates and deterministic body placeholders for `pqn-create` and missing-note creation in `pqn-daily`. Templates live in the vault and can provide supplemental frontmatter plus custom note structure when built-in skeletons do not fit. Both workflows share one parser, renderer, path resolver, missing-template fallback, and atomic new-file publication substrate; each workflow supplies its own metadata authority, variables, destination, and fallback skeleton. Bodies supplied through `pqn-create --body-stdin` use the same placeholder renderer with create's variable mapping.
 
 ## Where templates live
 
@@ -24,12 +24,13 @@ Reference templates by name (without `.md`) or by vault-relative path:
 ```bash
 pqn-create --template weekly-review ...        # looks up resources/templates/weekly-review.md
 pqn-create --template my/custom/template.md ...  # vault-relative path
+pqn-daily --date 2026-09-02 --create-missing --template daily
 ```
 
 Filenames can use any valid identifier style (kebab-case, snake_case,
 Title Case - all work).
 
-## Variables
+## `pqn-create` variables
 
 Template bodies and non-empty `--body-stdin` bodies use `$variable` syntax. Values come from the final normalized create inputs after deterministic Quest and supports resolution. Available variables:
 
@@ -49,6 +50,21 @@ slated for removal at v1.0. (The variable can't be named `$quest-kind`:
 `string.Template` names allow only letters, digits, and underscores, so a
 hyphen would be read as `$quest` followed by literal `-kind`.)
 
+## `pqn-daily` variables
+
+Daily template values come from the selected date, not wall-clock execution time:
+
+| Variable | Value |
+|----------|-------|
+| `$title` | Selected ISO date, for compatibility with title-oriented templates |
+| `$date` | Selected ISO date |
+| `$created` | Selected ISO date, so create-oriented date templates remain reusable |
+| `$year` | Four-digit selected year |
+| `$month` | Two-digit selected month |
+| `$day` | Two-digit selected day |
+
+Create-only variables such as `$type`, `$quest_kind`, and `$supports` are not assigned for daily notes, so safe substitution leaves those tokens unchanged.
+
 ### Escaping
 
 Variables are expanded everywhere in template and stdin bodies, including inside code fences. Template frontmatter is parsed as YAML and is not variable-substituted; stdin is never parsed as template metadata. To include a literal `$`, double it:
@@ -62,9 +78,9 @@ Unknown `$variables` (anything not in the table above) are left as-is, so `$PATH
 
 ## Frontmatter
 
-A template may start with YAML frontmatter. `pqn-create` merges template
-metadata under its generated metadata, then emits one canonical frontmatter
-block. Generated and CLI-derived values always win on conflicts:
+A template may start with YAML frontmatter. Both workflows parse it separately from the body, so placeholders in frontmatter are never rendered. Both tolerate legacy tail backmatter, merge it beneath leading frontmatter, migrate it into one frontmatter block on write, and leave malformed or non-mapping metadata fences as literal body text.
+
+`pqn-create` merges template metadata under its generated metadata, then emits one canonical frontmatter block. Generated and CLI-derived values always win on conflicts:
 
 - `type`
 - `quest-kind`
@@ -86,15 +102,11 @@ The canonical Quest classifier is `quest-kind`. A legacy template `quest` key
 is tolerated and migrated on write, but it never overrides the generated
 `quest-kind` value.
 
-Legacy tail backmatter is also tolerated and migrated into the generated
-frontmatter. When both template frontmatter and backmatter define a
-supplemental key, frontmatter wins. A malformed YAML fence or a YAML value that
-is not a mapping is not interpreted as metadata; it remains literal template
-body text, matching the vault parser's existing read policy.
+`pqn-daily` retains template-supplied metadata but does not synthesize `type`, `quest-kind`, `supports`, `source_url`, `created`, or any other PARA metadata. Daily notes continue to inherit Quest context from their contents. After rendering the body, daily preserves a custom first ATX H1 or prepends `# YYYY-MM-DD` when the first nonblank body line is not an H1.
 
 ## Priority
 
-When multiple body sources are available, priority is:
+For `pqn-create`, priority is:
 
 1. **stdin** (`--body-stdin`) - always wins
 2. **explicit `--template`** - flag on this invocation
@@ -102,6 +114,15 @@ When multiple body sources are available, priority is:
 4. **built-in skeleton** - type-appropriate minimal structure
 
 When non-empty stdin wins, the template is not loaded, so neither its body nor its supplemental frontmatter is applied. The stdin body is rendered with the same known variables, `$$` escaping, and unknown-token pass-through as a template body. Frontmatter-looking text from stdin remains body text. Empty or whitespace-only stdin retains the existing fallback behavior and continues to the selected template or built-in skeleton.
+
+For `pqn-daily`, priority is:
+
+1. **explicit `--template`**
+2. **explicit `--no-template`**
+3. **`workflows.daily.template`**
+4. **built-in H1-only skeleton**
+
+Daily template selection affects only a missing-note creation branch. It never merges into or rewrites an existing daily note, does not enable `create_missing`, and does not bypass `--apply`. A dry-run still resolves, loads, parses, and renders the selected template before reporting the plan.
 
 ## Config defaults
 
@@ -119,6 +140,18 @@ workflows:
 ```
 
 An explicit `--template` flag overrides the config default.
+
+Set one nullable default for missing daily notes while continuing to use the create template directory:
+
+```yaml
+workflows:
+  create:
+    template_dir: resources/templates
+  daily:
+    template: daily
+```
+
+An explicit daily `--template` overrides this value; `--no-template` bypasses it and uses the H1-only skeleton.
 
 ## Example template
 
@@ -159,11 +192,11 @@ with `$title` and `$created` substituted.
 
 ## Fallback behavior
 
-If a named template isn't found, `pqn-create` falls back to the
-built-in skeleton (no error, no escalation). The JSON output includes
-a `body_source` field indicating what was used:
+If a named template isn't found, both workflows fall back to their built-in skeleton (no error, no escalation). The JSON plan includes a `body_source` field indicating what was used:
 
 - `"template:<name>"` - template was found and rendered
 - `"skeleton"` - built-in skeleton (no template found or none specified)
 - `"skeleton (template not found)"` - template specified but missing
 - `"stdin"` - body came from stdin and known placeholders were rendered
+
+`"stdin"` applies only to `pqn-create`. For `pqn-daily`, `body_source` is null when the selected note already exists because no missing-note body was composed.

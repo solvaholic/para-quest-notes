@@ -121,12 +121,14 @@ class DailyInfo:
     create_missing: Setting
     open_existing: Setting
     editor: Setting
+    template: Setting
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "create_missing": self.create_missing.to_dict(),
             "open_existing": self.open_existing.to_dict(),
             "editor": self.editor.to_dict(),
+            "template": self.template.to_dict(),
         }
 
 

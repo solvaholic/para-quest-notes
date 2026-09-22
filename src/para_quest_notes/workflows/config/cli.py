@@ -138,6 +138,8 @@ def _render_daily(daily: DailyInfo) -> None:
     )
     editor = "(not configured)" if daily.editor.value is None else repr(daily.editor.value)
     print(f"- editor: {editor}{_prov(daily.editor.source)}")
+    template = "(not configured)" if daily.template.value is None else daily.template.value
+    print(f"- template: {template}{_prov(daily.template.source)}")
 
 
 def _render_templates(templates: TemplatesInfo) -> None:
