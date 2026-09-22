@@ -412,6 +412,25 @@ def test_link_target_completion_honors_archive_flag(vault: Path) -> None:
     assert "Old" in complete_link_targets(parsed_args=args_for(vault, include_archive=True))
 
 
+def test_link_target_completion_treats_case_only_stems_as_ambiguous(
+    vault: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import para_quest_notes.adapter.completion as completion_module
+
+    monkeypatch.setattr(
+        completion_module,
+        "list_markdown_files",
+        lambda *args, **kwargs: [
+            vault / "case-probe" / "Foo.md",
+            vault / "case-probe" / "foo.md",
+        ],
+    )
+
+    got = complete_link_targets(parsed_args=args_for(vault, include_archive=False))
+
+    assert got == ["case-probe/Foo.md", "case-probe/foo.md"]
+
+
 def test_link_target_completion_is_wired_to_search_parser(
     vault: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
