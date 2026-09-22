@@ -36,8 +36,7 @@ Key relationships:
   incoming links) to stdout. Redirect it into a note; it never owns or
   overwrites one. Most useful once Quest notes and `supports:` tags
   exist.
-- **`pqn-search` is read-only lookup** - keyword search over note titles and bodies, scoped by `--type` / `--quest` and ranked by the PARA + Quest model (title hits first; Resources tie-broken by inbound-link count), or one-hop outgoing-link/backlink traversal around one note. It shares `pqn-quests`'s `vault/links.py` +
-  `vault/scope.py` building blocks.
+- **`pqn-search` is read-only lookup** - keyword search over note titles and bodies, scoped by `--type` / `--quest` and ranked by the PARA + Quest model (title hits first; Resources tie-broken by inbound-link count), or one-hop outgoing-link/backlink traversal around one note. It shares `pqn-quests`'s `vault/links.py` + `vault/scope.py` building blocks.
 
 ## Design principles
 

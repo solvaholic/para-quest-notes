@@ -179,6 +179,56 @@ def test_link_graph_normalizes_unicode_case_and_backslash_paths(tmp_path: Path):
     assert escaped.value.kind == "outside_vault"
 
 
+def test_link_graph_exact_paths_disambiguate_case_only_collisions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    files = [
+        tmp_path / "areas" / "Source.md",
+        tmp_path / "case-probe" / "Foo.md",
+        tmp_path / "case-probe" / "foo.md",
+    ]
+    texts = {
+        "areas/Source.md": "[[case-probe/Foo]] [[case-probe/foo]]",
+        "case-probe/Foo.md": "",
+        "case-probe/foo.md": "",
+    }
+
+    def fake_read(path: Path, *args: object, **kwargs: object) -> str:
+        return texts[path.relative_to(tmp_path).as_posix()]
+
+    monkeypatch.setattr(Path, "read_text", fake_read)
+    graph = build_link_graph(tmp_path, files)
+
+    assert graph.resolve_target("case-probe/Foo.md").relative_path == ("case-probe/Foo.md")
+    assert graph.resolve_target("case-probe/foo.md").relative_path == ("case-probe/foo.md")
+    with pytest.raises(LinkTargetError) as ambiguous:
+        graph.resolve_target("case-probe/FOO.md")
+    assert ambiguous.value.candidates == (
+        "case-probe/Foo.md",
+        "case-probe/foo.md",
+    )
+    assert [
+        edge.target.relative_path for edge in graph.outgoing_from(graph.resolve_target("Source"))
+    ] == ["case-probe/Foo.md", "case-probe/foo.md"]
+
+
+def test_link_graph_exact_paths_disambiguate_unicode_normalization_collisions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    composed = "Café.md"
+    decomposed = normalize("NFD", composed)
+    files = [
+        tmp_path / "areas" / composed,
+        tmp_path / "areas" / decomposed,
+    ]
+
+    monkeypatch.setattr(Path, "read_text", lambda *args, **kwargs: "")
+    graph = build_link_graph(tmp_path, files)
+
+    assert graph.resolve_target(f"areas/{composed}").relative_path == (f"areas/{composed}")
+    assert graph.resolve_target(f"areas/{decomposed}").relative_path == (f"areas/{decomposed}")
+
+
 def test_link_graph_reads_each_candidate_at_most_once(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):

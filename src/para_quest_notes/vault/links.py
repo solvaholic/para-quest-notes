@@ -108,7 +108,8 @@ class LinkGraph:
 
     vault: Path
     _notes_by_path: dict[str, LinkNote] = field(default_factory=dict)
-    _paths_by_key: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    _paths_by_normalized_path: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    _paths_by_folded_path: dict[str, tuple[str, ...]] = field(default_factory=dict)
     _paths_by_stem: dict[str, tuple[str, ...]] = field(default_factory=dict)
     _outgoing: dict[str, dict[str, int]] = field(default_factory=dict)
     _incoming: dict[str, dict[str, int]] = field(default_factory=dict)
@@ -140,7 +141,12 @@ class LinkGraph:
             raise LinkTargetError("outside_vault", target)
 
         if normalized_candidate.lower().endswith(".md"):
-            path_matches = self._paths_by_key.get(_graph_path_key(parsed.as_posix()), ())
+            path_matches = _path_matches(
+                parsed.as_posix(),
+                notes_by_path=self._notes_by_path,
+                paths_by_normalized_path=self._paths_by_normalized_path,
+                paths_by_folded_path=self._paths_by_folded_path,
+            )
             if len(path_matches) == 1:
                 return self._notes_by_path[path_matches[0]]
             if len(path_matches) > 1:
@@ -206,8 +212,34 @@ def _graph_target_key(target: str) -> str:
     return _canonical(_graph_target_display(target).rsplit("/", 1)[-1])
 
 
+def _graph_normalized_path(path: str) -> str:
+    return unicodedata.normalize(
+        "NFC",
+        PurePosixPath(path.replace("\\", "/")).as_posix(),
+    )
+
+
 def _graph_path_key(path: str) -> str:
-    return _canonical(PurePosixPath(path.replace("\\", "/")).as_posix())
+    return _graph_normalized_path(path).casefold()
+
+
+def _path_matches(
+    relative_path: str,
+    *,
+    notes_by_path: dict[str, LinkNote],
+    paths_by_normalized_path: dict[str, tuple[str, ...]],
+    paths_by_folded_path: dict[str, tuple[str, ...]],
+) -> tuple[str, ...]:
+    """Resolve a path exact-first, then by canonical unique fallback."""
+    if relative_path in notes_by_path:
+        return (relative_path,)
+    normalized = paths_by_normalized_path.get(
+        _graph_normalized_path(relative_path),
+        (),
+    )
+    if normalized:
+        return normalized
+    return paths_by_folded_path.get(_graph_path_key(relative_path), ())
 
 
 def _graph_link_key(target: str) -> tuple[str, str, str]:
@@ -222,7 +254,7 @@ def _graph_link_key(target: str) -> tuple[str, str, str]:
     relative_path = parsed.as_posix()
     if not relative_path.lower().endswith(".md"):
         relative_path = f"{relative_path}.md"
-    return "path", _graph_path_key(relative_path), display
+    return "path", relative_path, display
 
 
 def build_link_graph(vault: Path, files: Iterable[Path]) -> LinkGraph:
@@ -279,11 +311,19 @@ def build_link_graph(vault: Path, files: Iterable[Path]) -> LinkGraph:
     for note in notes_by_path.values():
         paths_by_stem_lists.setdefault(_graph_target_key(note.stem), []).append(note.relative_path)
     paths_by_stem = {stem: tuple(sorted(paths)) for stem, paths in paths_by_stem_lists.items()}
-    paths_by_key_lists: dict[str, list[str]] = {}
+    paths_by_normalized_lists: dict[str, list[str]] = {}
+    paths_by_folded_lists: dict[str, list[str]] = {}
     for relative_path in notes_by_path:
-        paths_by_key_lists.setdefault(_graph_path_key(relative_path), []).append(relative_path)
-    paths_by_key = {
-        path_key: tuple(sorted(paths)) for path_key, paths in paths_by_key_lists.items()
+        paths_by_normalized_lists.setdefault(
+            _graph_normalized_path(relative_path),
+            [],
+        ).append(relative_path)
+        paths_by_folded_lists.setdefault(_graph_path_key(relative_path), []).append(relative_path)
+    paths_by_normalized_path = {
+        path_key: tuple(sorted(paths)) for path_key, paths in paths_by_normalized_lists.items()
+    }
+    paths_by_folded_path = {
+        path_key: tuple(sorted(paths)) for path_key, paths in paths_by_folded_lists.items()
     }
 
     outgoing: dict[str, dict[str, int]] = {}
@@ -305,7 +345,12 @@ def build_link_graph(vault: Path, files: Iterable[Path]) -> LinkGraph:
         for identity, occurrences in counts.items():
             kind, key = identity
             matches = (
-                paths_by_key.get(key, ())
+                _path_matches(
+                    key,
+                    notes_by_path=notes_by_path,
+                    paths_by_normalized_path=paths_by_normalized_path,
+                    paths_by_folded_path=paths_by_folded_path,
+                )
                 if kind == "path"
                 else paths_by_stem.get(key, ())
                 if kind == "stem"
@@ -335,7 +380,8 @@ def build_link_graph(vault: Path, files: Iterable[Path]) -> LinkGraph:
     return LinkGraph(
         vault=vault_absolute,
         _notes_by_path=notes_by_path,
-        _paths_by_key=paths_by_key,
+        _paths_by_normalized_path=paths_by_normalized_path,
+        _paths_by_folded_path=paths_by_folded_path,
         _paths_by_stem=paths_by_stem,
         _outgoing=outgoing,
         _incoming=incoming,
