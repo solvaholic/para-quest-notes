@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import unicodedata
 import warnings
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -41,6 +42,7 @@ from para_quest_notes.workflows.create.templates import (
     get_template_config,
     resolve_template_path,
 )
+from para_quest_notes.workflows.validate.pipeline import list_markdown_files
 
 # A completer is anything argcomplete will call. It passes ``prefix``,
 # ``action``, ``parser``, and ``parsed_args`` as keyword arguments, so
@@ -129,7 +131,12 @@ def _quiet_iterdir(root: Path, pattern: str, *, recursive: bool = True) -> list[
         return []
 
 
-def _stem_or_relpath(vault: Path, paths: Iterable[Path]) -> list[str]:
+def _stem_or_relpath(
+    vault: Path,
+    paths: Iterable[Path],
+    *,
+    case_insensitive: bool = False,
+) -> list[str]:
     """Emit bare stems, falling back to vault-relative paths on collision.
 
     A bare stem is nicer to type, but only safe when it resolves to
@@ -140,10 +147,12 @@ def _stem_or_relpath(vault: Path, paths: Iterable[Path]) -> list[str]:
     paths = list(paths)
     counts: dict[str, int] = {}
     for p in paths:
-        counts[p.stem] = counts.get(p.stem, 0) + 1
+        key = unicodedata.normalize("NFC", p.stem).casefold() if case_insensitive else p.stem
+        counts[key] = counts.get(key, 0) + 1
     out: list[str] = []
     for p in paths:
-        if counts[p.stem] == 1:
+        key = unicodedata.normalize("NFC", p.stem).casefold() if case_insensitive else p.stem
+        if counts[key] == 1:
             out.append(p.stem)
             continue
         try:
@@ -288,3 +297,20 @@ def complete_archive_targets(**kwargs: Any) -> list[str]:
         if p.is_file() and "archive" not in p.relative_to(vault).parts
     ]
     return _stem_or_relpath(vault, candidates)
+
+
+def complete_link_targets(**kwargs: Any) -> list[str]:
+    """Complete every note in ``pqn-search --links`` resolution scope."""
+    parsed_args = kwargs.get("parsed_args")
+    vault, _ = resolve_context(parsed_args)
+    if vault is None:
+        return []
+    include_archive = bool(getattr(parsed_args, "include_archive", False))
+    try:
+        candidates = list_markdown_files(
+            vault,
+            include_archive=include_archive,
+        )
+    except _EXPECTED_ERRORS:
+        return []
+    return _stem_or_relpath(vault, candidates, case_insensitive=True)

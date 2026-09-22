@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from para_quest_notes.workflows.search.cli import main
+from para_quest_notes.workflows.search.cli import build_parser, main
 
 
 def write(path: Path, text: str) -> Path:
@@ -40,6 +40,63 @@ def test_text_is_default(vault: Path, capsys):
     assert code == 0
     assert out.startswith('# Search results for "running"')
     assert "resources/Running Shoes.md" in out
+
+
+def test_help_documents_link_mode():
+    help_text = build_parser().format_help()
+    assert "--links" in help_text
+    assert "direct" in help_text.lower()
+
+
+def test_exactly_one_search_mode_is_required(vault: Path, capsys):
+    with pytest.raises(SystemExit) as missing:
+        main(["--vault", str(vault)])
+    assert missing.value.code == 2
+    assert "exactly one" in capsys.readouterr().err
+
+    with pytest.raises(SystemExit) as combined:
+        main(["--vault", str(vault), "--links", "Running Shoes", "running"])
+    assert combined.value.code == 2
+    assert "cannot be combined" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("keyword_flag", ["--title", "--content", "--snippet-radius"])
+def test_keyword_only_flags_are_rejected_in_link_mode(vault: Path, capsys, keyword_flag: str):
+    argv = ["--vault", str(vault), "--links", "Running Shoes", keyword_flag]
+    if keyword_flag == "--snippet-radius":
+        argv.append("10")
+
+    with pytest.raises(SystemExit) as exc:
+        main(argv)
+
+    assert exc.value.code == 2
+    assert "keyword mode" in capsys.readouterr().err
+
+
+def test_link_mode_json_and_text_output(vault: Path, capsys):
+    write(
+        vault / "projects" / "Use Shoes.md",
+        "---\ntype: project\n---\n[[Running Shoes]]\n",
+    )
+
+    code = main(["--vault", str(vault), "--links", "running shoes", "--format", "json"])
+    data = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert data["mode"] == "links"
+    assert data["target"]["path"] == "resources/Running Shoes.md"
+    assert [item["path"] for item in data["results"]] == ["projects/Use Shoes.md"]
+
+    code = main(["--vault", str(vault), "--links", "Running Shoes"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert '# Link neighbors for "resources/Running Shoes.md"' in out
+    assert "incoming: outgoing 0, incoming 1" in out
+
+
+def test_link_mode_target_error_exits_two(vault: Path, capsys):
+    code = main(["--vault", str(vault), "--links", "Missing"])
+    assert code == 2
+    assert "error:" in capsys.readouterr().err
 
 
 def test_json_output_is_parseable(vault: Path, capsys):
@@ -80,6 +137,13 @@ def test_limit_flag(vault: Path, capsys):
     assert code == 0
     data = json.loads(out)
     assert len(data["results"]) == 1
+
+
+def test_negative_limit_is_rejected(vault: Path, capsys):
+    with pytest.raises(SystemExit) as exc:
+        main(["--vault", str(vault), "--links", "Running Shoes", "--limit", "-1"])
+    assert exc.value.code == 2
+    assert "must be >= 0" in capsys.readouterr().err
 
 
 def test_snippet_radius_flag(vault: Path, capsys):
@@ -185,6 +249,51 @@ def test_json_sample_vault_copy_keeps_match_context_and_matches_in_sync(tmp_path
     assert hit["matches"] == [
         {"keyword": "title", "where": "title", "snippet": "Sample Evidence Title"},
         {"keyword": "body", "where": "body", "snippet": "Sample evidence body appears here."},
+    ]
+
+
+def test_link_mode_sample_vault_copy_text_and_json_smoke(tmp_path: Path, capsys):
+    sample = Path(__file__).resolve().parents[3] / "samples" / "vault"
+    copied_vault = tmp_path / "vault"
+    shutil.copytree(sample, copied_vault)
+    write(
+        copied_vault / "projects" / "Link Smoke Neighbor.md",
+        "---\ntype: project\nsupports:\n- '[[Health]]'\n---\n[[Workshop]] [[Workshop]]\n",
+    )
+
+    code = main(["--vault", str(copied_vault), "--links", "Workshop"])
+    text = capsys.readouterr().out
+    assert code == 0
+    assert "projects/Link Smoke Neighbor.md" in text
+    assert "incoming 2" in text
+    assert "Nonexistent Us" in text
+
+    code = main(
+        [
+            "--vault",
+            str(copied_vault),
+            "--links",
+            "areas/Workshop.md",
+            "--type",
+            "project",
+            "--quest",
+            "Health",
+            "--format",
+            "json",
+        ]
+    )
+    data = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert data["mode"] == "links"
+    assert data["target"]["path"] == "areas/Workshop.md"
+    assert [item["path"] for item in data["results"]] == ["projects/Link Smoke Neighbor.md"]
+    assert data["unresolved_links"] == [
+        {
+            "target": "Nonexistent Us",
+            "occurrences": 1,
+            "reason": "missing",
+            "candidates": [],
+        }
     ]
 
 

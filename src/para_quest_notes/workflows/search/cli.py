@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 from para_quest_notes.adapter.cli import build_base_parser
 from para_quest_notes.adapter.completion import (
+    complete_link_targets,
     complete_quests,
     enable_completion,
     set_completer,
@@ -17,7 +18,7 @@ from para_quest_notes.adapter.config import Config, load_config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.vault import find_vault
 
-from .api import render_text, search
+from .api import LinkTargetError, render_link_text, render_text, search, search_links
 from .builder import DEFAULT_SNIPPET_RADIUS
 
 _TYPE_CHOICES = ("project", "area", "resource")
@@ -34,17 +35,31 @@ def build_parser() -> argparse.ArgumentParser:
     p = build_base_parser(
         prog="pqn-search",
         description=(
-            "Search the vault for notes by title and/or body keywords, scoped "
-            "and ranked by the PARA + Quest model. Read-only, no LLM."
+            "Search the vault by title/body keywords or direct outgoing links "
+            "and backlinks, scoped by the PARA + Quest model. Read-only, no LLM."
         ),
     )
     p.add_argument(
         "query",
-        nargs="+",
+        nargs="*",
         help=(
             "Keyword(s) to match (case-insensitive). A note matches only when "
-            "all keywords are present in the searched fields."
+            "all keywords are present in the searched fields. Mutually "
+            "exclusive with --links."
         ),
+    )
+    set_completer(
+        p.add_argument(
+            "--links",
+            default=None,
+            metavar="TARGET",
+            help=(
+                "Resolve one note and report its direct outgoing links and "
+                "incoming backlinks. Accepts a unique basename or an exact "
+                "vault-relative .md path."
+            ),
+        ),
+        complete_link_targets,
     )
     p.add_argument(
         "--title",
@@ -83,7 +98,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--limit",
-        type=int,
+        type=_non_negative_int,
         default=None,
         help="Cap the number of results. Default: unlimited.",
     )
@@ -105,6 +120,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Include notes under archive/ (excluded by default).",
     )
     return p
+
+
+def _validate_mode(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+) -> None:
+    has_query = bool(args.query)
+    has_links = args.links is not None
+    if has_query and has_links:
+        parser.error("positional query terms cannot be combined with --links")
+    if not has_query and not has_links:
+        parser.error("exactly one search mode is required: query terms or --links TARGET")
+    if has_links and (args.title or args.content or args.snippet_radius is not None):
+        parser.error("--title, --content, and --snippet-radius are keyword mode options")
 
 
 def _resolve_snippet_radius(cli_value: int | None, config: Config) -> int:
@@ -131,6 +160,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     enable_completion(parser)
     args = parser.parse_args(argv)
+    _validate_mode(parser, args)
 
     config = load_config(args.config)
     try:
@@ -139,28 +169,49 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    try:
-        snippet_radius = _resolve_snippet_radius(args.snippet_radius, config)
-    except (TypeError, ValueError) as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 2
-
-    results = search(
-        vault,
-        args.query,
-        title=args.title,
-        content=args.content,
-        types=args.types,
-        quest=args.quest,
-        include_archive=args.include_archive,
-        limit=args.limit,
-        snippet_radius=snippet_radius,
-    )
-
-    if args.format == "json":
-        print(json.dumps(results.to_dict(), indent=2))
+    if args.links is not None:
+        try:
+            link_results = search_links(
+                vault,
+                args.links,
+                types=args.types,
+                quest=args.quest,
+                include_archive=args.include_archive,
+                limit=args.limit,
+            )
+        except LinkTargetError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        rendered = (
+            json.dumps(link_results.to_dict(), indent=2)
+            if args.format == "json"
+            else render_link_text(link_results)
+        )
     else:
-        print(render_text(results), end="")
+        try:
+            snippet_radius = _resolve_snippet_radius(args.snippet_radius, config)
+        except (TypeError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+
+        keyword_results = search(
+            vault,
+            args.query,
+            title=args.title,
+            content=args.content,
+            types=args.types,
+            quest=args.quest,
+            include_archive=args.include_archive,
+            limit=args.limit,
+            snippet_radius=snippet_radius,
+        )
+        rendered = (
+            json.dumps(keyword_results.to_dict(), indent=2)
+            if args.format == "json"
+            else render_text(keyword_results)
+        )
+
+    print(rendered, end="\n" if args.format == "json" else "")
 
     return 0
 

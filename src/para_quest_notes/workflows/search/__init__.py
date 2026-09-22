@@ -1,25 +1,40 @@
-"""``pqn-search`` - keyword search over the vault, PARA + Quest-aware (no LLM).
+"""``pqn-search`` - keyword and direct-link search, PARA + Quest-aware.
 
-Read-only and stateless: matches notes by title and/or body keywords, filters
-by ``--type`` / ``--quest``, and ranks hits (title hits first; Resources
-tie-broken by inbound-link count). Emits a flat list as text (default) or
-JSON. See ``docs/workflows/search.md``.
+Read-only, stateless, and no-LLM. Keyword mode matches notes by title or body.
+Link mode resolves one target and reports its direct outgoing links and
+incoming backlinks. See ``docs/workflows/search.md``.
 """
 
 from para_quest_notes.workflows.search.api import (
+    LinkContext,
+    LinkSearchResult,
+    LinkSearchResults,
+    LinkTargetError,
     MatchContext,
     MatchEvidence,
+    ResolvedLinkTarget,
     SearchResult,
     SearchResults,
+    UnresolvedLink,
+    render_link_text,
     render_text,
     search,
+    search_links,
 )
 
 __all__ = [
+    "LinkContext",
+    "LinkSearchResult",
+    "LinkSearchResults",
+    "LinkTargetError",
     "MatchContext",
     "MatchEvidence",
+    "ResolvedLinkTarget",
     "SearchResult",
     "SearchResults",
+    "UnresolvedLink",
+    "render_link_text",
     "render_text",
     "search",
+    "search_links",
 ]

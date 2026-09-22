@@ -97,6 +97,7 @@ they can never drift from what the command actually accepts.
 | Argument | Completes to |
 | --- | --- |
 | `pqn-search --quest`, `pqn-tasks --quest`, `pqn-quests --quest` | Main and Side Quest names |
+| `pqn-search --links` | Any searchable note: a bare stem when unique, otherwise a vault-relative path |
 | `pqn-create --supports` | The same Quests, as `[[Wikilinks]]` |
 | `pqn-create --sub-path` | Existing directories under the PARA top-level |
 | `pqn-create --template` | Templates in your configured template directory |
@@ -106,6 +107,9 @@ they can never drift from what the command actually accepts.
 ```bash
 pqn-search --quest <TAB>
 # Health   Home   Stay Sharp
+
+pqn-search --links <TAB>
+# Health   areas/Reading.md   resources/Reading.md
 
 pqn-create --supports <TAB>
 # [[Health]]  [[Home]]  [[Stay Sharp]]

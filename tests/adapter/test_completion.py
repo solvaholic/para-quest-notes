@@ -29,6 +29,7 @@ import pytest
 from para_quest_notes.adapter.completion import (
     complete_archive_targets,
     complete_daily_targets,
+    complete_link_targets,
     complete_quest_wikilinks,
     complete_quests,
     complete_sub_paths,
@@ -391,6 +392,38 @@ def test_duplicate_basenames_complete_as_vault_relative_paths(vault: Path) -> No
     assert "Repaint The Shed" in got
 
 
+def test_link_targets_complete_unique_stems_and_duplicate_paths(vault: Path) -> None:
+    (vault / "Health.md").write_text("# duplicate\n")
+
+    got = complete_link_targets(parsed_args=args_for(vault, include_archive=False))
+
+    assert "Side Gig" in got
+    assert "Health" not in got
+    assert "Health.md" in got
+    assert "areas/Health.md" in got
+
+
+def test_link_target_completion_honors_archive_flag(vault: Path) -> None:
+    archived = vault / "archive" / "projects"
+    archived.mkdir(parents=True)
+    (archived / "Old.md").write_text("# old\n")
+
+    assert "Old" not in complete_link_targets(parsed_args=args_for(vault, include_archive=False))
+    assert "Old" in complete_link_targets(parsed_args=args_for(vault, include_archive=True))
+
+
+def test_link_target_completion_is_wired_to_search_parser(
+    vault: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from para_quest_notes.workflows.search.cli import build_parser
+
+    line = f"pqn-search --vault {vault} --links "
+    candidates = complete(build_parser(), line, monkeypatch)
+
+    assert "Health" in candidates
+    assert "Ship It" in candidates
+
+
 # --------------------------------------------------------------------------- #
 # Vault + config precedence
 # --------------------------------------------------------------------------- #
@@ -444,6 +477,7 @@ def test_config_vault_is_the_last_rung(vault: Path, tmp_path: Path, isolated_env
         complete_templates,
         complete_daily_targets,
         complete_archive_targets,
+        complete_link_targets,
     ],
 )
 def test_unresolved_vault_yields_nothing_quietly(
@@ -468,6 +502,7 @@ def test_missing_optional_directories_yield_nothing_quietly(
     assert complete_templates(parsed_args=parsed) == []
     assert complete_daily_targets(parsed_args=parsed) == []
     assert complete_archive_targets(parsed_args=parsed) == []
+    assert complete_link_targets(parsed_args=parsed) == []
     assert complete_quests(parsed_args=parsed) == []
     assert capsys.readouterr().err == ""
 
@@ -533,6 +568,7 @@ def test_completion_does_not_mutate_the_sample_vault() -> None:
         complete_templates,
         complete_daily_targets,
         complete_archive_targets,
+        complete_link_targets,
     ):
         completer(parsed_args=parsed)
 
