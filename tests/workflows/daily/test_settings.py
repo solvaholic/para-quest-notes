@@ -17,6 +17,7 @@ def test_daily_settings_default_to_safe_disabled_values() -> None:
     assert settings.create_missing is False
     assert settings.open_existing is False
     assert settings.editor is None
+    assert settings.template is None
 
 
 def test_daily_settings_load_valid_values(tmp_path: Path) -> None:
@@ -26,7 +27,8 @@ def test_daily_settings_load_valid_values(tmp_path: Path) -> None:
         "  daily:\n"
         "    create_missing: true\n"
         "    open_existing: true\n"
-        "    editor: [code, --reuse-window]\n",
+        "    editor: [code, --reuse-window]\n"
+        "    template: daily\n",
         encoding="utf-8",
     )
 
@@ -35,6 +37,16 @@ def test_daily_settings_load_valid_values(tmp_path: Path) -> None:
     assert settings.create_missing is True
     assert settings.open_existing is True
     assert settings.editor == ("code", "--reuse-window")
+    assert settings.template == "daily"
+
+
+def test_daily_template_accepts_explicit_null(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("workflows:\n  daily:\n    template: null\n", encoding="utf-8")
+
+    settings = resolve_daily_settings(load_config(config_path).workflows)
+
+    assert settings.template is None
 
 
 @pytest.mark.parametrize(
@@ -47,6 +59,8 @@ def test_daily_settings_load_valid_values(tmp_path: Path) -> None:
         ("{editor: code}", "workflows.daily.editor"),
         ("{editor: [code, 1]}", "workflows.daily.editor[1]"),
         ("{editor: ['']}", "workflows.daily.editor[0]"),
+        ("{template: 7}", "workflows.daily.template"),
+        ("{template: ''}", "workflows.daily.template"),
     ],
 )
 def test_malformed_daily_settings_name_exact_key(daily: str, key: str, tmp_path: Path) -> None:

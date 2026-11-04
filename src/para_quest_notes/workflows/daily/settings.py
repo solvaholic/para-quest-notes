@@ -14,6 +14,7 @@ class DailySettings:
     create_missing: bool = False
     open_existing: bool = False
     editor: tuple[str, ...] | None = None
+    template: str | None = None
 
 
 def resolve_daily_settings(workflows: Mapping[str, Any]) -> DailySettings:
@@ -28,10 +29,12 @@ def resolve_daily_settings(workflows: Mapping[str, Any]) -> DailySettings:
     create_missing = _boolean(raw, "create_missing", default=False)
     open_existing = _boolean(raw, "open_existing", default=False)
     editor = _editor(raw)
+    template = _template(raw)
     return DailySettings(
         create_missing=create_missing,
         open_existing=open_existing,
         editor=editor,
+        template=template,
     )
 
 
@@ -54,3 +57,12 @@ def _editor(raw: Mapping[str, Any]) -> tuple[str, ...] | None:
         if not isinstance(argument, str) or not argument:
             raise ConfigError(f"workflows.daily.editor[{index}] must be a non-empty string")
     return tuple(value)
+
+
+def _template(raw: Mapping[str, Any]) -> str | None:
+    if "template" not in raw or raw["template"] is None:
+        return None
+    value = raw["template"]
+    if not isinstance(value, str) or not value:
+        raise ConfigError("workflows.daily.template must be a non-empty string or null")
+    return value

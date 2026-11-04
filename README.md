@@ -154,12 +154,16 @@ echo "# 2026-05-16" > /tmp/demo-vault/2026-05-16.md
 uv run pqn-daily --vault /tmp/demo-vault 2026-05-16
 uv run pqn-daily --vault /tmp/demo-vault 2026-05-16 --apply
 
-# Plan and create an H1-only note for a missing date
+# Plan and create the default H1-only note for a missing date
 uv run pqn-daily --vault /tmp/demo-vault --date 2026-09-02 --create-missing
 uv run pqn-daily --vault /tmp/demo-vault --date 2026-09-02 --create-missing --apply
+
+# Or render a whole-note template from resources/templates/
+uv run pqn-daily --vault /tmp/demo-vault --date 2026-09-03 \
+    --create-missing --template daily --apply
 ```
 
-Basename search covers vault root, `inbox/`, and `resources/daily_notes/`. Existing positional invocations keep their dry-run and cron-safe behavior. Full selection, creation, editor, and config options: [`docs/workflows/daily.md`](docs/workflows/daily.md).
+Basename search covers vault root, `inbox/`, and `resources/daily_notes/`. Daily templates affect only missing-note creation, use the same directory and deterministic whole-note renderer as `pqn-create`, and do not imply `--create-missing` or `--apply`. Existing positional invocations keep their dry-run, byte-idempotent, and cron-safe behavior. Full selection, creation, template, editor, and config options: [`docs/workflows/daily.md`](docs/workflows/daily.md).
 
 ### 5. `pqn-archive --generate-outcome` — archive a Project, LLM writes the Outcome (LLM)
 

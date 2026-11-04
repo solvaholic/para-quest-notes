@@ -100,7 +100,7 @@ they can never drift from what the command actually accepts.
 | `pqn-search --links` | Any searchable note: a bare stem when unique, otherwise a vault-relative path |
 | `pqn-create --supports` | The same Quests, as `[[Wikilinks]]` |
 | `pqn-create --sub-path` | Existing directories under the PARA top-level |
-| `pqn-create --template` | Templates in your configured template directory |
+| `pqn-create --template`, `pqn-daily --template` | Templates in your configured template directory |
 | `pqn-daily <target>` | `YYYY-MM-DD` notes in the vault root, `inbox/`, and `resources/daily_notes/` |
 | `pqn-archive <target>` | Project notes under `projects/` |
 
@@ -146,8 +146,7 @@ whatever you've already typed to the left of the cursor:
 4. `vault:` in your config
 
 A `--config PATH` you've already typed is honored too, so
-`pqn-create --config ./other.yaml --template <TAB>` completes from that
-config's template directory. See
+`pqn-create --config ./other.yaml --template <TAB>` and `pqn-daily --config ./other.yaml --template <TAB>` complete from that config's template directory. See
 [`docs/configuration.md`](configuration.md) for the full resolution rules.
 
 ## Behavior and limits

@@ -271,6 +271,31 @@ def test_write_note_apply_refuses_overwrite(tmp_path: Path):
         WriteNote(apply=True).run(ctx)
 
 
+def test_write_note_creation_race_preserves_winner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    vault = _seed_vault(tmp_path)
+    ctx = _ctx(vault)
+    dest = vault / "projects" / "X.md"
+    ctx.scratchpad.update(
+        destination_abs=dest,
+        destination="projects/X.md",
+        content="new",
+    )
+
+    def raced_publish(path: Path, content: str) -> None:
+        path.write_text("concurrent winner")
+        raise FileExistsError(path)
+
+    monkeypatch.setattr(
+        "para_quest_notes.workflows.create.steps.write_note.publish_new_note",
+        raced_publish,
+    )
+
+    with pytest.raises(EscalateToUser, match="destination appeared"):
+        WriteNote(apply=True).run(ctx)
+
+    assert dest.read_text() == "concurrent winner"
+
+
 def test_validate_after_skips_on_dry_run(tmp_path: Path):
     vault = _seed_vault(tmp_path)
     ctx = _ctx(vault)

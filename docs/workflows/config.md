@@ -22,7 +22,7 @@ It reports:
   `workflows.<name>.model` overrides, each flagged with whether it's
   actually **honored** (see the drift note below).
 - **ollama** — `base_url` and `request_timeout_seconds`.
-- **daily** — effective `create_missing`, `open_existing`, and editor argv settings with provenance.
+- **daily** — effective `create_missing`, `open_existing`, missing-note template, and editor argv settings with provenance.
 - **tasks** — the effective `date_fields` precedence, its provenance, and whether `pqn-tasks` honors it.
 - **templates** — the template dir (`create.template_dir`), the per-type
   defaults (`create.defaults.<type>`), and the template files found in the
@@ -77,7 +77,7 @@ guessing from whether a value happens to equal its default.
 
 Workflow settings also carry an `honored` flag. `tasks.date_fields` is `true` because `pqn-tasks` consumes it; documented-but-unwired model overrides remain `false`.
 
-The daily settings do not need a separate `honored` marker because all three are consumed directly by `pqn-daily`. An omitted editor is reported as `null` with `source: default`; this means "not configured", not OS editor discovery.
+The daily settings do not need a separate `honored` marker because all four are consumed directly by `pqn-daily`. An omitted template or editor is reported as `null` with `source: default`; these mean "use the H1-only skeleton" and "not configured", respectively.
 
 ## The per-workflow model drift it surfaces
 
@@ -115,6 +115,7 @@ If a workflow is later wired to honor its override, add its name to
   "daily": {
     "create_missing": {"value": false, "source": "default"},
     "open_existing": {"value": true, "source": "config"},
+    "template": {"value": "daily", "source": "config"},
     "editor": {"value": ["code", "--reuse-window"], "source": "config"}
   },
   "tasks": {

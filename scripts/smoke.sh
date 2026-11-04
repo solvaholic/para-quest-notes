@@ -67,6 +67,14 @@ cat > "$VAULT/resources/templates/smoke-template.md" << 'EOF'
 
 Custom smoke template content.
 EOF
+cat > "$VAULT/resources/templates/daily-smoke.md" << 'EOF'
+---
+status: draft
+---
+# Daily $date
+
+Month $month, literal $$date.
+EOF
 
 pass=0
 fail=0
@@ -199,6 +207,11 @@ check "daily create-missing dry-run" \
     --date 2026-09-02 --create-missing --no-open
 check "daily create-missing dry-run does not write" \
   test ! -e "$VAULT/resources/daily_notes/2026/09/2026-09-02.md"
+check "daily template dry-run" \
+  uv run pqn-daily --vault "$VAULT" --format json \
+    --date 2026-09-03 --create-missing --template daily-smoke --no-open
+check "daily template dry-run does not write" \
+  test ! -e "$VAULT/resources/daily_notes/2026/09/2026-09-03.md"
 
 if $APPLY; then
   check "daily --apply" \
@@ -213,6 +226,14 @@ if $APPLY; then
   check "daily created exact H1-only note" \
     cmp -s "$VAULT/resources/daily_notes/2026/09/2026-09-02.md" \
       <(printf '# 2026-09-02\n\n')
+  check "daily template --apply" \
+    uv run pqn-daily --vault "$VAULT" --format json --apply \
+      --date 2026-09-03 --create-missing --template daily-smoke --no-open
+  check "daily template metadata retained" \
+    grep -q "status: draft" "$VAULT/resources/daily_notes/2026/09/2026-09-03.md"
+  check "daily template selected-date variables rendered" \
+    grep -Fq 'Month 09, literal $date.' \
+      "$VAULT/resources/daily_notes/2026/09/2026-09-03.md"
 fi
 
 echo ""
