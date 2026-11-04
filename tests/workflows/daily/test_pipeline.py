@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import shutil
+import stat
 from pathlib import Path
+
+import pytest
 
 from para_quest_notes.workflows.daily.contract import DailyInputs
 from para_quest_notes.workflows.daily.pipeline import file_daily_note
+from para_quest_notes.workflows.daily.steps.compose_task_roundup import (
+    END_MARKER,
+    START_MARKER,
+)
 from para_quest_notes.workflows.validate.api import validate_paths
 
 
@@ -214,4 +221,306 @@ def test_apply_creation_smokes_copied_sample_vault(tmp_path: Path) -> None:
     assert payload["plan"]["source"] is None
     assert payload["plan"]["would_create"] is True
     assert destination.read_text(encoding="utf-8") == "# 2026-09-02\n\n"
+    assert validate_paths(vault, [destination]).issues == []
+
+
+def test_no_roundup_flag_does_not_scan_tasks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    vault = _seed_vault(tmp_path)
+    source = vault / "inbox/2026-09-07.md"
+    source.write_text("# 2026-09-07\n\n", encoding="utf-8")
+
+    def unexpected_scan(*args, **kwargs):
+        raise AssertionError("ordinary pqn-daily scanned the vault for tasks")
+
+    monkeypatch.setattr(
+        "para_quest_notes.workflows.daily.steps.compose_task_roundup.scan_vault_tasks",
+        unexpected_scan,
+    )
+
+    result = file_daily_note(DailyInputs(target="2026-09-07"), vault=vault)
+
+    assert result.ok
+    assert result.task_roundup is None
+    assert source.read_text(encoding="utf-8") == "# 2026-09-07\n\n"
+
+
+def test_task_roundup_dry_run_uses_selected_date_without_writing(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    source = vault / "inbox/2026-09-07.md"
+    source.write_text("# 2026-09-07\n\nDaily text.\n", encoding="utf-8")
+    (vault / "projects/Project.md").write_text(
+        "# Project\n\n- [ ] Today 📅 2026-09-07\n",
+        encoding="utf-8",
+    )
+
+    result = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=False,
+    )
+
+    assert result.ok
+    assert result.task_roundup is not None
+    assert result.task_roundup.reference_date == "2026-09-07"
+    assert result.task_roundup.action == "insert"
+    assert result.task_roundup.applied is False
+    assert result.task_roundup.summary["due_today"] == 1
+    assert source.read_text(encoding="utf-8") == "# 2026-09-07\n\nDaily text.\n"
+    assert not (vault / "resources/daily_notes/2026/09/2026-09-07.md").exists()
+
+
+def test_task_roundup_apply_moves_one_composed_note(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    source = vault / "inbox/2026-09-07.md"
+    source.write_text("# 2026-09-07\n\nDaily text.\n", encoding="utf-8")
+    (vault / "projects/Project.md").write_text(
+        "# Project\n\n- [ ] Today 📅 2026-09-07\n",
+        encoding="utf-8",
+    )
+
+    result = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    destination = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    assert result.ok
+    assert result.moved is True
+    assert result.task_roundup is not None
+    assert result.task_roundup.action == "insert"
+    assert result.task_roundup.applied is True
+    assert not source.exists()
+    assert destination.read_text(encoding="utf-8").startswith(
+        "# 2026-09-07\n\nDaily text.\n\n" + START_MARKER
+    )
+    assert "- [[Project]] Today (due 2026-09-07)" in destination.read_text(encoding="utf-8")
+
+
+def test_task_roundup_apply_rewrites_canonical_then_is_idempotent(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    destination = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    destination.parent.mkdir(parents=True)
+    destination.write_text("# 2026-09-07\n\n", encoding="utf-8")
+    (vault / "projects/Project.md").write_text(
+        "# Project\n\n- [ ] Today 📅 2026-09-07\n",
+        encoding="utf-8",
+    )
+
+    first = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+    first_bytes = destination.read_bytes()
+    second = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert first.task_roundup is not None
+    assert first.task_roundup.action == "insert"
+    assert second.task_roundup is not None
+    assert second.task_roundup.action == "unchanged"
+    assert destination.read_bytes() == first_bytes
+
+
+def test_task_roundup_insert_preserves_crlf_frontmatter_and_body(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    destination = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    destination.parent.mkdir(parents=True)
+    original = b"---\r\ncustom: 'keep quotes'\r\n---\r\n# 2026-09-07\r\n\r\nUser-owned text.\r\n"
+    destination.write_bytes(original)
+
+    result = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert result.ok
+    assert result.task_roundup is not None
+    assert result.task_roundup.action == "insert"
+    assert destination.read_bytes().startswith(original)
+
+
+def test_task_roundup_replace_preserves_mixed_newlines_around_region(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    destination = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    destination.parent.mkdir(parents=True)
+    prefix = b"# 2026-09-07\r\n\r\nBefore.\n"
+    suffix = b"After.\r\n"
+    destination.write_bytes(
+        prefix + START_MARKER.encode() + b"\r\nstale\r\n" + END_MARKER.encode() + b"\r\n" + suffix
+    )
+
+    result = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert result.ok
+    assert result.task_roundup is not None
+    assert result.task_roundup.action == "replace"
+    rewritten = destination.read_bytes()
+    assert rewritten.startswith(prefix)
+    assert rewritten.endswith(suffix)
+    assert b"stale" not in rewritten
+
+
+def test_task_roundup_rejects_concurrent_note_edit_before_write(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    vault = _seed_vault(tmp_path)
+    destination = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    destination.parent.mkdir(parents=True)
+    destination.write_text("# 2026-09-07\n\nOriginal.\n", encoding="utf-8")
+
+    from para_quest_notes.workflows.daily.steps import compose_task_roundup
+
+    real_scan = compose_task_roundup.scan_vault_tasks
+
+    def scan_after_edit(*args, **kwargs):
+        destination.write_text("# 2026-09-07\n\nConcurrent edit.\n", encoding="utf-8")
+        return real_scan(*args, **kwargs)
+
+    monkeypatch.setattr(compose_task_roundup, "scan_vault_tasks", scan_after_edit)
+
+    result = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert not result.ok
+    assert result.escalation is not None
+    assert result.escalation["step"] == "move_file"
+    assert destination.read_text(encoding="utf-8") == "# 2026-09-07\n\nConcurrent edit.\n"
+
+
+def test_task_roundup_in_place_refresh_preserves_file_mode(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    destination = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    destination.parent.mkdir(parents=True)
+    destination.write_text("# 2026-09-07\n\n", encoding="utf-8")
+    destination.chmod(0o600)
+
+    result = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert result.ok
+    assert stat.S_IMODE(destination.stat().st_mode) == 0o600
+
+
+def test_task_roundup_composes_with_missing_note_creation(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    (vault / "projects/Project.md").write_text(
+        "# Project\n\n- [ ] Today 📅 2026-09-07\n",
+        encoding="utf-8",
+    )
+
+    result = file_daily_note(
+        DailyInputs(
+            target="2026-09-07",
+            create_missing=True,
+            task_roundup=True,
+        ),
+        vault=vault,
+        apply=True,
+    )
+
+    destination = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+    assert result.ok
+    assert result.created is True
+    assert result.task_roundup is not None
+    assert destination.read_text(encoding="utf-8").startswith("# 2026-09-07\n\n" + START_MARKER)
+
+
+def test_malformed_roundup_markers_fail_before_move(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    source = vault / "inbox/2026-09-07.md"
+    original = f"# 2026-09-07\n\n{START_MARKER}\nbroken\n"
+    source.write_text(original, encoding="utf-8")
+
+    result = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert not result.ok
+    assert result.escalation is not None
+    assert result.escalation["step"] == "compose_task_roundup"
+    assert source.read_text(encoding="utf-8") == original
+    assert not (vault / "resources/daily_notes/2026/09/2026-09-07.md").exists()
+
+
+def test_unclosed_fence_fails_before_move(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    source = vault / "inbox/2026-09-07.md"
+    original = "# 2026-09-07\n\n```markdown\nunclosed example\n"
+    source.write_text(original, encoding="utf-8")
+
+    result = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert not result.ok
+    assert result.escalation is not None
+    assert result.escalation["step"] == "compose_task_roundup"
+    assert source.read_text(encoding="utf-8") == original
+    assert not (vault / "resources/daily_notes/2026/09/2026-09-07.md").exists()
+
+
+def test_task_roundup_apply_smokes_copied_sample_vault(tmp_path: Path) -> None:
+    sample = Path(__file__).resolve().parents[3] / "samples" / "vault"
+    vault = tmp_path / "vault"
+    shutil.copytree(sample, vault)
+    destination = vault / "resources/daily_notes/2026/09/2026-09-07.md"
+
+    dry_run = file_daily_note(
+        DailyInputs(
+            target="2026-09-07",
+            create_missing=True,
+            task_roundup=True,
+        ),
+        vault=vault,
+        apply=False,
+    )
+    applied = file_daily_note(
+        DailyInputs(
+            target="2026-09-07",
+            create_missing=True,
+            task_roundup=True,
+        ),
+        vault=vault,
+        apply=True,
+    )
+    first_bytes = destination.read_bytes()
+    rerun = file_daily_note(
+        DailyInputs(target="2026-09-07", task_roundup=True),
+        vault=vault,
+        apply=True,
+    )
+
+    assert dry_run.ok
+    assert dry_run.task_roundup is not None
+    assert dry_run.task_roundup.applied is False
+    assert applied.ok and applied.created
+    assert applied.task_roundup is not None
+    assert rerun.task_roundup is not None
+    assert rerun.task_roundup.action == "unchanged"
+    assert destination.read_bytes() == first_bytes
+    assert destination.read_text(encoding="utf-8").count(START_MARKER) == 1
+    assert destination.read_text(encoding="utf-8").count(END_MARKER) == 1
     assert validate_paths(vault, [destination]).issues == []

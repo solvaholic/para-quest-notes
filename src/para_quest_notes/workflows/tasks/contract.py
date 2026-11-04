@@ -100,6 +100,16 @@ class TasksReport:
     def unscheduled(self) -> list[TaskItem]:
         return self._in("unscheduled")
 
+    @property
+    def summary(self) -> dict[str, int]:
+        return {
+            "total": len(self.tasks),
+            "overdue": len(self.overdue),
+            "due_today": len(self.due_today),
+            "upcoming": len(self.upcoming),
+            "unscheduled": len(self.unscheduled),
+        }
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "vault": self.vault,
@@ -111,12 +121,6 @@ class TasksReport:
             "types": list(self.types) if self.types is not None else None,
             "quest": self.quest,
             "files_scanned": self.files_scanned,
-            "summary": {
-                "total": len(self.tasks),
-                "overdue": len(self.overdue),
-                "due_today": len(self.due_today),
-                "upcoming": len(self.upcoming),
-                "unscheduled": len(self.unscheduled),
-            },
+            "summary": self.summary,
             "tasks": [asdict(t) for t in self.tasks],
         }

@@ -30,6 +30,7 @@ from para_quest_notes.vault.frontmatter import (
     migrate_quest_kind,
     split_note,
 )
+from para_quest_notes.workflows.daily.steps.move_file import SourceSnapshot
 
 # Match the first non-blank line as an ATX H1, capturing its text.
 _H1_RE = re.compile(r"^\s*#\s+(.+?)\s*$")
@@ -60,7 +61,9 @@ class ComposeNote:
             )
 
         source = ctx.scratchpad["source_abs"]
-        text = source.read_text(encoding="utf-8")
+        source_snapshot = SourceSnapshot.capture(source)
+        text = source_snapshot.content.decode("utf-8")
+        ctx.scratchpad["source_snapshot"] = source_snapshot
         split = split_note(text)
 
         # Migrate tail backmatter into frontmatter (frontmatter wins).
@@ -80,7 +83,9 @@ class ComposeNote:
         body, h1_inserted = _ensure_h1(split.body, date_iso)
 
         # Render: preserve user frontmatter shape (no canonical reorder).
-        if merged_fm:
+        if split.had_frontmatter and not frontmatter_migrated:
+            fm_text = text[: len(text) - len(split.body)]
+        elif merged_fm:
             fm_text = ParsedNote(
                 frontmatter=merged_fm,
                 body="",
@@ -89,6 +94,8 @@ class ComposeNote:
         else:
             fm_text = ""
 
+        if fm_text and body and not fm_text.endswith("\n"):
+            fm_text += "\n"
         content = fm_text + body
 
         # Idempotent re-runs at the canonical path: only need to write

@@ -8,6 +8,7 @@ step's input -> output / escalation contract.
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -19,7 +20,7 @@ from para_quest_notes.workflows.daily.steps.compose_note import ComposeNote
 from para_quest_notes.workflows.daily.steps.compute_destination import ComputeDestination
 from para_quest_notes.workflows.daily.steps.detect_shape import DetectShape
 from para_quest_notes.workflows.daily.steps.inspect_parent import InspectParent
-from para_quest_notes.workflows.daily.steps.move_file import MoveFile
+from para_quest_notes.workflows.daily.steps.move_file import MoveFile, SourceSnapshot
 from para_quest_notes.workflows.daily.steps.resolve_target import ResolveTarget
 from para_quest_notes.workflows.daily.steps.validate_after import ValidateAfter
 
@@ -317,6 +318,16 @@ def test_compose_note_preserves_user_frontmatter(tmp_path: Path) -> None:
     assert "# 2026-05-12" in ctx.scratchpad["content"]
 
 
+def test_compose_note_separates_eof_frontmatter_from_inserted_h1(tmp_path: Path) -> None:
+    src = tmp_path / "2026-05-12.md"
+    src.write_text("---\nfoo: bar\n---")
+    ctx = _ctx(source_abs=src, date_iso="2026-05-12", already_at_destination=False)
+
+    ComposeNote().run(ctx)
+
+    assert ctx.scratchpad["content"] == "---\nfoo: bar\n---\n# 2026-05-12\n"
+
+
 def test_compose_note_migrates_backmatter(tmp_path: Path) -> None:
     src = tmp_path / "2026-05-12.md"
     src.write_text("# 2026-05-12\n\nbody\n\n---\nfoo: bar\n---\n")
@@ -364,6 +375,7 @@ def test_move_file_apply_writes_then_unlinks(tmp_path: Path) -> None:
     vault = _seed_vault(tmp_path)
     src = vault / "inbox" / "2026-05-12.md"
     src.write_text("body\n")
+    src.chmod(0o600)
     dest = vault / "resources" / "daily_notes" / "2026" / "05" / "2026-05-12.md"
     ctx = _ctx(
         vault=vault,
@@ -373,11 +385,13 @@ def test_move_file_apply_writes_then_unlinks(tmp_path: Path) -> None:
         content="# 2026-05-12\n\nbody\n",
         content_changed=True,
         already_at_destination=False,
+        source_snapshot=SourceSnapshot.capture(src),
     )
     res = MoveFile(apply=True).run(ctx)
     assert res.output["moved"] is True
     assert not src.exists()
     assert dest.read_text() == "# 2026-05-12\n\nbody\n"
+    assert stat.S_IMODE(dest.stat().st_mode) == 0o600
 
 
 def test_move_file_apply_already_at_destination_noop(tmp_path: Path) -> None:
@@ -415,11 +429,38 @@ def test_move_file_apply_already_at_destination_rewrites(tmp_path: Path) -> None
         content=new_content,
         content_changed=True,
         already_at_destination=True,
+        source_snapshot=SourceSnapshot.capture(src),
     )
     res = MoveFile(apply=True).run(ctx)
     assert res.output["moved"] is False
     assert res.output["rewrote_in_place"] is True
     assert src.read_text() == new_content
+
+
+def test_move_file_rejects_changed_source_before_writing(tmp_path: Path) -> None:
+    vault = _seed_vault(tmp_path)
+    src = vault / "inbox" / "2026-05-12.md"
+    src.write_text("original\n")
+    snapshot = SourceSnapshot.capture(src)
+    src.write_text("concurrent edit\n")
+    dest = vault / "resources" / "daily_notes" / "2026" / "05" / "2026-05-12.md"
+    ctx = _ctx(
+        vault=vault,
+        source_abs=src,
+        source_rel="inbox/2026-05-12.md",
+        source_snapshot=snapshot,
+        destination_abs=dest,
+        destination_rel="resources/daily_notes/2026/05/2026-05-12.md",
+        content="# 2026-05-12\n\noriginal\n",
+        content_changed=True,
+        already_at_destination=False,
+    )
+
+    with pytest.raises(EscalateToUser, match="source changed during daily composition"):
+        MoveFile(apply=True).run(ctx)
+
+    assert src.read_text() == "concurrent edit\n"
+    assert not dest.exists()
 
 
 # ----- validate_after -------------------------------------------------------
