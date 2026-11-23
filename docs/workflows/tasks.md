@@ -134,11 +134,7 @@ Vault discovery follows the standard order
 ([`docs/configuration.md`](../configuration.md)): `--vault` →
 `PARA_QUEST_VAULT` → walk up from cwd → `vault:` in `config.yaml`.
 
-The markdown output uses plain `-` bullets (not `- [ ]` checkboxes)
-with the source note wikilinked, so a roundup can be pasted into a
-daily note without re-parsing as live, duplicate tasks. Output is
-stdout only; wiring a roundup into a daily note is a later `pqn-daily`
-concern, not part of this command.
+The markdown output uses plain `-` bullets (not `- [ ]` checkboxes) with the source note wikilinked, so a roundup can be embedded in a daily note without re-parsing as live, duplicate tasks. `pqn-tasks` remains stdout-only; `pqn-daily --task-roundup` reuses the same in-process scanner and renderer to own the write safely.
 
 `--unscheduled only` uses `# Unscheduled tasks as of YYYY-MM-DD` as its title and reports `No open unscheduled tasks.` when nothing matches. Other modes preserve the existing dated-report title and empty state.
 
@@ -222,7 +218,7 @@ The `tasks` list is flat (grouping is a presentation concern applied to the mark
 - **Fixed `-` bullet rendering.** Configurable task-state
   representation is deferred.
 - No recurrence generation — this reports tasks that already exist.
-- No daily-note integration — stdout only.
+- No writes from `pqn-tasks` itself. Daily-note integration belongs to `pqn-daily --task-roundup`.
 
 ## Gotchas
 

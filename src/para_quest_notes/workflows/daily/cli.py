@@ -23,6 +23,7 @@ from para_quest_notes.adapter.vault import find_vault
 from para_quest_notes.workflows.daily.contract import DailyInputs, DailyResult
 from para_quest_notes.workflows.daily.pipeline import file_daily_note
 from para_quest_notes.workflows.daily.settings import DailySettings, resolve_daily_settings
+from para_quest_notes.workflows.tasks.settings import resolve_date_fields
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -64,6 +65,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Open the real file after success. Overrides workflows.daily.open_existing.",
     )
     p.add_argument(
+        "--task-roundup",
+        action="store_true",
+        help=(
+            "Plan or refresh one managed default pqn-tasks report in the "
+            "selected note. Writes still require --apply."
+        ),
+    )
+    p.add_argument(
         "--apply",
         action="store_true",
         help="Write the destination and remove the source. Without this flag, runs as a dry-run.",
@@ -91,6 +100,9 @@ def main(argv: Sequence[str] | None = None, *, today: date | None = None) -> int
     try:
         config = load_config(args.config)
         settings = resolve_daily_settings(config.workflows)
+        task_date_fields = (
+            resolve_date_fields(None, config.workflows) if args.task_roundup else None
+        )
         vault = find_vault(arg=args.vault, config=config)
     except (ConfigError, VaultError) as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -99,7 +111,11 @@ def main(argv: Sequence[str] | None = None, *, today: date | None = None) -> int
     target = args.target or args.date or (today or date.today()).isoformat()
     create_missing = settings.create_missing if args.create_missing is None else args.create_missing
     should_open = settings.open_existing if args.open is None else args.open
-    inputs = DailyInputs(target=target, create_missing=create_missing)
+    inputs = DailyInputs(
+        target=target,
+        create_missing=create_missing,
+        task_roundup=args.task_roundup,
+    )
 
     trace_path = new_run_path(config.run_log_dir)
     with TraceWriter(trace_path) as trace:
@@ -109,6 +125,7 @@ def main(argv: Sequence[str] | None = None, *, today: date | None = None) -> int
             apply=args.apply,
             config=config,
             trace=trace,
+            task_date_fields=task_date_fields,
         )
 
     if should_open and result.ok:
@@ -197,10 +214,35 @@ def _print_text(result: DailyResult, trace_path: Path) -> None:
         print("      inserted # YYYY-MM-DD H1")
     if result.plan.frontmatter_migrated:
         print("      migrated tail backmatter -> frontmatter")
+    if result.task_roundup is not None:
+        _print_task_roundup(result)
     if result.opened:
         print(f"      opened {result.open_path}")
     elif result.open_error:
         print(f"  ERR could not open note: {result.open_error}")
+
+
+def _print_task_roundup(result: DailyResult) -> None:
+    roundup = result.task_roundup
+    if roundup is None:  # pragma: no cover - guarded by caller
+        return
+
+    total = roundup.summary["total"]
+    task_word = "task" if total == 1 else "tasks"
+    if roundup.action == "unchanged":
+        print(f"      task roundup: unchanged ({total} {task_word})")
+        return
+
+    if result.apply:
+        verb = "inserted" if roundup.action == "insert" else "replaced"
+    else:
+        verb = f"would {roundup.action}"
+    counts = (
+        f"{roundup.summary['overdue']} overdue, "
+        f"{roundup.summary['due_today']} due today, "
+        f"{roundup.summary['upcoming']} upcoming"
+    )
+    print(f"      task roundup: {verb} {total} {task_word} ({counts})")
 
 
 if __name__ == "__main__":  # pragma: no cover
