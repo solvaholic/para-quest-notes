@@ -1,17 +1,17 @@
 """Step 5: write_note (``--apply`` gated, refuses to overwrite).
 
-Dry-run by default. With ``apply=True`` the parent directory is created
-if missing and the composed content is written atomically (write to a
-sibling temp path, then ``os.replace``).
+Dry-run by default. With ``apply=True`` the shared creation substrate
+atomically publishes the composed content without replacing a concurrent
+winner.
 """
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.step import StepContext, StepResult
+from para_quest_notes.workflows.creation import publish_new_note
 
 
 class WriteNote:
@@ -42,10 +42,15 @@ class WriteNote:
                 context={"destination": destination},
             )
 
-        dest_abs.parent.mkdir(parents=True, exist_ok=True)
-        tmp = dest_abs.with_name(f".{dest_abs.name}.tmp")
-        tmp.write_text(content, encoding="utf-8")
-        os.replace(tmp, dest_abs)
+        try:
+            publish_new_note(dest_abs, content)
+        except FileExistsError:
+            raise EscalateToUser(
+                step=self.name,
+                reason=f"destination appeared between collision check and write: {destination}",
+                options=[],
+                context={"destination": destination},
+            ) from None
 
         return StepResult(
             name=self.name,

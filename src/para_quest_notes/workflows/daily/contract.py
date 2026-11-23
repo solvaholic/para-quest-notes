@@ -15,6 +15,7 @@ class DailyInputs:
 
     target: str  # vault-relative path or bare basename (with or without .md)
     create_missing: bool = False
+    template: str | None = None
 
 
 @dataclass
@@ -28,6 +29,7 @@ class DailyPlan:
     frontmatter_migrated: bool = False
     already_at_destination: bool = False
     would_create: bool = False
+    body_source: str | None = None
 
 
 @dataclass

@@ -31,11 +31,8 @@ Seven steps, all pure (`--apply` only gates the actual disk write):
    delegates to `validate.api.check_basename_available` so a duplicate
    basename anywhere in the vault is also caught. Wikilinks resolve by
    basename.
-5. **`compose_note`** - emits canonical frontmatter via the shared `split_note`, `merge`, `canonical_frontmatter`, and `dump_frontmatter` helpers (single source of truth), plus a selected stdin body, template body, or type-appropriate skeleton. Stdin and template bodies pass through the same deterministic placeholder renderer after all input normalization and Quest resolution finish. Template metadata merges under generated values. Empty generated `supports` and `source_url` values remain authoritative and are dropped from frontmatter.
-6. **`write_note`** - `--apply` only. Creates the parent directory if
-   needed and writes atomically (sibling temp + `os.replace`). A
-   defensive re-check guards the TOCTOU window between collision check
-   and write.
+5. **`compose_note`** - emits canonical frontmatter via the shared `split_note`, `merge`, `canonical_frontmatter`, and `dump_frontmatter` helpers, plus a selected stdin body, template body, or type-appropriate skeleton. Template path resolution, whole-note parsing, deterministic rendering, and fallback body-source selection come from the shared creation substrate also used by missing-note `pqn-daily` creation. Create still owns its generated metadata authority and variable mapping. Empty generated `supports` and `source_url` values remain authoritative and are dropped from frontmatter.
+6. **`write_note`** - `--apply` only. Uses the shared atomic no-overwrite publication path, including a defensive race check between collision planning and publication.
 7. **`validate_after`** - `--apply` only. Runs `validate.api.validate_paths`
    scoped to the new file. Whole-vault validation stays the user's call
    (run `pqn-validate` for that).

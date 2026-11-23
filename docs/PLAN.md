@@ -340,7 +340,7 @@ migration. Areas/Resources escalate as planned.
 
 #### Slice 4 — `pqn-daily` (shipped, selection + filing + authoring + opening, no-LLM)
 
-Shipped as a no-LLM workflow. Selects today or an explicit date, files one date-shaped note (`YYYY-MM-DD.md`) into `resources/daily_notes/YYYY/MM/`, can create an exact H1-only note when missing, and can open a real resolved note through configured editor argv. Safe defaults keep creation and opening disabled, `--apply` remains the only write consent, and idempotent re-runs remain cron-safe.
+Shipped as a no-LLM workflow. Selects today or an explicit date, files one date-shaped note (`YYYY-MM-DD.md`) into `resources/daily_notes/YYYY/MM/`, can create a template-backed or exact H1-only note when missing, and can open a real resolved note through configured editor argv. Safe defaults keep creation and opening disabled, `--apply` remains the only write consent, and idempotent re-runs remain cron-safe.
 
 - Lands `workflows/daily/` + `pqn-daily` console script + per-step
   tests + `docs/workflows/daily.md` JSON contract.
@@ -366,8 +366,9 @@ Shipped as a no-LLM workflow. Selects today or an explicit date, files one date-
 - **Shared-infra reuse:** the `ignore_path` parameter on
   `check_basename_available` already
   existed (added during slice 1 for `pqn-ingest`'s self-rename case).
-- **Wave 5 delivered (#124):** optional positional target; bare/`--today`/`--date` selection; independently configurable and positively/negatively overridable missing-note creation and editor opening; additive JSON/text results; effective-config provenance. Missing-note authoring is exact H1-only content and remains `--apply` gated.
-- **Out of scope:** templates, frontmatter, routine tasks, task roundup sections, bulk migration, implicit apply, and OS editor discovery.
+- **Wave 5 delivered (#124):** optional positional target; bare/`--today`/`--date` selection; independently configurable and positively/negatively overridable missing-note creation and editor opening; additive JSON/text results; effective-config provenance. Missing-note authoring remains `--apply` gated.
+- **Daily templates delivered (#137):** explicit or configured whole-note templates reuse the same template parser, deterministic renderer, body-source vocabulary, template directory, and no-overwrite publication substrate as `pqn-create`. Templates are creation-only; existing daily notes remain byte-idempotent and user-owned. With no selected template, the exact H1-only bytes from #124 remain the default.
+- **Out of scope:** generated daily PARA frontmatter, routine tasks, task roundup sections, bulk migration, implicit apply, and OS editor discovery.
 
 #### Workflow conventions for all remaining slices
 
@@ -477,7 +478,7 @@ let them creep into the v1 release.
 
 - **`pqn-search --links TARGET` - delivered.** Direct one-hop outgoing-link and backlink traversal now shares a reusable in-memory graph with the existing link-aware workflows. Target resolution is identity-safe and archive-aware, missing or ambiguous outgoing links are reported rather than guessed, and the mode remains read-only, deterministic, no-LLM, and free of persistent indexing. Transitive traversal, similarity, and visualization remain separate concerns.
 
-- **`pqn-daily` authoring mode - delivered in Wave 5 (#124).** Bare/`--today`/`--date` selection, explicit/configured missing-note creation, and configured editor opening landed as additive behavior. Authored notes are exactly an H1 plus a blank line, with no frontmatter, template, or routine tasks. Writes still require `--apply`.
+- **`pqn-daily` authoring mode - delivered in Wave 5 (#124), extended by #137.** Bare/`--today`/`--date` selection, explicit/configured missing-note creation, and configured editor opening landed as additive behavior. Missing notes use an explicit/configured whole-note template or the exact H1-plus-blank-line fallback; templates retain their own metadata without synthesized daily PARA metadata. Writes still require `--apply`.
 
 - **`--file` richer input.** Extend `--file` on `pqn-ingest` (and any
   other workflow that gains it) to accept: a directory (process all

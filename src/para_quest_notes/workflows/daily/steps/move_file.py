@@ -7,7 +7,8 @@ Dry-run by default. With ``apply=True``:
 * When ``already_at_destination`` and content *did* change (H1 added
   or backmatter migrated), rewrite the file in place atomically.
 * When authoring a missing date, atomically publish the canonical note
-  without replacing a destination created by another process.
+  through the shared creation substrate without replacing a destination
+  created by another process.
 * Otherwise: refuse to overwrite the destination (defensive re-check),
   publish composed content without replacement, then
   ``unlink`` the source. Write-first / remove-second matches
@@ -22,6 +23,7 @@ from pathlib import Path
 
 from para_quest_notes.adapter.errors import EscalateToUser
 from para_quest_notes.adapter.step import StepContext, StepResult
+from para_quest_notes.workflows.creation import publish_new_note
 
 
 class MoveFile:
@@ -94,13 +96,10 @@ class MoveFile:
 
     def _publish_without_replace(self, destination: Path, dest_rel: str, content: str) -> None:
         """Publish complete content atomically, refusing a concurrent winner."""
-        temp = self._write_unique_temp(destination, content)
         try:
-            os.link(temp, destination)
+            publish_new_note(destination, content)
         except FileExistsError:
             self._destination_exists(dest_rel)
-        finally:
-            temp.unlink(missing_ok=True)
 
     def _replace(self, destination: Path, content: str) -> None:
         temp = self._write_unique_temp(destination, content)

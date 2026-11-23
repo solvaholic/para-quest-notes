@@ -86,10 +86,7 @@ Step 5 is iterative. Use `rg` or similar to identify inbox files by
 topic, wikilink target, or folder, then ingest them in batches.
 Escalations stay in inbox for the next pass.
 
-Notes about templates: if your vault had a templates directory, those
-files are now in inbox too. Ignore them - para-quest-notes has no use
-for templates until a future milestone. Leave them in inbox or move
-them aside manually.
+Notes about templates: move reusable whole-note templates to the configured `workflows.create.template_dir` (default `resources/templates/`) rather than ingesting them as PARA notes. Both `pqn-create` and missing-note `pqn-daily` creation resolve templates from that directory, and `pqn-validate` excludes it from note checks.
 
 ### Daily use (human)
 
@@ -181,4 +178,4 @@ pqn-validate --vault ~/notes --format json --strict
   yet.
 - **Routine generation:** the notes-system spec describes recurring
   tasks generated into daily notes. This workflow doesn't exist yet.
-- **Daily-note templates and task roundup:** `pqn-daily` can create an exact H1-only note, but template content, routine-task prepopulation, and task-roundup integration remain out of scope.
+- **Daily-note task roundup:** `pqn-daily` can create from a whole-note template or the exact H1-only fallback, but routine-task prepopulation and task-roundup integration remain out of scope.

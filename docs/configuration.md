@@ -35,6 +35,9 @@ workflows:
     # Safe defaults: neither setting bypasses the --apply write gate.
     create_missing: false
     open_existing: false
+    # Optional whole-note template for missing daily notes.
+    # Resolved from workflows.create.template_dir.
+    template: daily
     # An argv list, not a shell command string. The note path is appended.
     editor:
       - code
@@ -46,7 +49,7 @@ run_log_dir: ~/.local/state/para-quest-notes/runs
 
 `pqn-tasks` resolves its date fields as `--date-field` flags, then `workflows.tasks.date_fields`, then the built-in `[due, scheduled, start]` default. The configured value must be a non-empty list containing only `due`, `scheduled`, and `start`.
 
-`pqn-daily` resolves `create_missing` and `open_existing` from explicit positive or negative CLI flags, then `workflows.daily`, then the safe `false` defaults. `create_missing` still requires `--apply` before it writes. `editor` must be a non-empty argv list of non-empty strings; the resolved note path is appended and the process runs without a shell. There is no default editor or OS-specific discovery.
+`pqn-daily` resolves `create_missing` and `open_existing` from explicit positive or negative CLI flags, then `workflows.daily`, then the safe `false` defaults. It resolves a missing-note template from explicit `--template`, explicit `--no-template`, `workflows.daily.template`, then the H1-only skeleton. The nullable template setting uses `workflows.create.template_dir`; there is no daily-specific template directory. Neither template selection nor `create_missing` bypasses `--apply`. `editor` must be a non-empty argv list of non-empty strings; the resolved note path is appended and the process runs without a shell. There is no default editor or OS-specific discovery.
 
 ## Vault content (in your vault)
 

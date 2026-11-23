@@ -13,6 +13,7 @@ from pathlib import Path
 from para_quest_notes.adapter.cli import build_base_parser
 from para_quest_notes.adapter.completion import (
     complete_daily_targets,
+    complete_templates,
     enable_completion,
     set_completer,
 )
@@ -63,6 +64,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Open the real file after success. Overrides workflows.daily.open_existing.",
     )
+    template_selection = p.add_mutually_exclusive_group()
+    set_completer(
+        template_selection.add_argument(
+            "--template",
+            default=None,
+            help=(
+                "Whole-note template for missing-note creation. Uses "
+                "workflows.create.template_dir and renders $title, $date, $created, "
+                "$year, $month, and $day from the selected date."
+            ),
+        ),
+        complete_templates,
+    )
+    template_selection.add_argument(
+        "--no-template",
+        action="store_true",
+        help="Bypass workflows.daily.template and use the H1-only creation skeleton.",
+    )
     p.add_argument(
         "--apply",
         action="store_true",
@@ -99,7 +118,17 @@ def main(argv: Sequence[str] | None = None, *, today: date | None = None) -> int
     target = args.target or args.date or (today or date.today()).isoformat()
     create_missing = settings.create_missing if args.create_missing is None else args.create_missing
     should_open = settings.open_existing if args.open is None else args.open
-    inputs = DailyInputs(target=target, create_missing=create_missing)
+    if args.template is not None:
+        template = args.template
+    elif args.no_template:
+        template = None
+    else:
+        template = settings.template
+    inputs = DailyInputs(
+        target=target,
+        create_missing=create_missing,
+        template=template,
+    )
 
     trace_path = new_run_path(config.run_log_dir)
     with TraceWriter(trace_path) as trace:
@@ -197,6 +226,8 @@ def _print_text(result: DailyResult, trace_path: Path) -> None:
         print("      inserted # YYYY-MM-DD H1")
     if result.plan.frontmatter_migrated:
         print("      migrated tail backmatter -> frontmatter")
+    if result.plan.would_create and result.plan.body_source:
+        print(f"      body source: {result.plan.body_source}")
     if result.opened:
         print(f"      opened {result.open_path}")
     elif result.open_error:

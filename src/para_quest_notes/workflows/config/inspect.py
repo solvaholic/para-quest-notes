@@ -20,7 +20,7 @@ from para_quest_notes.adapter.config import Config
 from para_quest_notes.adapter.errors import VaultError
 from para_quest_notes.adapter.trace import default_state_dir
 from para_quest_notes.adapter.vault import resolve_vault
-from para_quest_notes.workflows.create.templates import get_template_config
+from para_quest_notes.workflows.creation import get_template_config
 from para_quest_notes.workflows.daily.settings import resolve_daily_settings
 from para_quest_notes.workflows.tasks.settings import resolve_date_fields
 
@@ -75,6 +75,15 @@ def _present(raw: Mapping[str, Any], *keys: str) -> bool:
 
 def _source(raw: Mapping[str, Any], *keys: str) -> Source:
     return "config" if _present(raw, *keys) else "default"
+
+
+def _source_including_null(raw: Mapping[str, Any], *keys: str) -> Source:
+    node: Any = raw
+    for key in keys:
+        if not isinstance(node, Mapping) or key not in node:
+            return "default"
+        node = node[key]
+    return "config"
 
 
 def inspect_config(
@@ -170,6 +179,10 @@ def _inspect_daily(config: Config, raw: Mapping[str, Any]) -> DailyInfo:
         editor=Setting(
             value=None if settings.editor is None else list(settings.editor),
             source=_source(raw, "workflows", "daily", "editor"),
+        ),
+        template=Setting(
+            value=settings.template,
+            source=_source_including_null(raw, "workflows", "daily", "template"),
         ),
     )
 

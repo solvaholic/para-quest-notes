@@ -30,14 +30,12 @@ from para_quest_notes.vault.frontmatter import (
     canonical_frontmatter,
     dump_frontmatter,
     merge,
-    split_note,
 )
 from para_quest_notes.workflows.create.contract import CreateInputs
-from para_quest_notes.workflows.create.templates import (
-    TemplateNotFoundError,
+from para_quest_notes.workflows.creation import (
     get_template_config,
-    load_template,
     render_template,
+    select_body,
 )
 
 _PROJECT_BODY = """# {title}
@@ -120,28 +118,26 @@ class ComposeNote:
         title: str = ctx.scratchpad["title"]
         today = self._today or date.today().isoformat()
 
-        template_frontmatter: dict[str, Any] = {}
-
         # Body priority: stdin > template > built-in skeleton
         body: str
         body_source = "skeleton"
+        template_frontmatter: dict[str, Any] = {}
         if inputs.body is not None:
             body = render_template(inputs.body, self._template_vars(inputs, title, today))
             body_source = "stdin"
-        elif ctx.vault is not None and (template_name := self._resolve_template_name(inputs, ctx)):
-            template_dir, _ = get_template_config(ctx.config.workflows if ctx.config else {})
-            try:
-                raw = load_template(template_name, vault=ctx.vault, template_dir=template_dir)
-                split = split_note(raw)
-                template_frontmatter = merge(split.backmatter, split.frontmatter)
-                body = render_template(split.body, self._template_vars(inputs, title, today))
-                body_source = f"template:{template_name}"
-            except TemplateNotFoundError:
-                # Template specified but not found - fall through to skeleton
-                body = _body_for(inputs, title)
-                body_source = "skeleton (template not found)"
         else:
-            body = _body_for(inputs, title)
+            template_name = self._resolve_template_name(inputs, ctx)
+            template_dir, _ = get_template_config(ctx.config.workflows if ctx.config else {})
+            selected = select_body(
+                template_name=template_name,
+                skeleton=_body_for(inputs, title),
+                variables=self._template_vars(inputs, title, today),
+                vault=ctx.vault,
+                template_dir=template_dir,
+            )
+            body = selected.body
+            body_source = selected.body_source
+            template_frontmatter = selected.frontmatter
 
         generated_frontmatter = _frontmatter_for(inputs, today=today)
         fm = canonical_frontmatter(merge(template_frontmatter, generated_frontmatter))

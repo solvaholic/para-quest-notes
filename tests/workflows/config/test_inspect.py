@@ -112,7 +112,11 @@ def test_tasks_date_fields_reports_default(tmp_path: Path) -> None:
 def test_daily_settings_report_config_and_default_provenance(tmp_path: Path) -> None:
     cfg_file = tmp_path / "config.yaml"
     cfg_file.write_text(
-        "workflows:\n  daily:\n    create_missing: true\n    editor: [code, --reuse-window]\n",
+        "workflows:\n"
+        "  daily:\n"
+        "    create_missing: true\n"
+        "    editor: [code, --reuse-window]\n"
+        "    template: daily\n",
         encoding="utf-8",
     )
     config = load_config(cfg_file)
@@ -125,6 +129,22 @@ def test_daily_settings_report_config_and_default_provenance(tmp_path: Path) -> 
     assert report.daily.open_existing.source == "default"
     assert report.daily.editor.value == ["code", "--reuse-window"]
     assert report.daily.editor.source == "config"
+    assert report.daily.template.value == "daily"
+    assert report.daily.template.source == "config"
+
+
+def test_daily_null_template_reports_config_provenance(tmp_path: Path) -> None:
+    cfg_file = tmp_path / "config.yaml"
+    cfg_file.write_text("workflows:\n  daily:\n    template: null\n", encoding="utf-8")
+
+    report = inspect_config(
+        config=load_config(cfg_file),
+        env={},
+        start_dir=tmp_path,
+    )
+
+    assert report.daily.template.value is None
+    assert report.daily.template.source == "config"
 
 
 def test_template_files_listed_when_dir_exists(tmp_path: Path) -> None:
